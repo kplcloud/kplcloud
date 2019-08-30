@@ -1,6 +1,6 @@
 # kplcloud
 
-卡普勒平台开源版
+开普勒平台开源版
 
 kplcloud是一个基于了kubernetes的应用管理系统，通过可视化的页面对应用进行管理，降低容器化成本，同时也降低了Docker及Kubernetes的学习门槛。
 
