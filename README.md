@@ -57,7 +57,7 @@ $ cd kplcloud
 2. 配置文件准备
 
     - 将连接Kubernets的kubeconfig文件放到该项目目录
-    - app.cfg文件配置也放到该项目目录app.cfg配置请参考 [配置文件解析](https://docs.nsini.com/start/config)
+    - app.cfg文件配置也放到该项目目录app.cfg配置请参考 [配置文件解析](https://docs.nsini.com/start/config.html)
 
 3. docker-compose 启动
 
