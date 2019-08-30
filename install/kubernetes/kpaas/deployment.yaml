@@ -1,0 +1,91 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kplcloud
+  labels:
+    app: kplcloud
+    language: Golang
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kplcloud
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: kplcloud
+        name: kplcloud
+    spec:
+      serviceAccountName: kplcloud
+      volumes:
+        - name: "tz-config"
+          hostPath:
+            path: "/usr/share/zoneinfo/Asia/Shanghai"
+        - name: kplcloud
+          configMap:
+            name: kplcloud
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - image: kplcloud/kplcloud
+          name: kplcloud
+          ports:
+            - name: http
+              containerPort: 8080
+          command:
+            - /go/bin/kplcloud
+            - start
+          args:
+            - -p
+            - :8080
+            - -c
+            - /etc/kplcloud/app.cfg
+            - -k
+            - /etc/kplcloud/config.yaml
+          resources:
+            requests:
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: INSTANCE_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+          volumeMounts:
+            - name: tz-config
+              mountPath: /etc/localtime
+            - name: kplcloud
+              mountPath: /etc/kplcloud/app.cfg
+              readOnly: true
+              subPath: app.cfg
+            - name: kplcloud
+              mountPath: /etc/kplcloud/config.yaml
+              readOnly: true
+              subPath: config.yaml
+      livenessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /metrics
+          port: 8080
+          scheme: http
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        successThreshold: 1
+        timeoutSeconds: 30

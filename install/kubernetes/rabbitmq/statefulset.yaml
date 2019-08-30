@@ -1,0 +1,72 @@
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: rabbitmq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:3.6.14-management-alpine
+          ports:
+            - name: epmd-4369
+              containerPort: 4369
+              protocol: TCP
+            - name: amqp-5672
+              containerPort: 5672
+              protocol: TCP
+            - name: rabbitmq-dist
+              containerPort: 25672
+              protocol: TCP
+            - name: http-15672
+              containerPort: 15672
+              protocol: TCP
+          env:
+            - name: RABBITMQ_ERLANG_COOKIE
+              value: fT4FYaFYZydoxHWmf7d1SluTCJMxdKf+Icn/ehaOANU=
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: rabbitmq-data
+              mountPath: "/var/lib/rabbitmq"
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - "/bin/sh"
+                  - "-c"
+                  - |
+                    if [ -z "$(grep rabbitmq /etc/resolv.conf)" ]; then
+                      sed "s/^search \([^ ]\+\)/search rabbitmq.\1 \1/" /etc/resolv.conf > /etc/resolv.conf.new;
+                      cat /etc/resolv.conf.new > /etc/resolv.conf;
+                      rm /etc/resolv.conf.new;
+                    fi; until rabbitmqctl node_health_check; do sleep 1; done; if [[ "$HOSTNAME" != "rabbitmq-0" && -z "$(rabbitmqctl cluster_status | grep rabbitmq-0)" ]]; then
+                      rabbitmqctl stop_app;
+                      rabbitmqctl join_cluster rabbit@rabbitmq-0;
+                      rabbitmqctl start_app;
+                    fi; rabbitmqctl set_policy ha-all "." '{"ha-mode":"exactly","ha-params":3,"ha-sync-mode":"automatic"}'
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+      hostname: rabbitmq
+  volumeClaimTemplates:
+    - metadata:
+        name: rabbitmq-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 512Mi
+        storageClassName: nfs-storage
+  serviceName: rabbitmq

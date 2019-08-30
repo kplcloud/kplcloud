@@ -1,0 +1,16 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: prometheus
+  labels:
+    app: prometheus
+spec:
+  ports:
+    - name: http-9090
+      protocol: TCP
+      port: 9090
+      targetPort: 9090
+  selector:
+    app: prometheus
+  type: ClusterIP

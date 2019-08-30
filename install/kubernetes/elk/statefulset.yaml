@@ -1,0 +1,110 @@
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: es-master
+  labels:
+    app: elasticsearch
+    role: master
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: elasticsearch
+      role: master
+  template:
+    metadata:
+      creationTimestamp:
+      labels:
+        app: elasticsearch
+        role: master
+    spec:
+      volumes:
+        - name: tz-config
+          hostPath:
+            path: "/usr/share/zoneinfo/Asia/Shanghai"
+      initContainers:
+        - name: init-sysctl
+          image: busybox:1.30.1
+          command:
+            - sysctl
+            - "-w"
+            - vm.max_map_count=262144
+          securityContext:
+            privileged: true
+            procMount: Default
+      containers:
+        - name: es-master
+          image: elasticsearch:6.8.0
+          ports:
+            - name: transport
+              containerPort: 9300
+              protocol: TCP
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: CLUSTER_NAME
+              value: esdb
+            - name: NUMBER_OF_MASTERS
+              value: '3'
+            - name: NODE_MASTER
+              value: 'true'
+            - name: NODE_INGEST
+              value: 'false'
+            - name: NODE_DATA
+              value: 'false'
+            - name: HTTP_ENABLE
+              value: 'false'
+            - name: ES_JAVA_OPTS
+              value: "-XX:+UnlockExperimentalVMOptions -Xms4g -Xmx4g -Duser.timezone=GMT+08"
+            - name: PROCESSORS
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.cpu
+          resources:
+            limits:
+              cpu: '4'
+              memory: 8Gi
+            requests:
+              cpu: 250m
+              memory: 2Gi
+          volumeMounts:
+            - name: tz-config
+              mountPath: "/etc/localtime"
+            - name: data
+              mountPath: "/usr/share/elasticsearch/data"
+          livenessProbe:
+            tcpSocket:
+              port: transport
+            initialDelaySeconds: 20
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          imagePullPolicy: IfNotPresent
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+        creationTimestamp:
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+        storageClassName: nfs-storage
+        volumeMode: Filesystem
+      status:
+        phase: Pending
+  serviceName: elasticsearch-master
+  podManagementPolicy: OrderedReady
+  updateStrategy:
+    type: RollingUpdate

@@ -1,0 +1,134 @@
+# StatefulSet to run the actual Consul server cluster.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: consul-server
+  labels:
+    app: consul
+spec:
+  serviceName: consul-server
+  podManagementPolicy: Parallel
+  replicas: 3
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0
+  selector:
+    matchLabels:
+      app: consul
+      component: server
+      hasDNS: "true"
+  template:
+    metadata:
+      labels:
+        app: consul
+        component: server
+        hasDNS: "true"
+      annotations:
+        "consul.hashicorp.com/connect-inject": "false"
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: consul
+                  component: server
+              topologyKey: kubernetes.io/hostname
+#          # 单节点用这个
+#          preferredDuringSchedulingIgnoredDuringExecution:
+#            - wight: 100
+#              podAffinityTerm:
+#                topologyKey: kubernetes.io/hostname
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        fsGroup: 1000
+      volumes:
+        - name: config
+          configMap:
+            name: consul-server-config
+      containers:
+        - name: consul
+          image: "consul:1.2.2"
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          command:
+            - "/bin/sh"
+            - "-ec"
+            - |
+              CONSUL_FULLNAME="consul"
+
+              exec /bin/consul agent \
+                -advertise="${POD_IP}" \
+                -bind=0.0.0.0 \
+                -bootstrap-expect=3 \
+                -client=0.0.0.0 \
+                -config-dir=/consul/config \
+                -datacenter=dc1 \
+                -data-dir=/consul/data \
+                -domain=consul \
+                -hcl="connect { enabled = true }" \
+                -ui \
+                -retry-join=${CONSUL_FULLNAME}-server-0.${CONSUL_FULLNAME}-server.${NAMESPACE}.svc \
+                -retry-join=${CONSUL_FULLNAME}-server-1.${CONSUL_FULLNAME}-server.${NAMESPACE}.svc \
+                -retry-join=${CONSUL_FULLNAME}-server-3.${CONSUL_FULLNAME}-server.${NAMESPACE}.svc \
+                -server
+          volumeMounts:
+            - name: data
+              mountPath: /consul/data
+            - name: config
+              mountPath: /consul/config
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - consul leave
+          ports:
+            - containerPort: 8500
+              name: http
+            - containerPort: 8301
+              name: serflan
+            - containerPort: 8302
+              name: serfwan
+            - containerPort: 8300
+              name: server
+            - containerPort: 8600
+              name: dns-tcp
+              protocol: "TCP"
+            - containerPort: 8600
+              name: dns-udp
+              protocol: "UDP"
+          readinessProbe:
+            # NOTE(mitchellh): when our HTTP status endpoints support the
+            # proper status codes, we should switch to that. This is temporary.
+            exec:
+              command:
+                - "/bin/sh"
+                - "-ec"
+                - |
+                  curl http://127.0.0.1:8500/v1/status/leader 2>/dev/null | \
+                  grep -E '".+"'
+            failureThreshold: 2
+            initialDelaySeconds: 5
+            periodSeconds: 3
+            successThreshold: 1
+            timeoutSeconds: 5
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: nfs-storage
+        resources:
+          requests:
+            storage: 512Mi

@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: alertmanager
+  name: alertmanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertmanager
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - preference:
+                matchExpressions:
+                  - key: beta.kubernetes.io/arch
+                    operator: In
+                    values:
+                      - amd64
+              weight: 2
+            - preference:
+                matchExpressions:
+                  - key: beta.kubernetes.io/arch
+                    operator: In
+                    values:
+                      - ppc64le
+              weight: 2
+            - preference:
+                matchExpressions:
+                  - key: beta.kubernetes.io/arch
+                    operator: In
+                    values:
+                      - s390x
+              weight: 2
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: beta.kubernetes.io/arch
+                    operator: In
+                    values:
+                      - amd64
+                      - ppc64le
+                      - s390x
+      containers:
+        - args:
+            - --config.file=/etc/alertmanager/config.yml
+            - --storage.path=/etc/alertmanager
+          image: prom/alertmanager:v0.18.0
+          name: alertmanager
+          ports:
+            - containerPort: 9093
+              name: alertmanager
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 100m
+              memory: 64Mi
+            requests:
+              cpu: 10m
+              memory: 32Mi
+          volumeMounts:
+            - mountPath: /etc/alertmanager
+              name: alert-volume
+      serviceAccount: prometheus
+      serviceAccountName: prometheus
+      volumes:
+        - configMap:
+            defaultMode: 420
+            name: alertmanager
+          name: alert-volume

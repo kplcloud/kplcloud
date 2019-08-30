@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+spec:
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+        - name: kibana
+          image: kibana:6.8.0
+          resources:
+            limits:
+              memory: "512Mi"
+            requests:
+              memory: "200Mi"
+          ports:
+            - containerPort: 5601
+          env:
+            - name: ELASTICSEARCH_HOSTS
+              value: "http://elasticsearch:9200"
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: logstash
+  labels:
+    elastic-app: logstash
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      elastic-app: logstash
+  template:
+    metadata:
+      creationTimestamp:
+      labels:
+        elastic-app: logstash
+    spec:
+      volumes:
+        - name: logstash-conf
+          configMap:
+            name: logstash
+            defaultMode: 420
+        - name: tz-config
+          hostPath:
+            path: "/usr/share/zoneinfo/Asia/Shanghai"
+      containers:
+        - name: logstash
+          image: logstash:6.8.0
+          ports:
+            - containerPort: 5045
+              protocol: TCP
+            - containerPort: 5044
+              protocol: TCP
+            - containerPort: 9200
+              protocol: TCP
+          env:
+            - name: XPACK_MONITORING_ELASTICSEARCH_URL
+              value: elasticsearch:9200
+          volumeMounts:
+            - name: logstash-conf
+              mountPath: "/usr/share/logstash/pipeline"
+            - name: tz-config
+              mountPath: "/etc/localtime"
+          securityContext:
+            privileged: true
+      schedulerName: default-scheduler
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%

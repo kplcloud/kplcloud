@@ -1,0 +1,9 @@
+# StatefulSet to run the actual Consul server cluster.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: consul-server-config
+  labels:
+    app: consul
+data:
+  extra-from-values.json: "{\"acl_master_token\": \"2a8073a8-5c91-3d2c-871a-bbbeb030d1f6\",\"acl_datacenter\":\"dc1\",\"acl_default_policy\":\"allow\",\"acl_down_policy\":\"allow\"}"

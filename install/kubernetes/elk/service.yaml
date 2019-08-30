@@ -1,0 +1,51 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: elasticsearch-discovery
+  labels:
+    app: elasticsearch
+    role: master
+spec:
+  ports:
+    - name: transport
+      protocol: TCP
+      port: 9300
+      targetPort: 9300
+  selector:
+    app: elasticsearch
+    role: master
+  clusterIP: None
+  type: ClusterIP
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: elasticsearch
+  labels:
+    app: elasticsearch
+    role: data
+spec:
+  ports:
+    - name: http
+      protocol: TCP
+      port: 9200
+      targetPort: 9200
+  selector:
+    app: elasticsearch
+    role: master
+  type: ClusterIP
+  externalTrafficPolicy: Cluster
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+  namespace: kube-public
+spec:
+  ports:
+    - name: http
+      port: 5601
+      targetPort: 5601
+  selector:
+    app: kibana

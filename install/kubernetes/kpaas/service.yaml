@@ -1,0 +1,20 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: kplcloud
+  labels:
+    app: kplcloud
+spec:
+  ports:
+    - name: http-8080
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: kplcloud
+  type: ClusterIP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
