@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kpaas
+spec:
+  finalizers:
+    - kubernetes
+status:
+  phase: Active
+---
+# kubectl create secret generic regcred \
+#    --from-file=.dockerconfigjson=<path/to/.docker/config.json> \
+#    --type=kubernetes.io/dockerconfigjson

@@ -1,0 +1,51 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kpl-nfs-client-provisioner
+  labels:
+    app: kpl-nfs-client-provisioner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kpl-nfs-client-provisioner
+  template:
+    metadata:
+      creationTimestamp:
+      labels:
+        app: kpl-nfs-client-provisioner
+    spec:
+      volumes:
+        - name: kpl-nfs-client-root
+          nfs:
+            server: 172.16.0.4
+            path: "/home/data"
+      containers:
+        - name: kpl-nfs-client-provisioner
+          image: quay.io/external_storage/nfs-client-provisioner:latest
+          env:
+            - name: PROVISIONER_NAME
+              value: fuseim.pri/ifs
+            - name: NFS_SERVER
+              value: 172.16.0.4
+            - name: NFS_PATH
+              value: "/home/data"
+          resources: {}
+          volumeMounts:
+            - name: kpl-nfs-client-root
+              mountPath: "/persistentvolumes"
+          imagePullPolicy: Always
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      serviceAccountName: nfs-client-provisioner
+      serviceAccount: nfs-client-provisioner
+      securityContext: {}
+      imagePullSecrets:
+        - name: regcred
+      schedulerName: default-scheduler
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600

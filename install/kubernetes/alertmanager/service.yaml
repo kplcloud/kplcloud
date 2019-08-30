@@ -1,0 +1,16 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: alertmanager
+  labels:
+    app: alertmanager
+spec:
+  ports:
+    - name: http-9093
+      protocol: TCP
+      port: 9093
+      targetPort: 9093
+  selector:
+    app: alertmanager
+  type: ClusterIP

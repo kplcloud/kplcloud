@@ -1,0 +1,57 @@
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      volumes:
+        - name: redis-config
+          configMap:
+            name: redis-config
+      containers:
+        - name: redis
+          image: redis:latest
+          command:
+            - redis-server
+          args:
+            - /etc/redis/redis.conf
+          ports:
+            - name: tcp-6379
+              containerPort: 6379
+              protocol: TCP
+          resources:
+            limits:
+              memory: 128Mi
+            requests:
+              memory: 64Mi
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+            - name: redis-config
+              readOnly: true
+              mountPath: /etc/redis/redis.conf
+              subPath: redis.conf
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+      hostname: redis
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+        creationTimestamp:
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 512Mi
+        storageClassName: nfs-storage
+  serviceName: redis

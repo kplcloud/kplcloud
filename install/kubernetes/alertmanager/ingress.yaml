@@ -1,0 +1,13 @@
+---
+kind: Ingress
+apiVersion: extensions/v1beta1
+metadata:
+  name: alertmanager
+spec:
+  rules:
+    - host: alertmanager.kpaas.nsini.com
+      http:
+        paths:
+          - backend:
+              serviceName: alertmanager
+              servicePort: 9093

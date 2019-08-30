@@ -1,0 +1,34 @@
+version: '2'
+services:
+  mysql:
+    image: mysql:5.7.14
+    environment:
+      MYSQL_ROOT_PASSWORD: "admin"
+    expose:
+      - "3306"
+    ports:
+      - "3306:3306"
+  rabbitmq:
+    environment:
+      RABBITMQ_NODENAME: "rabbit"
+      RABBITMQ_DEFAULT_USER: "kplcloud"
+      RABBITMQ_DEFAULT_PASS: "kplcloud"
+    image: rabbitmq:3.6.14-management-alpine
+    expose:
+      - "5672"
+    ports:
+      - "5672:5672"
+  kplcloud:
+    image: kplcloud/kplcloud
+    command: /go/bin/server start -p :8080 -c /etc/kplcloud/app.cfg -k /etc/kplcloud/config.yaml
+    environment:
+      GOPATH: "/go"
+    volumes:
+      - ./../../app.cfg:/etc/kplcloud/app.cfg
+      - ./../../config_189.yaml:/etc/kplcloud/config.yaml
+    depends_on:
+      - mysql
+      - rabbitmq
+    restart: always
+    ports:
+      - "8080:8080"

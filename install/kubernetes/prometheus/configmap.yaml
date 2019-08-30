@@ -1,0 +1,488 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: prometheus
+  name: prometheus
+data:
+  etcd3.rules.yml: |-
+    groups:
+      - name: ./etcd3.rules
+        rules:
+          - alert: InsufficientMembers
+            expr: count(up{job="etcd"} == 0) > (count(up{job="etcd"}) / 2 - 1)
+            for: 3m
+            labels:
+              severity: critical
+            annotations:
+              description: If one more etcd member goes down the cluster will be unavailable
+              summary: etcd cluster insufficient members
+          - alert: NoLeader
+            expr: etcd_server_has_leader{job="etcd"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              description: etcd member {{ $labels.instance }} has no leader
+              summary: etcd member has no leader
+          - alert: HighNumberOfLeaderChanges
+            expr: increase(etcd_server_leader_changes_seen_total{job="etcd"}[1h]) > 3
+            labels:
+              severity: warning
+            annotations:
+              description: etcd instance {{ $labels.instance }} has seen {{ $value }} leader
+                changes within the last hour
+              summary: a high number of leader changes within the etcd cluster are happening
+          - alert: HighNumberOfFailedGRPCRequests
+            expr: sum(rate(etcd_grpc_requests_failed_total{job="etcd"}[5m])) BY (grpc_method)
+              / sum(rate(etcd_grpc_total{job="etcd"}[5m])) BY (grpc_method) > 0.01
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              description: '{{ $value }}% of requests for {{ $labels.grpc_method }} failed
+            on etcd instance {{ $labels.instance }}'
+              summary: a high number of gRPC requests are failing
+          - alert: HighNumberOfFailedGRPCRequests
+            expr: sum(rate(etcd_grpc_requests_failed_total{job="etcd"}[5m])) BY (grpc_method)
+              / sum(rate(etcd_grpc_total{job="etcd"}[5m])) BY (grpc_method) > 0.05
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              description: '{{ $value }}% of requests for {{ $labels.grpc_method }} failed
+            on etcd instance {{ $labels.instance }}'
+              summary: a high number of gRPC requests are failing
+          - alert: GRPCRequestsSlow
+            expr: histogram_quantile(0.99, rate(etcd_grpc_unary_requests_duration_seconds_bucket[5m]))
+              > 0.15
+            for: 10m
+            labels:
+              severity: critical
+            annotations:
+              description: on etcd instance {{ $labels.instance }} gRPC requests to {{ $labels.grpc_method
+                }} are slow
+              summary: slow gRPC requests
+          - alert: HighNumberOfFailedHTTPRequests
+            expr: sum(rate(etcd_http_failed_total{job="etcd"}[5m])) BY (method) / sum(rate(etcd_http_received_total{job="etcd"}[5m]))
+              BY (method) > 0.01
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              description: '{{ $value }}% of requests for {{ $labels.method }} failed on etcd
+            instance {{ $labels.instance }}'
+              summary: a high number of HTTP requests are failing
+          - alert: HighNumberOfFailedHTTPRequests
+            expr: sum(rate(etcd_http_failed_total{job="etcd"}[5m])) BY (method) / sum(rate(etcd_http_received_total{job="etcd"}[5m]))
+              BY (method) > 0.05
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              description: '{{ $value }}% of requests for {{ $labels.method }} failed on etcd
+            instance {{ $labels.instance }}'
+              summary: a high number of HTTP requests are failing
+          - alert: HTTPRequestsSlow
+            expr: histogram_quantile(0.99, rate(etcd_http_successful_duration_seconds_bucket[5m]))
+              > 0.15
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              description: on etcd instance {{ $labels.instance }} HTTP requests to {{ $labels.method
+                }} are slow
+              summary: slow HTTP requests
+          - alert: EtcdMemberCommunicationSlow
+            expr: histogram_quantile(0.99, rate(etcd_network_member_round_trip_time_seconds_bucket[5m]))
+              > 0.15
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              description: etcd instance {{ $labels.instance }} member communication with
+                {{ $labels.To }} is slow
+              summary: etcd member communication is slow
+          - alert: HighNumberOfFailedProposals
+            expr: increase(etcd_server_proposals_failed_total{job="etcd"}[1h]) > 5
+            labels:
+              severity: warning
+            annotations:
+              description: etcd instance {{ $labels.instance }} has seen {{ $value }} proposal
+                failures within the last hour
+              summary: a high number of proposals within the etcd cluster are failing
+          - alert: HighFsyncDurations
+            expr: histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[5m]))
+              > 0.5
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              description: etcd instance {{ $labels.instance }} fync durations are high
+              summary: high fsync durations
+          - alert: HighCommitDurations
+            expr: histogram_quantile(0.99, rate(etcd_disk_backend_commit_duration_seconds_bucket[5m]))
+              > 0.25
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              description: etcd instance {{ $labels.instance }} commit durations are high
+              summary: high commit durations
+  kube-state-metrics_rules.yml: |-
+    groups:
+      - name: kube-state-metrics.rules
+        rules:
+          - alert: DeploymentGenerationMismatch
+            expr: kube_deployment_status_observed_generation != kube_deployment_metadata_generation
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              description: Observed deployment generation does not match expected one for
+                deployment {{$labels.namespace}}/{{$labels.deployment}}
+              summary: Deployment is outdated
+          - alert: DeploymentReplicasNotUpdated
+            expr: ((kube_deployment_status_replicas_updated != kube_deployment_spec_replicas)
+              or (kube_deployment_status_replicas_available != kube_deployment_spec_replicas))
+              unless (kube_deployment_spec_paused == 1)
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              description: Replicas are not updated and available for deployment {{$labels.namespace}}/{{$labels.deployment}}
+              summary: Deployment replicas are outdated
+          - alert: DaemonSetRolloutStuck
+            expr: kube_daemonset_status_number_ready / kube_daemonset_status_desired_number_scheduled
+              * 100 < 100
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              description: Only {{$value}}% of desired pods scheduled and ready for daemon
+                set {{$labels.namespace}}/{{$labels.daemonset}}
+              summary: DaemonSet is missing pods
+          - alert: K8SDaemonSetsNotScheduled
+            expr: kube_daemonset_status_desired_number_scheduled - kube_daemonset_status_current_number_scheduled
+              > 0
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              description: A number of daemonsets are not scheduled.
+              summary: Daemonsets are not scheduled correctly
+          - alert: DaemonSetsMissScheduled
+            expr: kube_daemonset_status_number_misscheduled > 0
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              description: A number of daemonsets are running where they are not supposed
+                to run.
+              summary: Daemonsets are not scheduled correctly
+          - alert: PodFrequentlyRestarting
+            expr: increase(kube_pod_container_status_restarts_total[1h]) > 5
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              description: Pod {{$labels.namespace}}/{{$labels.pod}} was restarted {{$value}}
+                times within the last hour
+              summary: Pod is restarting frequently
+  kubelet_rule.yml: |-
+    groups:
+      - name: kubelet.rules
+        rules:
+          - alert: K8SNodeNotReady
+            expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+            for: 1h
+            labels:
+              severity: warning
+            annotations:
+              description: The Kubelet on {{ $labels.node }} has not checked in with the API,
+                or has set itself to NotReady, for more than an hour
+              summary: Node status is NotReady
+          - alert: K8SManyNodesNotReady
+            expr: count(kube_node_status_condition{condition="Ready",status="true"} == 0)
+              > 1 and (count(kube_node_status_condition{condition="Ready",status="true"} ==
+              0) / count(kube_node_status_condition{condition="Ready",status="true"})) > 0.2
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              description: '{{ $value }}% of Kubernetes nodes are not ready'
+          - alert: K8SKubeletDown
+            expr: count(up{job="kubernetes-nodes"} == 0) / count(up{job="kubernetes-nodes"}) * 100 > 3
+            for: 1h
+            labels:
+              severity: warning
+            annotations:
+              description: Prometheus failed to scrape {{ $value }}% of kubelets.
+              summary: Prometheus failed to scrape
+          - alert: K8SKubeletDown
+            expr: (absent(up{job="kubernetes-nodes"} == 1) or count(up{job="kubernetes-nodes"} == 0) / count(up{job="kubernetes-nodes"}))
+              * 100 > 10
+            for: 1h
+            labels:
+              severity: critical
+            annotations:
+              description: Prometheus failed to scrape {{ $value }}% of kubelets, or all Kubelets
+                have disappeared from service discovery.
+              summary: Many Kubelets cannot be scraped
+          - alert: K8SKubeletTooManyPods
+            expr: kubelet_running_pod_count > 100
+            for: 10m
+            labels:
+              severity: warning
+            annotations:
+              description: Kubelet {{$labels.instance}} is running {{$value}} pods, close
+                to the limit of 110
+              summary: Kubelet is close to pod limit
+  kubernetes_rule.yml: |-
+    groups:
+      - name: kubernetes.rules
+        rules:
+          - alert: container_memory_usage_bytes:sum > 1G
+            expr: sum(container_memory_usage_bytes{container_name!="POD",pod_name!=""}) BY
+              (pod_name) / 1024 / 1024 / 1024 > 1
+            for: 10m
+            labels:
+              severity: critical
+            annotations:
+              description: the container "{{ $labels.pod_name }}" memory usage {{ $value }}
+          - record: pod_name:container_spec_cpu_shares:sum
+            expr: sum(container_spec_cpu_shares{container_name!="POD",pod_name!=""}) BY (pod_name)
+          - alert: pod_name:container_cpu_usage:sum > 1
+            expr: sum(rate(container_cpu_usage_seconds_total{container_name!="POD",pod_name!=""}[5m]))
+              BY (pod_name) > 1
+            labels:
+              severity: critical
+            annotations:
+              description: the container "{{ $labels.pod_name }}" cpu usage {{ $value }}
+          - record: pod_name:container_fs_usage_bytes:sum
+            expr: sum(container_fs_usage_bytes{container_name!="POD",pod_name!=""}) BY (pod_name)
+          - record: namespace:container_memory_usage_bytes:sum
+            expr: sum(container_memory_usage_bytes{container_name!=""}) BY (namespace)
+          - record: namespace:container_spec_cpu_shares:sum
+            expr: sum(container_spec_cpu_shares{container_name!=""}) BY (namespace)
+          - record: namespace:container_cpu_usage:sum
+            expr: sum(rate(container_cpu_usage_seconds_total{container_name!="POD"}[5m]))
+              BY (namespace)
+          - alert: instance:container_memory_usage > 30%
+            expr: sum(container_memory_usage_bytes{container_name!="POD",pod_name!=""}) BY
+              (instance) / sum(machine_memory_bytes) BY (instance) > 0.3
+            labels:
+              severity: critical
+            annotations:
+              description: the instance "{{ $labels.instance }}" memory usage {{ $value }}
+          - record: cluster:container_spec_cpu_shares:ratio
+            expr: sum(container_spec_cpu_shares{container_name!="POD",pod_name!=""}) / 1000
+              / sum(machine_cpu_cores)
+          - record: cluster:container_cpu_usage:ratio
+            expr: sum(rate(container_cpu_usage_seconds_total{container_name!="POD",pod_name!=""}[5m]))
+              / sum(machine_cpu_cores)
+          - record: apiserver_latency_seconds:quantile
+            expr: histogram_quantile(0.99, rate(apiserver_request_latencies_bucket[5m])) /
+              1e+06
+            labels:
+              quantile: "0.99"
+          - record: apiserver_latency:quantile_seconds
+            expr: histogram_quantile(0.9, rate(apiserver_request_latencies_bucket[5m])) /
+              1e+06
+            labels:
+              quantile: "0.9"
+          - record: apiserver_latency_seconds:quantile
+            expr: histogram_quantile(0.5, rate(apiserver_request_latencies_bucket[5m])) /
+              1e+06
+            labels:
+              quantile: "0.5"
+          - alert: APIServerLatencyHigh
+            expr: apiserver_latency_seconds:quantile{quantile="0.99",subresource!="log",verb!~"^(?:WATCH|WATCHLIST|PROXY|CONNECT)$"}
+              > 4
+            for: 10m
+            labels:
+              severity: critical
+            annotations:
+              description: the API server has a 99th percentile latency of {{ $value }} seconds
+                for {{$labels.verb}} {{$labels.resource}}
+              summary: API server high latency
+          - alert: APIServerErrorsHigh
+            expr: rate(apiserver_request_count{code=~"^(?:5..)$"}[5m]) / rate(apiserver_request_count[5m])
+              * 100 > 5
+            for: 10m
+            labels:
+              severity: critical
+            annotations:
+              description: API server returns errors for {{ $value }}% of requests
+          - alert: K8SApiserverDown
+            expr: absent(up{job="kubernetes-apiservers"} == 1)
+            for: 20m
+            labels:
+              severity: critical
+            annotations:
+              description: No API servers are reachable or all have disappeared from service
+                discovery
+              summary: No API servers are reachable
+          - alert: K8sCertificateExpirationNotice
+            labels:
+              severity: warning
+            annotations:
+              description: Kubernetes API Certificate is expiring soon (less than 7 days)
+              summary: Kubernetes API Certificate is expiering soon
+            expr: sum(apiserver_client_certificate_expiration_seconds_bucket{le="604800"}) > 0
+          - alert: K8sCertificateExpirationNotice
+            expr: sum(apiserver_client_certificate_expiration_seconds_bucket{le="86400"}) > 0
+            labels:
+              severity: critical
+            annotations:
+              description: Kubernetes API Certificate is expiring in less than 1 day
+              summary: Kubernetes API Certificate is expiering
+          - alert: container memory usage > 85%
+            expr: sum(container_memory_usage_bytes) by (namespace,container_name) / sum(container_spec_memory_limit_bytes) by (namespace,container_name) * 100 > 85 !=+Inf
+            labels:
+              severity: critical
+            annotations:
+              description: 这个容器 "{{ $labels.pod_name }}" 内存使用量 {{ $value }} > 85%
+              summary: pod 内存使用 > 85%
+
+  prometheus.yml: |-
+    global:
+      scrape_interval: 15s
+    rule_files:
+    - /etc/prometheus/etcd3.rules.yaml
+    - /etc/prometheus/kubelet_rule.yaml
+    - /etc/prometheus/istio_rules.yml
+    - /etc/prometheus/kubernetes_rule.yml
+    - /etc/prometheus/kube-state-metrics_rules.yml
+    alerting:
+      alertmanagers:
+        - static_configs:
+          - targets: ["alertmanager:9093"]
+    scrape_configs:
+
+    # scrape config for API servers
+    - job_name: 'kubernetes-apiservers'
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names:
+          - default
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: kubernetes;https
+
+    # scrape config for nodes (kubelet)
+    - job_name: 'kubernetes-nodes'
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      kubernetes_sd_configs:
+      - role: node
+      relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - target_label: __address__
+        replacement: kubernetes.default.svc:443
+      - source_labels: [__meta_kubernetes_node_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/nodes/${1}/proxy/metrics
+
+    # Scrape config for Kubelet cAdvisor.
+    #
+    # This is required for Kubernetes 1.7.3 and later, where cAdvisor metrics
+    # (those whose names begin with 'container_') have been removed from the
+    # Kubelet metrics endpoint.  This job scrapes the cAdvisor endpoint to
+    # retrieve those metrics.
+    #
+    # In Kubernetes 1.7.0-1.7.2, these metrics are only exposed on the cAdvisor
+    # HTTP endpoint; use "replacement: /api/v1/nodes/${1}:4194/proxy/metrics"
+    # in that case (and ensure cAdvisor's HTTP server hasn't been disabled with
+    # the --cadvisor-port=0 Kubelet flag).
+    #
+    # This job is not necessary and should be removed in Kubernetes 1.6 and
+    # earlier versions, or it will cause the metrics to be scraped twice.
+    - job_name: 'kubernetes-cadvisor'
+      scheme: https
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      kubernetes_sd_configs:
+      - role: node
+      relabel_configs:
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - target_label: __address__
+        replacement: kubernetes.default.svc:443
+      - source_labels: [__meta_kubernetes_node_name]
+        regex: (.+)
+        target_label: __metrics_path__
+        replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
+
+    # scrape config for service endpoints.
+    - job_name: 'kubernetes-service-endpoints'
+      kubernetes_sd_configs:
+      - role: endpoints
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_scheme]
+        action: replace
+        target_label: __scheme__
+        regex: (https?)
+      - source_labels: [__meta_kubernetes_service_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_service_annotation_prometheus_io_port]
+        action: replace
+        target_label: __address__
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: kubernetes_namespace
+      - source_labels: [__meta_kubernetes_service_name]
+        action: replace
+        target_label: kubernetes_name
+
+    - job_name: 'kubernetes-pods'
+      kubernetes_sd_configs:
+      - role: pod
+      relabel_configs:  # If first two labels are present, pod should be scraped  by the istio-secure job.
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+        action: keep
+        regex: true
+      # Keep target if there's no sidecar or if prometheus.io/scheme is explicitly set to "http"
+      - source_labels: [__meta_kubernetes_pod_annotation_sidecar_istio_io_status, __meta_kubernetes_pod_annotation_prometheus_io_scheme]
+        action: keep
+        regex: ((;.*)|(.*;http))
+      - source_labels: [__meta_kubernetes_pod_annotation_istio_mtls]
+        action: drop
+        regex: (true)
+      - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+        action: replace
+        target_label: __metrics_path__
+        regex: (.+)
+      - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+        action: replace
+        regex: ([^:]+)(?::\d+)?;(\d+)
+        replacement: $1:$2
+        target_label: __address__
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_namespace]
+        action: replace
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        action: replace
+        target_label: pod_name

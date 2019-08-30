@@ -1,0 +1,13 @@
+---
+kind: Ingress
+apiVersion: extensions/v1beta1
+metadata:
+  name: kplcloud
+spec:
+  rules:
+    - host: kplcloud.kpaas.nsini.com
+      http:
+        paths:
+          - backend:
+              serviceName: kplcloud
+              servicePort: 8080

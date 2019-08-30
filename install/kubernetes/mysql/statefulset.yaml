@@ -1,0 +1,59 @@
+---
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:5.7.14
+          ports:
+            - name: tcp-3306
+              containerPort: 3306
+              protocol: TCP
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: root
+            - name: MYSQL_ROOT_PASSWORD
+              value: admin
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              memory: 128Mi
+          volumeMounts:
+            - name: mysql-data
+              mountPath: "/var/lib/mysql"
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      hostname: mysql
+      schedulerName: default-scheduler
+  volumeClaimTemplates:
+    - metadata:
+        name: mysql-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 512Mi
+        storageClassName: nfs-storage
+        volumeMode: Filesystem
+      status:
+        phase: Pending
+  serviceName: mysql
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0
+  revisionHistoryLimit: 10

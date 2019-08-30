@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elasticsearch
+data:
+  elasticsearch.yml: |
+    cluster.name: elastic-cluster
+    network.host: "0.0.0.0"
+    bootstrap.memory_lock: true
+    discovery.zen.ping.unicast.hosts: elasticsearch-cluster
+    discovery.zen.minimum_master_nodes: 1
+    xpack.security.enabled: false
+    xpack.monitoring.enabled: false
+  ES_JAVA_OPTS: -Xms512m -Xmx512m
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logstash
+data:
+  logstash.conf: |
+    input {
+        tcp {
+            port => 5054
+        }
+    }
+    filter {
+        grok {
+            match => {
+                "message" => "(%{TIMESTAMP_ISO8601:timestamp}|%{DATESTAMP:timestamp}) %{GREEDYDATA:log}"
+                }
+            }
+        date{
+            match => [ "timestamp", "YYYY-MM-dd HH:mm:ss","ISO8601","YY/MM/dd HH:mm:ss" ]
+            remove_field => [ "timestamp" ]
+            }
+        mutate {
+            remove_field => [ "timestamp", "beat" ]
+        }
+    }
+    output{
+      elasticsearch {
+        hosts => ["elasticsearch:9200"]
+        index => "kpl-%{[fields][app_name]}-%{+YYYY.MM.dd}"\
+        manage_template => false
+      }
+      stdout { codec => rubydebug }
+    }

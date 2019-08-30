@@ -1,0 +1,213 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kplcloud
+data:
+  app.cfg: |
+    ; ;[server]
+    ; ;该服务启动的相关参数
+    ; ;http_static: 静态文件目录, 前端的文件会放在这里
+    ; ;http_proxy: 代理服务地址如果需要的话就填
+    ; ;logs_path: 日志文件目录
+    ; ;upload_path: 文件上传目录
+    ; ;domain: 访问域名
+    ; ;login_type: 登陆类型
+    ; ;  1. ldap 需要在下面的 [ldap] 填写相关的ldap地址及配置信息
+    ; ;  2. email 邮箱登陆
+    ; ;consul_kv: 是否启consul kv功能, 如果启用, 将可以在平台上操作consul kv
+    ; ;app_key: 通常用来加密使用
+    ; ;session_timeout: sesstion时长, 单位秒
+    ; ;kibana_url: kibanba地址
+    ; ;grafana_url: grafana地址
+    ; ;heapster_url: heapster 地址
+    ; ;prometheus_url: prometheus地址 http://prometheus.kube-system:9090
+    ; ;docker_repo: 您的镜像仓库地址
+    ; ;service_mesh: false 是否启用service mesh 功能
+    ; ;domain_suffix: 生成对外访问域名的后缀
+    ; ;client_id: 平台的OAuth App所生成的Client ID
+    ; ;client_secret: 平台的OAuth App所生成的Client Secret 如有不清楚的可查看 配置Github授权登陆
+    ; ;auth_login: 授权登陆的平台，目前只支持GitHub
+    ; ;default_namespace: 默认分配的空间名 目前只支持一个
+    ; ;default_role_id: 默认分配的角色ID 目前只支持一个
+    ; ;debug: 是否打印gorm debug 及 casbin debug日志
+    [server]
+    app_name = kplcloud
+    http_static = ./static/
+    ;http_proxy =
+    ;logs_path = /var/log
+    upload_path = /go/bin/upload
+    domain = https://kplcloud.nsini.com
+    login_type = auth
+    consul_kv = true
+    app_key = ac31q*2aw3f!#%101
+    session_timeout = 7200
+    kibana_url = http://kibana.kpaas.nsini.com
+    transfer_url = http://tracing.kpaas.nsini.com
+    grafana_url = http://grafana.kpaas.nsini.com
+    prometheus_url = http://prometheus.kube-system:9090
+    heapster_url = http://heapster.kube-system
+    docker_repo = hub.kpaas.nsini.com
+    service_mesh = false
+    domain_suffix = %s.%s.nsini.com
+    client_id = 20emfs
+    client_secret = 9jfapsmdg8i
+    auth_login = github
+    default_namespace = default
+    default_role_id = 4
+    debug = false
+
+
+    ; ;[cors]
+    ; ;主要是让服务端支持跨域请求
+    ; ;allow: 是否支持跨域请求
+    ; ;origin: Access-Control-Allow-Origin
+    ; ;methods: Access-Control-Allow-Methods
+    ; ;headers: Access-Control-Allow-Headers
+    [cors]
+    allow = false
+    origin = http://localhost:8000
+    methods = GET,POST,OPTIONS,PUT,DELETE
+    headers = Origin,Content-Type,Authorization,x-requested-with,Access-Control-Allow-Origin,Access-Control-Allow-Credentials
+
+
+    ; ;[mysql]
+    ; ;mysql相关的配置, 如下所示, 就不需要过多解释了
+    ; ;mysql_host: mysql
+    ; ;mysql_port: 3306
+    ; ;mysql_user: root
+    ; ;mysql_password: admin
+    ; ;mysql_database: kplcloud
+    [mysql]
+    mysql_host = mysql
+    mysql_port = 3306
+    mysql_user = kplcloud
+    mysql_password = 32-0@g03wje;dm
+    mysql_database = kplcloud
+
+
+    ; ;[redis]
+    ; ;redis可配集群访问和单点访问
+    ; ;redis_drive:
+    ; ;  1. cluster: 若为该值, 则访问redis集群
+    ; ;  2. single: 若为该值, 则访问单点redis服务
+    ; ;redis_hosts: redis IP 地址(redis:6379), 若redis_drive为cluster,则redis_hosts需要多个IP用";"隔开
+    ; ;redis_password: redis auth 密码
+    ; ;redis_db: 在redis_drive为cluster的情况下 redis_db 不需要设置
+    [redis]
+    redis_drive = single
+    redis_hosts = redis:6379
+    ;redis_password =
+    redis_db = 0
+
+    ; ;[kubernetes]
+    ; ;kubernetes的一些配置
+    ; ;image_pull_secrets: 拉取镜像所需要的secrets名称
+    [kubernetes]
+    image_pull_secrets = regcred
+
+    ; ;[jenkins]
+    ; ;host: jenins 地址, 如: http://jenkins.devops.idc
+    ; ;token:
+    ; ;user: 执行相关jenkins任务的用户
+    ; ;credentials_id: 访问jenkins的凭据, 可以在jenkins的 credentials/store/system/domain/_/credential进行配置或创建
+    [jenkins]
+    host = http://jenkins:8080/
+    token = 1c8da3pq9erfaiosdhfd1ca05bac2c
+    user = admin
+    credentials_id =
+
+    ; ;[consul]
+    ; ;consul_token: 连接consul的 token
+    ; ;consul_addr: consul地址 http://consul:8500
+    [consul]
+    consul_token =
+    consul_addr = http://consul:8500
+
+    ; ;[amqp]
+    ; ;url: rabbitmq的地址 amqp://kplcloud:kplcloud@rabbitmq:5672/kplcloud
+    ; ;exchange: direct
+    ; ;exchange_type: kplcloud-exchange
+    ; ;routing_key: kplcloud
+    [amqp]
+    url = amqp://kplcloud:kplcloud@rabbitmq:5672/kplcloud
+    exchange = direct
+    exchange_type = kplcloud-exchange
+    routing_key = kplcloud
+
+    ; ;[git]
+    ; ;git_type:
+    ; ;  1. gitlab: 使用内部自建的gitlab gitlab的版本需要支持v3 api,如果不支持 您可以自己行加载应用的package
+    ; ;  2. github: 使用公共的github
+    ; ;git_addr: git API地址, 例如: http://gitlab.domain.idc/api/v4/  v3 的API暂时不支持
+    ; ;token: 访问相关git的token 需要所有基础的clone权限 0d6f6bc3ecaf97fc87aa2b8bf3e7e7d27667920b
+    ; ;client_id:  如果使用的是github 由需要用这个在https://github.com/settings/developers上查找
+    [git]
+    ;git_type = gitlab
+    ;git_addr = https://gitlab.com
+    ;token = fasdfskBEP29qzzyFu2T
+    git_type = github
+    token =
+    client_id = github-api
+
+    ; ;[email]
+    ; ;邮箱使用的是公司邮箱，有相应用API的,把src/email/client:EmailInterface 实现一遍就好
+    ; ;若使用的是SMTP的话，配置下面相关参数就好
+    ; ;smtp_user: 发送邮箱
+    ; ;smtp_password: 密码
+    ; ;smtp_host: 服务端smtp 地址
+    [email]
+    smtp_user = 123456@qq.com
+    smtp_password = 654321
+    smtp_host = smtp.qq.com:587
+
+    ; ;[ldap]
+    ; ;ldap的相关配置,根据需要调整
+    [ldap]
+    ldap_host = ldap
+    ldap_port = 389
+    ldap_base = DC=nsini,DC=corp
+    ldap_sseSSL = false
+    ldap_bindDN = hlw-moniti
+    ldap_bind_password = 2019Paasd-@4!2
+    ldap_user_filter = (userPrincipalName=%s)
+    ldap_group_filter = (&(objectCategory=Group))
+    ldap_attr = name;mail
+
+    ; ;[wechat]
+    ; ;app_id: 微信公众号的应用ID
+    ; ;access_token: 微信公众号的应用access_token
+    [wechat]
+    app_id =
+    app_secret =
+    token =
+    encoding_aes_key =
+    tpl_alarm = kTwwPu4Bwd-Cr684ExGAf4YN4c2uHJeq_Own14uylH4
+    tpl_notice = hqtepX_add4iv_O55BFD8GoSx6HwNs81GtXK7EBs38Q
+    tpl_test = rSXMVUtcSFBbbjzuw15OcREGKcvQUdb0wPFYii0BPKc
+
+    ; ;[msg]
+    ; ;消息分发中心，默认接收消息的管理员id
+    [msg]
+    alarm_default_email = admin@nsini.com;kplcloud@nsini.con
+    prometheus_url = http://prometheus.kpaas.nsini.com
+
+  config.yaml: |
+    apiVersion: v1
+    clusters:
+    - cluster:
+        certificate-authority-data: LS0tLS1CRUdJTNQjRYRFRFNU1ETXhNVEE1TkRBek9Gb1hEVEk1TURNd09EQTVOREF6T0Zvd0ZURVRNQkVHQTFVRQpBeE1LYTNWaVpYSnVaWFJsY3pDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTDJxClIrUEE4Z2VYbjVBKzgzY3Jrcm05TWtISKdVAvV0J3SUcxSGpXOHNKeERPVm1hQkZqOHo4ZmVVTAoxd28wQUpJOHNnQ2NTS2hoMEhLT0psa3hqS1hONmZUOHVmdVdEMmtWaXBHQitSN2RjQitmZHQrajRBaFJXVG9UCk5MNGRnbnVhMzFFakdtM3F6Sm8xN1RQSUhoNXBwVVdjZjNuYURjY211K05HMWRhdkZFQnNPZSsvWXdwYzFJcmoKakh0cGlQV1ZqSEREVldVWUZrYnpTTFdSRHVJT0NuZjN1L2dNWFVrVE1GR0JYUU9zcExObS90S01YaWt1YXlNNwpvZVIydkdtS0svWUdzSjlvS2hVQ0F3RUFBYU1qTUNFd0RnWURWUjBQQVFIL0JBUURBZ0trTUE4R0ExVWRFd0VCCi93UUZNQU1CQWY4d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQkFGbnB6ZzJzcmMycms1cEpZNUtJTWJmVFh1NnkKNzExczlscXkvM2crbFRLb3U4amRmODY2d0pzbHNpYmREL2VnREN4eWPOG1HVUZ4UDk3Cm44OCs5MktwS0N3NncycnlLcnZWVzcvVTl1cDN2blVDVGN0dncwVXJqdS9yVy9ZZVpiVVp6WlhpL3BKKzFVWUcKNXo5YlFuQUxPV2p6bEhJWmxCZStHNUJob293dVQ1LzFzSXpqNjAzQ0xkcmtaZUt6TXh6bC9iUGtLMXlxTURpegpUS3FhZzl4aEpQc1hEclVicTM3dmdvVjFYQVptZHRQcGVpTWU4UXJIMHV2c2VNNHJFK2htRlJYLzlnMD0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+        server: https://172.16.0.4:6443
+      name: kubernetes
+    contexts:
+    - context:
+        cluster: kubernetes
+        user: kubernetes-admin
+      name: kubernetes-admin@kubernetes
+    current-context: kubernetes-admin@kubernetes
+    kind: Config
+    preferences: {}
+    users:
+    - name: kubernetes-admin
+      user:
+        client-certificate-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB4T1RBek1URXdPVFF3TXpoYUZ3MHlNREF6TVRBd09UUXdOREZhTURReApGekFWQmdOVkJBb1REbk41YzNSbGJUcHRZWE4wWlhKek1Sa3dGd1lEVlFRREV4QnJkV0psY20KQmpZeEdMUEt2MC9VdUJQZ0IxRGlUa3N3ck5INmVkMTdsTzlQREFnVXg3VmZuNm1za0hWQXZkT294RThreG52Mgp0dkVnUDFQVU5uOVlJekVZbEc4S24wNElnb2oxaDlsWkpTTzJ5SGxsMXAwaXIydnFsS0ZBb1FrVzg4RUlEQ1RoCkZXeFRHZUJPNTBoWVdhUW1kRjNKZWdCYzUyYkZMTmFZWUJFK0FnQjNac1dpc1hwQjJDbDBTeExuV1h6d2ZZeFkKQWpnM2FTK0pocXV5M3hrTUw5NFJZbGVIT2xYOWJuUUFEQjZSbGZMK1VQei9oeFhRbjN4Z2l5cFZ6akxsZXRzMAoyUnFRUWFmUVZ2cXNvdFR5YklhNUd0cGYvR3kxbFE0VG9JWDRua01HcHNTWHU4R3RoQWcrR2YwalRMTTBjRFRkClhXZnEwd0lEQVFBQm95Y3dKVEFPQmdOVkhROEJBZjhFQkFNQ0JhQXdFd1lEVlIwbEJBd3dDZ1lJS3dZQkJRVUZFRZbEd6OEFGdwpYUGNTTUpjVXQwdXJkTlAwWll3bWZ3aEE2dWJ4TGVCZWpJMi9Id2tjeEpyK1YyRXZFNUNmZFdrRnNUMVF0U0R4Clk1bEp1V2tyREpuaDZoN1FDV1lJYllLNUtYRWpFUUNUMmp5bjREbTdmbFE2WmFwbGMvTi8vSitZanN4a2pZVWQKY3NCMVpnR0ppWmJUM0VVc0p4OEVXaitYNzhuSWxudWJCcy8vWHBLNFJITGg1Z2NsUUpMdzJITjZEOTFUS0JlZgpLQ0Ixd0pxeW9ZblY1L3JqemJuZzBXVjVFVTFnbk1nbm1hWExCNSs5YkxTNVdIazBxT2hkUU1EQkw1N2w3bSsrCmhtU3VWR0ZRYm1xaHVKSHNObDhhZnJuM3FBdXJTYks2WjdtcGhlYW1QRlpETTZzSjRxVT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+        client-key-data: LS0tLS1CRUdJTiBSU0EguYWlzMitPN0QrN0JqWXhHTFBLdjAvVXVCUGdCMURpVGtzd3JOSDZlZDE3CmxPOVBEQWdVeDdWZm42bXNrSFZBdmRPb3hFOGt4bnYydHZFZ1AxUFVObjlZSXpFWWxHOEtuMDRJZ29qMWg5bFoKSlNPMnlIbGwxcDBpcjJ2cWxLRkFvUWtXODhFSURDVGhGV3hUR2VCTzUwaFlXYVFtZEYzSmVnRCNlJsZkwrVVB6L2h4WFFuM3hnaXlwVnpqTGxldHMwMlJxUVFhZlFWdnFzb3RUeWJJYTVHdHBmL0d5MWxRNFQKb0lYNG5rTUdwc1NYdThHdGhBZytHZjBqVExNMGNEVGRYV2ZxMHdJREFRQUJBb0lCQUZpWFVtUE5adXhnMVNFVwpwcDh1QThhclVSQTJRQVJZOEpUb3lTZklCMlBsVlpLb0pFekhXeDlKWVNWeEYwNDVSc0Q1NzRYdnhlc0NlS2EwCnNhaXVVL2o5Y2JqNlpyU2RNQUZvS242RjM1Uk4ybUFPeWdmd01rcG5GRjFGYnVvOExMN2wxOHJocldHeFBUcW0KYklXSTZHL0V3NzZMSVhDSUhITThwTE83WFNXZzRUQzNOUjNlNHhvNXpYZUhJcVl1ODUxRkZ1bTBPdFcrTHlWMgorVmN1VUVrVERoajE5bk9WOVU3YTFXbFV2VlZLQzd4V1NxZThVUkR5eHpGOFlkaWNWTzlVVlhpKytRYUZXVHpxCkwyU29vVWhnL3doVDRlRnA0aGVBUEJUUW5IR2dMdEU4NzEvVGR2SzZFWGtZK05NWDlVd3hmSUlFMXUvZ251elpTKytaL24zS0I3a2ZROVp5MGtXVSsxN2cydkVDZ1lFQXdSblkKdTViaXZZUytza0JNWVlHUFhuM0haWkZOKzBiM21veUZQaWJrc1BoOE5wN05QV1VjVS90L05KbkNGU1pMZ3BlKwo3Qjhadi84MHMzWlVQdi9RR3V3bUVMTmtUdGswSVdOQ2RTakFpWkpKQ3VPeUxGMm15bjJFU0hEV1RTRUtZaEloCklTNW0xMHRWUlJVZnNsZnB4c1U3MkdKaU9hQm1CNmRVYi81VytnTUNnWUJhM1pJbjNKMzJjekl6TzdKYjIzdHQKL0drV1R6RUk5YkNqbU1wT2xhMmE1YXZybjB3KzVuT0FhZFZYMWV1OVpFZnBZT1VnclN4S0tQLytHbm13bXRtQQo4TU9MUTdPR2dKQkVFL1ozbHBweGE0VTdheWI5SmlGYmpwMFdSNmgyZjlZY3Jxcmw5elpwRnJMamZaemxYOTNhCnpQRFRPL01SOWRRKzZydTlwZHo0d1FLQmdGRFdyVEQ3SGJrUlZYUHlEd2ZTNFY1QmNiUkhmRW54ajc2WGpVQlQKci9HV1ZRbll1VHMybFFGampBRk5UVDdsWlQ4cW43Ymgzam5PY1JXZ04reVgwMXN4K1UyTWpEV21JSGpKd1F5agpIdGQ0OGpNbzEzSlRVbnY2eCtJN3VydFhWYTF3d1lYT2t5Y1dWb0F4TTYvSnRnaU1rVjBvOHM0RkpER1lEM1ZECkdNNVpBb0dBU0oyQ0JIL3kyQVlNNjVQVTMxemZmWUR0RE10RWxwN1F2N1IzT0hVR2hDa0xTU1crQTdPMzRrUXUKQzRHRWVia3hrTkhBbDlaY2luOXB5cktSMWhPZVQ5WWxtUXB2NXBtaXZYanFNanZ3dTE3dXE3alp5NlRaUUdzbwpobkFncXl6bUJqQ0JpVWJjRWkzbDhoUm5JMGJqVlErd2ZkRlo4TkdFU09qYVFEUDFibGc9Ci0tLS0tRU5EIFJTQSBQUklWQVRFIEtFWS0tLS0tCg==
