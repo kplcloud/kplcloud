@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/middleware"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
@@ -66,7 +67,7 @@ func (c *service) Post(ctx context.Context, name, language, version, detail, des
 		AuthorID:   userId,
 		Sha256:     null.StringFrom(encode.HashString([]byte(dockerfile))),
 	}); err != nil {
-		_ = c.logger.Log("repository.Dockerfile().", "Create", "err", err.Error())
+		_ = level.Error(c.logger).Log("repository.Dockerfile().", "Create", "err", err.Error())
 		return ErrDockerfileCreate
 	}
 
@@ -85,7 +86,7 @@ func (c *service) List(ctx context.Context, page, limit int, language []string, 
 func (c *service) Put(ctx context.Context, id int64, name, language, version, detail, desc, dockerfile, fullPath string, status int64) (err error) {
 	data, err := c.repository.Dockerfile().FindById(id)
 	if err != nil {
-		_ = c.logger.Log("dockerfileRepository", "FindById", "err", err.Error())
+		_ = level.Error(c.logger).Log("dockerfileRepository", "FindById", "err", err.Error())
 		return ErrDockerfileGet
 	}
 
@@ -99,7 +100,7 @@ func (c *service) Put(ctx context.Context, id int64, name, language, version, de
 	data.Sha256 = null.StringFrom(encode.HashString([]byte(dockerfile)))
 
 	if err = c.repository.Dockerfile().Update(data); err != nil {
-		_ = c.logger.Log("dockerfileRepository", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("dockerfileRepository", "Update", "err", err.Error())
 		return ErrDockerfileUpdate
 	}
 

@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/repository"
@@ -67,7 +68,7 @@ func NewService(logger log.Logger, config *config.Config,
 func (c *service) Metrics(ctx context.Context) (map[string]interface{}, error) {
 	nodes, err := c.k8sClient.Do().CoreV1().Nodes().List(metav1.ListOptions{})
 	if err != nil {
-		_ = c.logger.Log("Nodes", "List", "err", err.Error())
+		_ = level.Error(c.logger).Log("Nodes", "List", "err", err.Error())
 		return nil, ErrMonitorNodesList
 	}
 
@@ -154,7 +155,7 @@ func (c *service) getNodeMetrics(name string, metricsNames []string) []map[strin
 					v: resp,
 				})
 			} else {
-				_ = c.logger.Log("c", "getMetrics", "err", err.Error())
+				_ = level.Error(c.logger).Log("c", "getMetrics", "err", err.Error())
 			}
 			wg.Done()
 		}(path, v)

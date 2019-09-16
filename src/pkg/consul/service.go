@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/hashicorp/consul/api"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/consul"
@@ -76,12 +77,12 @@ func NewService(logger log.Logger, cf *config.Config, store repository.Repositor
 func (c *service) Sync(ctx context.Context) (err error) {
 	consulClient, err := consul.NewConsulClient(c.cf)
 	if err != nil {
-		_ = c.logger.Log("Sync", "NewConsulClient", "err", err.Error())
+		_ = level.Error(c.logger).Log("Sync", "NewConsulClient", "err", err.Error())
 		return
 	}
 	aclList, err := consulClient.ACLList(nil)
 	if err != nil {
-		_ = c.logger.Log("Sync", "ACLList", "err", err.Error())
+		_ = level.Error(c.logger).Log("Sync", "ACLList", "err", err.Error())
 		return
 	}
 
@@ -89,11 +90,11 @@ func (c *service) Sync(ctx context.Context) (err error) {
 		for _, v := range aclList {
 			nameStr := strings.Split(v.Name, ".")
 			if len(nameStr) < 2 {
-				_ = c.logger.Log("Consul", "Sync", "Refused", v.Name)
+				_ = level.Error(c.logger).Log("Consul", "Sync", "Refused", v.Name)
 				continue
 			}
 			if err = c.repository.Consul().UpdateOrCreate(v, nameStr[0], nameStr[1]); err != nil {
-				_ = c.logger.Log("Sync", "UpdateOrCreate", err.Error())
+				_ = level.Error(c.logger).Log("Sync", "UpdateOrCreate", err.Error())
 			}
 
 		}
@@ -135,7 +136,7 @@ func (c *service) Detail(ctx context.Context, ns, name string) (res map[string]i
 func (c *service) List(ctx context.Context, ns, name string, page, limit int) (res map[string]interface{}, err error) {
 	count, err := c.repository.Consul().Count(ns, name)
 	if err != nil {
-		_ = c.logger.Log("Consul", "List Count", "err", err.Error())
+		_ = level.Error(c.logger).Log("Consul", "List Count", "err", err.Error())
 		return nil, ErrConsulGet
 	}
 
@@ -144,7 +145,7 @@ func (c *service) List(ctx context.Context, ns, name string, page, limit int) (r
 	list, err := c.repository.Consul().FindOffsetLimit(ns, name, p.Offset(), limit)
 
 	if err != nil {
-		_ = c.logger.Log("Consul", "List", "err", err.Error())
+		_ = level.Error(c.logger).Log("Consul", "List", "err", err.Error())
 		return nil, ErrConsulGet
 	}
 
@@ -176,7 +177,7 @@ func (c *service) Post(ctx context.Context, ns, name, clientType, rules string) 
 
 	consulClient, err := consul.NewConsulClient(c.cf)
 	if err != nil {
-		_ = c.logger.Log("Post", "NewConsulClient", "err", err.Error())
+		_ = level.Error(c.logger).Log("Post", "NewConsulClient", "err", err.Error())
 		return ErrConsulConnect
 	}
 
@@ -186,12 +187,12 @@ func (c *service) Post(ctx context.Context, ns, name, clientType, rules string) 
 		Rules: rules,
 	})
 	if err != nil {
-		_ = c.logger.Log("Post", "ACLCreate", "err", err.Error())
+		_ = level.Error(c.logger).Log("Post", "ACLCreate", "err", err.Error())
 		return ErrConsulCreate
 	}
 
 	if _, err := c.repository.Consul().FirstOrCreate(acl, ns, name); err != nil {
-		_ = c.logger.Log("Post", "FirstOrCreate", "err", err.Error())
+		_ = level.Error(c.logger).Log("Post", "FirstOrCreate", "err", err.Error())
 		return ErrConsulCreate
 	}
 
@@ -206,7 +207,7 @@ func (c *service) Update(ctx context.Context, ns, name, clientType, rules string
 
 	consulClient, err := consul.NewConsulClient(c.cf)
 	if err != nil {
-		_ = c.logger.Log("Update", "NewConsulClient", "err", err.Error())
+		_ = level.Error(c.logger).Log("Update", "NewConsulClient", "err", err.Error())
 		return ErrConsulConnect
 	}
 	ae := api.ACLEntry{
@@ -216,12 +217,12 @@ func (c *service) Update(ctx context.Context, ns, name, clientType, rules string
 		Rules: rules,
 	}
 	if err := consulClient.ACLUpdate(&ae); err != nil {
-		_ = c.logger.Log("Update", "ACLUpdate", "err", err.Error())
+		_ = level.Error(c.logger).Log("Update", "ACLUpdate", "err", err.Error())
 		return ErrConsulUpdate
 	}
 
 	if err = c.repository.Consul().UpdateOrCreate(&ae, ns, name); err != nil {
-		_ = c.logger.Log("Update", "UpdateOrCreate", "err", err.Error())
+		_ = level.Error(c.logger).Log("Update", "UpdateOrCreate", "err", err.Error())
 		return ErrConsulUpdate
 	}
 
@@ -231,23 +232,23 @@ func (c *service) Update(ctx context.Context, ns, name, clientType, rules string
 func (c *service) Delete(ctx context.Context, ns, name string) error {
 	consulClient, err := consul.NewConsulClient(c.cf)
 	if err != nil {
-		_ = c.logger.Log("Delete", "NewConsulClient", "err", err.Error())
+		_ = level.Error(c.logger).Log("Delete", "NewConsulClient", "err", err.Error())
 		return ErrConsulConnect
 	}
 
 	consulInfo, notExist := c.repository.Consul().Find(ns, name)
 	if notExist == true {
-		_ = c.logger.Log("Delete", "Find Not Found")
+		_ = level.Error(c.logger).Log("Delete", "Find Not Found")
 		return ErrConsulGet
 	}
 
 	if err = consulClient.ACLDelete(consulInfo.Token); err != nil {
-		_ = c.logger.Log("Delete", "ACLDelete", "err", err.Error())
+		_ = level.Error(c.logger).Log("Delete", "ACLDelete", "err", err.Error())
 		return ErrConsulDelete
 	}
 
 	if err = c.repository.Consul().Delete(ns, name); err != nil {
-		_ = c.logger.Log("Delete", "DB", "err", err.Error())
+		_ = level.Error(c.logger).Log("Delete", "DB", "err", err.Error())
 		return ErrConsulDelete
 	}
 
@@ -263,14 +264,14 @@ func (c *service) KVDetail(ctx context.Context, ns, name, prefix string) (res ma
 
 	kvClient, err := consul.NewKVClient(c.cf, consulInfo.Token)
 	if err != nil {
-		_ = c.logger.Log("KVDetail", "NewKVClient", "err", err.Error())
+		_ = level.Error(c.logger).Log("KVDetail", "NewKVClient", "err", err.Error())
 		err = ErrConsulConnect
 		return
 	}
 
 	pairs, err := kvClient.KVGet(prefix)
 	if err != nil {
-		_ = c.logger.Log("KVDetail", "KVGet", "err", err.Error())
+		_ = level.Error(c.logger).Log("KVDetail", "KVGet", "err", err.Error())
 		err = ErrConsulKVGet
 		return
 	}
@@ -289,14 +290,14 @@ func (c *service) KVList(ctx context.Context, ns, name, prefix string) (res map[
 
 	kvClient, err := consul.NewKVClient(c.cf, consulInfo.Token)
 	if err != nil {
-		_ = c.logger.Log("KVList", "NewKVClient", "err", err.Error())
+		_ = level.Error(c.logger).Log("KVList", "NewKVClient", "err", err.Error())
 		err = ErrConsulConnect
 		return
 	}
 
 	list, err := kvClient.KVList(prefix)
 	if err != nil {
-		_ = c.logger.Log("KVList", "KVList", "err", err.Error())
+		_ = level.Error(c.logger).Log("KVList", "KVList", "err", err.Error())
 		err = ErrConsulKVGet
 		return
 	}
@@ -340,7 +341,7 @@ func (c *service) KVPost(ctx context.Context, ns, name, key, value string) (err 
 
 	kvClient, err := consul.NewKVClient(c.cf, consulInfo.Token)
 	if err != nil {
-		_ = c.logger.Log("KVPost", "NewKVClient", "err", err.Error())
+		_ = level.Error(c.logger).Log("KVPost", "NewKVClient", "err", err.Error())
 		err = ErrConsulConnect
 		return
 	}
@@ -352,7 +353,7 @@ func (c *service) KVPost(ctx context.Context, ns, name, key, value string) (err 
 
 	err = kvClient.KVPut(key, value)
 	if err != nil {
-		_ = c.logger.Log("KVPost", "KVPut", "err", err.Error())
+		_ = level.Error(c.logger).Log("KVPost", "KVPut", "err", err.Error())
 		err = ErrConsulKVPost
 		return
 	}
@@ -368,7 +369,7 @@ func (c *service) KVDelete(ctx context.Context, ns, name, prefix string, filderS
 
 	kvClient, err := consul.NewKVClient(c.cf, consulInfo.Token)
 	if err != nil {
-		_ = c.logger.Log("KVDelete", "NewKVClient", "err", err.Error())
+		_ = level.Error(c.logger).Log("KVDelete", "NewKVClient", "err", err.Error())
 		err = ErrConsulConnect
 		return
 	}
@@ -378,7 +379,7 @@ func (c *service) KVDelete(ctx context.Context, ns, name, prefix string, filderS
 		err = kvClient.KVDelete(prefix)
 	}
 	if err != nil {
-		_ = c.logger.Log("KVDelete", "KVDelete", err, err.Error())
+		_ = level.Error(c.logger).Log("KVDelete", "KVDelete", err, err.Error())
 		err = ErrConsulKVDelete
 		return
 	}

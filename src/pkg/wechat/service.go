@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/middleware"
 	"github.com/kplcloud/kplcloud/src/repository"
@@ -122,7 +123,7 @@ func (c *service) Receive(ctx context.Context) (str, contentType string, err err
 				uTag := c.wxClient.GetUser()
 				re, err := uTag.GetUserInfo(InfoSubscribeEvent.FromUserName, "zh_CN")
 				if err != nil {
-					_ = c.logger.Log("wechat.Receive", "uTag.GetUserInfo", "err", err.Error(), "openid", InfoSubscribeEvent.FromUserName)
+					_ = level.Error(c.logger).Log("wechat.Receive", "uTag.GetUserInfo", "err", err.Error(), "openid", InfoSubscribeEvent.FromUserName)
 				} else {
 					//wechatUser to db
 					wu := new(types.WechatUser)
@@ -139,7 +140,7 @@ func (c *service) Receive(ctx context.Context) (str, contentType string, err err
 
 					err := c.store.WechatUser().CreateOrUpdate(wu)
 					if err != nil {
-						_ = c.logger.Log("wechat.Receive", "c.wechatUser.Create", "err", err.Error())
+						_ = level.Error(c.logger).Log("wechat.Receive", "c.wechatUser.Create", "err", err.Error())
 					}
 				}
 
@@ -154,7 +155,7 @@ func (c *service) Receive(ctx context.Context) (str, contentType string, err err
 					email := ekArr[1]
 					err := c.store.Member().BindWechat(email, openId)
 					if err != nil {
-						_ = c.logger.Log("wechat.Receive", "c.member.BindWechat", "err", err.Error())
+						_ = level.Error(c.logger).Log("wechat.Receive", "c.member.BindWechat", "err", err.Error())
 						msgType = message.MsgTypeText
 						reStr = response.NewText(email + "\n 绑定微信失败")
 					} else {
@@ -167,7 +168,7 @@ func (c *service) Receive(ctx context.Context) (str, contentType string, err err
 				InfoUnSubscribeEvent := request.GetUnsubscribeEvent(&msg)
 				err := c.store.WechatUser().UnSubscribe(InfoUnSubscribeEvent.FromUserName)
 				if err != nil {
-					_ = c.logger.Log("wechat.Receive", "c.wechatUser.UnSubscribe", "err", err.Error())
+					_ = level.Error(c.logger).Log("wechat.Receive", "c.wechatUser.UnSubscribe", "err", err.Error())
 				}
 
 			case "SCAN":
@@ -179,7 +180,7 @@ func (c *service) Receive(ctx context.Context) (str, contentType string, err err
 					email := ekArr[1]
 					err := c.store.Member().BindWechat(email, openId)
 					if err != nil {
-						_ = c.logger.Log("wechat.Receive", "c.member.BindWechat", "err", err.Error())
+						_ = level.Error(c.logger).Log("wechat.Receive", "c.member.BindWechat", "err", err.Error())
 						msgType = message.MsgTypeText
 						reStr = response.NewText(email + "\n 绑定微信失败")
 					} else {
@@ -209,7 +210,7 @@ func (c *service) Receive(ctx context.Context) (str, contentType string, err err
 	//处理消息接收以及回复
 	echostr, contentType, echostrExist, err := server.ResponseServe()
 	if err != nil {
-		_ = c.logger.Log("wechat.Receive", "server.ResponseServe", "err", err.Error())
+		_ = level.Error(c.logger).Log("wechat.Receive", "server.ResponseServe", "err", err.Error())
 		return "", "", err
 	}
 	if echostrExist {
@@ -225,7 +226,7 @@ func (c *service) GetQr(ctx context.Context, req qrRequest) (res interface{}, er
 	re, err := account.CreateQrCodeSceneStr(false, "bindEmail:"+req.Email, 7200)
 
 	if err != nil {
-		_ = c.logger.Log("wechat.Receive", "server.GetQr", "err", err.Error())
+		_ = level.Error(c.logger).Log("wechat.Receive", "server.GetQr", "err", err.Error())
 		return nil, ErrCreateQr
 	}
 

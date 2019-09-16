@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	amqpClient "github.com/kplcloud/kplcloud/src/amqp"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/middleware"
@@ -52,7 +53,7 @@ func (c *service) Get(ctx context.Context, id int) (resp *types.Notices, err err
 
 func (c *service) Post(ctx context.Context, req proclaimRequest) (err error) {
 	memberId := ctx.Value(middleware.UserIdContext).(int64)
-	_ = c.logger.Log("title", req.Title, "content", req.Content, "proclaim_type", req.ProclaimType)
+	_ = level.Info(c.logger).Log("title", req.Title, "content", req.Content, "proclaim_type", req.ProclaimType)
 	if req.Title == "" || req.Content == "" {
 		return ErrProclaimParamsRefused
 	}
@@ -70,7 +71,7 @@ func (c *service) Post(ctx context.Context, req proclaimRequest) (err error) {
 
 	content, err := c.ContentHtmlHandle(req.Content)
 	if err != nil {
-		_ = c.logger.Log("proclaim", "post", "c.ContentHtmlHandle.Err", err.Error())
+		_ = level.Error(c.logger).Log("proclaim", "post", "c.ContentHtmlHandle.Err", err.Error())
 		return
 	}
 
@@ -91,7 +92,7 @@ func (c *service) Post(ctx context.Context, req proclaimRequest) (err error) {
 		if err := c.amqpClient.PublishOnQueue(amqpClient.ProclaimTopic, func() []byte {
 			return []byte(b)
 		}); err != nil {
-			_ = c.logger.Log("amqpClient", "PublicProclaimQueue", "err", err.Error())
+			_ = level.Error(c.logger).Log("amqpClient", "PublicProclaimQueue", "err", err.Error())
 		}
 	}()
 
@@ -126,7 +127,7 @@ func (c *service) ContentHtmlHandle(content string) (body string, err error) {
 
 			re, err := im.Base64ToFile()
 			if err != nil {
-				_ = c.logger.Log("ContentHtmlHandle.Base64ToFile.Err", err.Error())
+				_ = level.Error(c.logger).Log("ContentHtmlHandle.Base64ToFile.Err", err.Error())
 				return
 			}
 
@@ -138,8 +139,11 @@ func (c *service) ContentHtmlHandle(content string) (body string, err error) {
 	})
 
 	body, err = doc.Find("body").Html()
+	if err != nil {
+		_ = level.Error(c.logger).Log("doc", "Find", "Html", "body", "err", err.Error())
+	}
 
-	_ = c.logger.Log("ContentHtmlHandle.ContentToHtml", body)
+	_ = level.Info(c.logger).Log("ContentHtmlHandle.ContentToHtml", body)
 
 	return
 }
@@ -147,7 +151,7 @@ func (c *service) ContentHtmlHandle(content string) (body string, err error) {
 func (c *service) List(ctx context.Context, name string, page int, limit int) (res map[string]interface{}, err error) {
 	count, err := c.store.Proclaim().Count(name, 1)
 	if err != nil {
-		_ = c.logger.Log("template", "Count", "err", err.Error())
+		_ = level.Error(c.logger).Log("template", "Count", "err", err.Error())
 		return nil, ErrProclaimListCount
 	}
 
@@ -156,7 +160,7 @@ func (c *service) List(ctx context.Context, name string, page int, limit int) (r
 	list, err := c.store.Proclaim().FindOffsetLimit(name, 1, p.Offset(), limit)
 
 	if err != nil {
-		_ = c.logger.Log("proclaim", "FindOffsetLimit", "err", err.Error())
+		_ = level.Error(c.logger).Log("proclaim", "FindOffsetLimit", "err", err.Error())
 		return nil, ErrProclaimList
 	}
 

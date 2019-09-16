@@ -102,7 +102,7 @@ func (c *service) Rollback(ctx context.Context, buildId int64) error {
 	project := ctx.Value(middleware.ProjectContext).(*types.Project)
 	build, err := c.repository.Build().FindById(project.Namespace, project.Name, buildId)
 	if err != nil {
-		_ = c.logger.Log("buildRepository", "FindById", "err", err.Error())
+		_ = level.Error(c.logger).Log("buildRepository", "FindById", "err", err.Error())
 		return ErrBuildGet
 	}
 	var deployment *v1.Deployment
@@ -114,7 +114,7 @@ func (c *service) Rollback(ctx context.Context, buildId int64) error {
 				tpl.FinalTemplate = string(b)
 				tpl.FieldStruct.Image = build.Version
 				if ee := c.repository.ProjectTemplate().UpdateTemplate(tpl); ee != nil {
-					_ = c.logger.Log("projectTemplateRepository", "UpdateTemplate", "err", ee.Error())
+					_ = level.Error(c.logger).Log("projectTemplateRepository", "UpdateTemplate", "err", ee.Error())
 				}
 			}
 		}
@@ -122,7 +122,7 @@ func (c *service) Rollback(ctx context.Context, buildId int64) error {
 
 	deployment, err = c.k8sClient.Do().AppsV1().Deployments(project.Namespace).Get(project.Name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return ErrBuildDeploymentK8sGet
 	}
 
@@ -137,13 +137,13 @@ func (c *service) Rollback(ctx context.Context, buildId int64) error {
 
 	deployment, err = c.k8sClient.Do().AppsV1().Deployments(project.Namespace).Update(deployment)
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Update", "err", err.Error())
 		return ErrBuildDeploymentK8sUpdate
 	}
 
 	build.Status = null.StringFrom("ROLLBACK")
 	if _, e := c.repository.Build().CreateBuild(&build); e != nil {
-		_ = c.logger.Log("buildRepository", "CreateBuild", "err", err.Error())
+		_ = level.Error(c.logger).Log("buildRepository", "CreateBuild", "err", err.Error())
 	}
 
 	go func() {
@@ -151,7 +151,7 @@ func (c *service) Rollback(ctx context.Context, buildId int64) error {
 			repository.RollbackEvent,
 			project.Name, project.Namespace,
 			fmt.Sprintf("项目回滚: %v.%v, 版本：%v", project.Name, project.Namespace, build.Version)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Warn(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 
@@ -163,14 +163,14 @@ func (c *service) History(ctx context.Context, page, limit int) (map[string]inte
 
 	total, err := c.repository.Build().Count(project.Namespace, project.Name)
 	if err != nil {
-		_ = c.logger.Log("buildRepository", "Count", "err", err.Error())
+		_ = level.Error(c.logger).Log("buildRepository", "Count", "err", err.Error())
 		return nil, ErrBuildCount
 	}
 
 	p := paginator.NewPaginator(page, limit, int(total))
 	builds, err := c.repository.Build().FindOffsetLimit(project.Namespace, project.Name, p.Offset(), limit)
 	if err != nil {
-		_ = c.logger.Log("buildRepository", "FindOffsetLimit", "err", err.Error())
+		_ = level.Error(c.logger).Log("buildRepository", "FindOffsetLimit", "err", err.Error())
 		return nil, ErrBuildList
 	}
 
@@ -185,7 +185,7 @@ func (c *service) AbortBuild(ctx context.Context, jenkinsBuildId int) error {
 
 	build, err := c.repository.Build().FindById(project.Namespace, project.Name, int64(jenkinsBuildId))
 	if err != nil {
-		_ = c.logger.Log("buildRepository", "FindById", "err", err.Error())
+		_ = level.Error(c.logger).Log("buildRepository", "FindById", "err", err.Error())
 		return ErrBuildAbort
 	}
 
@@ -193,12 +193,12 @@ func (c *service) AbortBuild(ctx context.Context, jenkinsBuildId int) error {
 		// 更新数据库
 		build.Status = null.StringFrom("ABORTED")
 		if err = c.repository.Build().Update(&build); err != nil {
-			_ = c.logger.Log("buildRepository", "Update", "err", err.Error())
+			_ = level.Error(c.logger).Log("buildRepository", "Update", "err", err.Error())
 		}
 	}()
 	jobName := project.Name + "." + project.Namespace
 	if err = c.jenkins.AbortJob(jobName, int(build.BuilderID)); err != nil {
-		_ = c.logger.Log("jenkins", "AbortJob", "err", err.Error())
+		_ = level.Error(c.logger).Log("jenkins", "AbortJob", "err", err.Error())
 		return ErrBuildAbort
 	}
 
@@ -215,7 +215,7 @@ func (c *service) Build(ctx context.Context, gitType, version, buildEnv, buildEn
 	if buildTime != "" {
 		buildTimer, err = time.ParseInLocation("2006-01-02 15:04:05", buildTime, time.Local)
 		if err != nil {
-			_ = c.logger.Log("time", "ParseInLocation", "err", err.Error())
+			_ = level.Error(c.logger).Log("time", "ParseInLocation", "err", err.Error())
 		}
 	}
 
@@ -231,14 +231,14 @@ func (c *service) Build(ctx context.Context, gitType, version, buildEnv, buildEn
 
 	projectTpl, err := c.repository.ProjectTemplate().FindByProjectId(project.ID, repository.Deployment)
 	if err != nil {
-		_ = c.logger.Log("projectTemplateRepository", "FindByProjectId", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectTemplateRepository", "FindByProjectId", "err", err.Error())
 		return ErrBuildProjectGet
 	}
 
 	jenkinsJobName := project.Name + "." + project.Namespace
 	job, err := c.jenkins.GetJob(jenkinsJobName)
 	if err != nil {
-		_ = c.logger.Log("jenkins", "GetJob", "err", err.Error())
+		_ = level.Error(c.logger).Log("jenkins", "GetJob", "err", err.Error())
 		return ErrBuildJenkinsJobGet
 	}
 
@@ -268,7 +268,7 @@ func (c *service) Build(ctx context.Context, gitType, version, buildEnv, buildEn
 
 	lastBuild, err := c.jenkins.GetLastBuild(job)
 	if err != nil {
-		_ = c.logger.Log("jenkins", "GetLastBuild", "err", err.Error())
+		_ = level.Warn(c.logger).Log("jenkins", "GetLastBuild", "err", err.Error())
 		lastBuild = jenkins.Build{}
 	}
 
@@ -290,7 +290,7 @@ func (c *service) Build(ctx context.Context, gitType, version, buildEnv, buildEn
 	})
 
 	if err != nil {
-		_ = c.logger.Log("buildRepository", "CreateBuild", "err", err.Error())
+		_ = level.Error(c.logger).Log("buildRepository", "CreateBuild", "err", err.Error())
 		return ErrBuildCreate
 	}
 
@@ -306,7 +306,7 @@ func (c *service) Build(ctx context.Context, gitType, version, buildEnv, buildEn
 		})
 		return b
 	}); err != nil {
-		_ = c.logger.Log("amqpClient", "PublishOnQueue", "err", err.Error())
+		_ = level.Error(c.logger).Log("amqpClient", "PublishOnQueue", "err", err.Error())
 		return ErrBuildQueuePublish
 	}
 
@@ -316,7 +316,7 @@ func (c *service) Build(ctx context.Context, gitType, version, buildEnv, buildEn
 			repository.BuildEvent,
 			project.Name, project.Namespace,
 			fmt.Sprintf("项目 %v.%v, Build版本：%v", project.Name, project.Namespace, version)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Warn(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 
@@ -328,7 +328,7 @@ func (c *service) BuildConsole(ctx context.Context, number, start int) (string, 
 
 	buildInfo, err := c.repository.Build().FindById(project.Namespace, project.Name, int64(number))
 	if err != nil {
-		_ = c.logger.Log("buildRepository", "FindBuildByBuildId", "err", err.Error())
+		_ = level.Error(c.logger).Log("buildRepository", "FindBuildByBuildId", "err", err.Error())
 		return "", start, ErrBuildGet
 	}
 
@@ -356,7 +356,7 @@ func (c *service) ReceiverBuild(ctx context.Context, data string) (err error) {
 			if e := c.amqpClient.PublishOnQueue(amqpClient.BuildTopic, func() []byte {
 				return []byte(data)
 			}); e != nil {
-				_ = c.logger.Log("amqpClient", "PublishOnQueue", "err", err.Error())
+				_ = level.Error(c.logger).Log("amqpClient", "PublishOnQueue", "err", err.Error())
 			}
 		}
 		time.Sleep(time.Second * 2)
@@ -367,25 +367,25 @@ func (c *service) ReceiverBuild(ctx context.Context, data string) (err error) {
 
 	job, err := c.jenkins.GetJob(receiverData.JenkinJobName)
 	if err != nil {
-		_ = c.logger.Log("jenkins", "GetJob", "err", err.Error())
+		_ = level.Error(c.logger).Log("jenkins", "GetJob", "err", err.Error())
 		return err
 	}
 
 	build, err := c.jenkins.GetBuild(job, int(receiverData.JenkinsBuildId))
 	if err != nil {
-		_ = c.logger.Log("jenkins", "GetBuild", "err", err.Error())
+		_ = level.Error(c.logger).Log("jenkins", "GetBuild", "err", err.Error())
 		return err
 	}
 
 	buildRes, err := c.repository.Build().FindBuildByBuildId(receiverData.Namespace, receiverData.Name, int(receiverData.JenkinsBuildId))
 	if err != nil {
-		_ = c.logger.Log("buildRepository", "FindBuildByBuildId", "err", err.Error())
+		_ = level.Error(c.logger).Log("buildRepository", "FindBuildByBuildId", "err", err.Error())
 		return nil
 	}
 
 	resBody, err := c.jenkins.GetBuildConsoleOutput(build)
 	if err != nil {
-		_ = c.logger.Log("jenkins", "GetBuildConsoleOutput", "err", err.Error())
+		_ = level.Error(c.logger).Log("jenkins", "GetBuildConsoleOutput", "err", err.Error())
 		return err
 	}
 
@@ -398,7 +398,7 @@ func (c *service) ReceiverBuild(ctx context.Context, data string) (err error) {
 	buildRes.Output = null.StringFrom(string(resBody))
 	go func() {
 		if e := c.repository.Build().Update(&buildRes); e != nil {
-			_ = c.logger.Log("buildRepository", "Update", "err", e.Error())
+			_ = level.Error(c.logger).Log("buildRepository", "Update", "err", e.Error())
 		}
 	}()
 
@@ -423,7 +423,7 @@ Build时间: %s
 					repository.BuildEvent,
 					receiverData.Name, receiverData.Namespace,
 					msg); err != nil {
-					_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+					_ = level.Error(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 				}
 			}()
 			return
@@ -433,7 +433,7 @@ Build时间: %s
 		// 调用deployment api 更新image
 		deployment, e := c.k8sClient.Do().AppsV1().Deployments(receiverData.Namespace).Get(receiverData.Name, metav1.GetOptions{})
 		if e != nil {
-			_ = c.logger.Log("Deployments", "Get", "err", e.Error())
+			_ = level.Error(c.logger).Log("Deployments", "Get", "err", e.Error())
 			return nil
 		}
 		dockerHub := c.config.GetString("server", "docker_repo")
@@ -450,13 +450,13 @@ Build时间: %s
 					b, _ := json.Marshal(deployment)
 					projectTpl.FinalTemplate = string(b)
 					if eeeer := c.repository.ProjectTemplate().UpdateTemplate(projectTpl); eeeer != nil {
-						_ = c.logger.Log("build", "status", "projectTemplateRepository", "UpdateTemplate", "eeeer", eeeer.Error())
+						_ = level.Error(c.logger).Log("build", "status", "projectTemplateRepository", "UpdateTemplate", "eeeer", eeeer.Error())
 					}
 				} else {
-					_ = c.logger.Log("projectTemplateRepository", "FindByProjectId", "err", eeer.Error())
+					_ = level.Error(c.logger).Log("projectTemplateRepository", "FindByProjectId", "err", eeer.Error())
 				}
 			} else {
-				_ = c.logger.Log("projectRepository", "FindByNsName", "err", eer.Error())
+				_ = level.Error(c.logger).Log("projectRepository", "FindByNsName", "err", eer.Error())
 			}
 		} else {
 			// todo 给管理员推 更新镜像失败
@@ -487,14 +487,14 @@ func (c *service) CronHistory(ctx context.Context, page, limit int) (map[string]
 
 	total, err := c.repository.Build().Count(cronjob.Namespace, cronjob.Name+"-cronjob")
 	if err != nil {
-		_ = c.logger.Log("buildRepository", "Count", "err", err.Error())
+		_ = level.Error(c.logger).Log("buildRepository", "Count", "err", err.Error())
 		return nil, ErrBuildCount
 	}
 
 	p := paginator.NewPaginator(page, limit, int(total))
 	builds, err := c.repository.Build().FindOffsetLimit(cronjob.Namespace, cronjob.Name+"-cronjob", p.Offset(), limit)
 	if err != nil {
-		_ = c.logger.Log("buildRepository", "FindOffsetLimit", "err", err.Error())
+		_ = level.Error(c.logger).Log("buildRepository", "FindOffsetLimit", "err", err.Error())
 		return nil, ErrBuildList
 	}
 
@@ -509,7 +509,7 @@ func (c *service) CronBuildConsole(ctx context.Context, number, start int) (stri
 
 	buildInfo, err := c.repository.Build().FindById(cronjob.Namespace, cronjob.Name+"-cronjob", int64(number))
 	if err != nil {
-		_ = c.logger.Log("buildRepository", "FindBuildByBuildId", "err", err.Error())
+		_ = level.Error(c.logger).Log("buildRepository", "FindBuildByBuildId", "err", err.Error())
 		return "", start, ErrBuildGet
 	}
 

@@ -12,6 +12,7 @@ import (
 	"errors"
 	"github.com/ghodss/yaml"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
@@ -77,7 +78,7 @@ func (c *service) Sync(_ context.Context) (err error) {
 		StorageClasses().
 		List(metav1.ListOptions{})
 	if err != nil {
-		_ = c.logger.Log("storageclass", "list", "err", err.Error())
+		_ = level.Error(c.logger).Log("storageclass", "list", "err", err.Error())
 		return
 	}
 	for _, class := range storages.Items {
@@ -87,7 +88,7 @@ func (c *service) Sync(_ context.Context) (err error) {
 		if err = c.repository.StorageClass().FirstOrCreate(class.Name, class.Provisioner,
 			repository.PersistentVolumeReclaimPolicy(*class.ReclaimPolicy),
 			repository.VolumeBindingMode(*class.VolumeBindingMode), b); err != nil {
-			_ = c.logger.Log("storage", "FirstOrCreate", "err", err.Error())
+			_ = level.Error(c.logger).Log("storage", "FirstOrCreate", "err", err.Error())
 		}
 	}
 	return
@@ -95,13 +96,13 @@ func (c *service) Sync(_ context.Context) (err error) {
 
 func (c *service) Get(ctx context.Context, name string) (rs interface{}, err error) {
 	if _, err = c.repository.StorageClass().Find(name); err != nil {
-		_ = c.logger.Log("storage", "find", "err", err.Error())
+		_ = level.Error(c.logger).Log("storage", "find", "err", err.Error())
 		return nil, ErrStorageClassNotFound
 	}
 
 	storage, err := c.k8sClient.Do().StorageV1().StorageClasses().Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("StorageClasses", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("StorageClasses", "Get", "err", err.Error())
 		return nil, ErrStorageClassK8sGet
 	}
 
@@ -155,7 +156,7 @@ func (c *service) Post(ctx context.Context, name, provisioner, reclaimRolicy, vo
 
 	tpl, err := c.repository.Template().FindByKindType(repository.StorageClassKind)
 	if err != nil {
-		_ = c.logger.Log("template", "FindByKindType", "err", err.Error())
+		_ = level.Error(c.logger).Log("template", "FindByKindType", "err", err.Error())
 		return ErrStorageClassTemplateNotExists
 	}
 
@@ -166,25 +167,25 @@ func (c *service) Post(ctx context.Context, name, provisioner, reclaimRolicy, vo
 		"volumeBindingMode": volumeBindingMode,
 	})
 	if err != nil {
-		_ = c.logger.Log("encode", "EncodeTemplate", "err", err.Error())
+		_ = level.Error(c.logger).Log("encode", "EncodeTemplate", "err", err.Error())
 		return ErrStorageClassTemplateEncode
 	}
 
 	var storageClass *v1.StorageClass
 	if err = yaml.Unmarshal([]byte(enTpl), &storageClass); err != nil {
-		_ = c.logger.Log("yaml", "Unmarshal", "err", err.Error())
+		_ = level.Error(c.logger).Log("yaml", "Unmarshal", "err", err.Error())
 		return
 	}
 
 	if storageClass, err = c.k8sClient.Do().StorageV1().StorageClasses().Create(storageClass); err != nil {
-		_ = c.logger.Log("StorageClasses", "Create", "err", err.Error())
+		_ = level.Error(c.logger).Log("StorageClasses", "Create", "err", err.Error())
 		return errors.New(ErrStorageClassK8sCreate.Error() + err.Error())
 	}
 
 	defer func() {
 		if err != nil {
 			if e := c.k8sClient.Do().StorageV1().StorageClasses().Delete(name, &metav1.DeleteOptions{}); e != nil {
-				_ = c.logger.Log("StorageClasses", "Delete", "err", e.Error())
+				_ = level.Warn(c.logger).Log("StorageClasses", "Delete", "err", e.Error())
 			}
 		}
 	}()
@@ -198,7 +199,7 @@ func (c *service) Post(ctx context.Context, name, provisioner, reclaimRolicy, vo
 		VolumeBindingMode: repository.VolumeBindingMode(volumeBindingMode).String(),
 		Detail:            string(b),
 	}); err != nil {
-		_ = c.logger.Log("storage", "create", "err", err.Error())
+		_ = level.Error(c.logger).Log("storage", "create", "err", err.Error())
 		return ErrStorageClassK8sCreate
 	}
 
@@ -209,13 +210,13 @@ func (c *service) Delete(ctx context.Context, name string) (err error) {
 	defer func() {
 		if err == nil {
 			if e := c.repository.StorageClass().Delete(name); e != nil {
-				_ = c.logger.Log("storage", "delete", "err", e.Error())
+				_ = level.Warn(c.logger).Log("storage", "delete", "err", e.Error())
 			}
 		}
 	}()
 
 	if err := c.k8sClient.Do().StorageV1().StorageClasses().Delete(name, &metav1.DeleteOptions{}); err != nil {
-		_ = c.logger.Log("StorageClasses", "Delete", "err", err.Error())
+		_ = level.Error(c.logger).Log("StorageClasses", "Delete", "err", err.Error())
 		return err
 	}
 
@@ -225,7 +226,7 @@ func (c *service) Delete(ctx context.Context, name string) (err error) {
 func (c *service) List(ctx context.Context, offset, limit int) (res []*types.StorageClass, err error) {
 	res, err = c.repository.StorageClass().FindOffsetLimit(offset, limit)
 	if err != nil {
-		_ = c.logger.Log("storage", "FindOffsetLimit", "err", err.Error())
+		_ = level.Error(c.logger).Log("storage", "FindOffsetLimit", "err", err.Error())
 		return nil, ErrStorageClassList
 	}
 	return

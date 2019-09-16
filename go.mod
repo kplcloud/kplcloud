@@ -12,6 +12,7 @@ require (
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
 	github.com/elazarl/goproxy v0.0.0-20190703090003-6125c262ffb0 // indirect
 	github.com/elazarl/goproxy/ext v0.0.0-20190703090003-6125c262ffb0 // indirect
+	github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-kit/kit v0.8.0
 	github.com/go-redis/redis v6.15.2+incompatible
@@ -26,16 +27,21 @@ require (
 	github.com/howeyc/gopass v0.0.0-20170109162249-bf9dde6d0d2c // indirect
 	github.com/igm/sockjs-go v2.0.1+incompatible // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
+	github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 // indirect
 	github.com/jinzhu/gorm v1.9.8
+	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/jtblin/go-ldap-client v0.0.0-20170223121919-b73f66626b33
 	github.com/kplcloud/request v0.2.1
 	github.com/kr/pretty v0.1.0 // indirect
+	github.com/lestrrat-go/file-rotatelogs v2.2.0+incompatible
+	github.com/lestrrat-go/strftime v0.0.0-20190725011945-5c849dd2c51d // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.0.0
 	github.com/sirupsen/logrus v1.2.0
 	github.com/smartystreets/goconvey v0.0.0-20190330032615-68dc04aab96a // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
+	github.com/tebeka/strftime v0.1.3 // indirect
 	github.com/xanzy/go-gitlab v0.18.0
 	github.com/yijizhichang/wechat-sdk v0.1.3
 	golang.org/x/crypto v0.0.0-20190325154230-a5d413f7728c

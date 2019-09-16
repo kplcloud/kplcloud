@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/ghodss/yaml"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/amqp"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/jenkins"
@@ -129,7 +130,7 @@ func (c *service) Sync(ctx context.Context) (err error) {
 
 	for _, v := range list.Items {
 		if project, err := c.repository.Project().FindByNsName(ns, v.Name); err == nil && project != nil {
-			_ = c.logger.Log("projectRepository", "FindByNsName", "err", "project is exists.")
+			_ = level.Error(c.logger).Log("projectRepository", "FindByNsName", "err", "project is exists.")
 			continue
 		}
 		project := &types.Project{
@@ -144,12 +145,12 @@ func (c *service) Sync(ctx context.Context) (err error) {
 			Step:         2,
 		}
 		if err = c.repository.Project().Create(project); err != nil {
-			_ = c.logger.Log("projectRepository", "Create", "err", err.Error())
+			_ = level.Error(c.logger).Log("projectRepository", "Create", "err", err.Error())
 			continue
 		}
 		//tpl, err := c.templateRepository.FindByKindType(repository.DeploymentKind)
 		//if err != nil {
-		//	_ = c.logger.Log("templateRepository", "FindByKindType", "err", err.Error())
+		//	_ = level.Error(c.logger).Log("templateRepository", "FindByKindType", "err", err.Error())
 		//	continue
 		//}
 		b, _ := yaml.Marshal(v)
@@ -176,7 +177,7 @@ func (c *service) Sync(ctx context.Context) (err error) {
 		bb, _ := json.Marshal(field)
 		_, err = c.repository.ProjectTemplate().FirstOrCreate(project.ID, repository.Deployment, string(bb), string(b), 1)
 		if err != nil {
-			_ = c.logger.Log("projectTemplateRepository", "FirstOrCreate", "err", err.Error())
+			_ = level.Error(c.logger).Log("projectTemplateRepository", "FirstOrCreate", "err", err.Error())
 			continue
 		}
 
@@ -199,7 +200,7 @@ func (c *service) Sync(ctx context.Context) (err error) {
 				bb, _ := json.Marshal(field)
 				_, err = c.repository.ProjectTemplate().FirstOrCreate(project.ID, repository.Service, string(bb), string(b), 1)
 				if err != nil {
-					_ = c.logger.Log("projectTemplateRepository", "FirstOrCreate", "err", err.Error())
+					_ = level.Error(c.logger).Log("projectTemplateRepository", "FirstOrCreate", "err", err.Error())
 					continue
 				}
 			}
@@ -231,7 +232,7 @@ func (c *service) Sync(ctx context.Context) (err error) {
 				bb, _ := json.Marshal(field)
 				_, err = c.repository.ProjectTemplate().FirstOrCreate(project.ID, repository.Ingress, string(bb), string(b), 1)
 				if err != nil {
-					_ = c.logger.Log("projectTemplateRepository", "FirstOrCreate", "err", err.Error())
+					_ = level.Error(c.logger).Log("projectTemplateRepository", "FirstOrCreate", "err", err.Error())
 					continue
 				}
 			}
@@ -242,7 +243,7 @@ func (c *service) Sync(ctx context.Context) (err error) {
 				b, _ := yaml.Marshal(configmap)
 				_, err = c.repository.ProjectTemplate().FirstOrCreate(project.ID, repository.ConfigMap, "", string(b), 1)
 				if err != nil {
-					_ = c.logger.Log("projectTemplateRepository", "FirstOrCreate", "err", err.Error())
+					_ = level.Error(c.logger).Log("projectTemplateRepository", "FirstOrCreate", "err", err.Error())
 					continue
 				}
 			}
@@ -263,14 +264,14 @@ func (c *service) Update(ctx context.Context, displayName, desc string) (err err
 
 func (c *service) Post(ctx context.Context, ns, name, displayName, desc string) (err error) {
 	if !convert.IsEnNameString(name) {
-		_ = c.logger.Log("Project", "Post", "NameRefused", name)
+		_ = level.Error(c.logger).Log("Project", "Post", "NameRefused", name)
 		return ErrProjectName
 	}
 
 	memberId := ctx.Value(middleware.UserIdContext).(int64)
 	_, notExist := c.repository.Project().FindByNsNameExist(ns, name)
 	if notExist != true {
-		_ = c.logger.Log("Project", "Post", "FindByNsNameExist", notExist)
+		_ = level.Error(c.logger).Log("Project", "Post", "FindByNsNameExist", notExist)
 		return ErrProjectExist
 	}
 
@@ -330,13 +331,13 @@ func (c *service) BasicPost(ctx context.Context, name string, req basicRequest) 
 	//@todo 记得修改模板中的Args，Command为[]string格式
 
 	if err = c.rewriteTemplate(project.ID, repository.DeploymentKind, deployment); err != nil {
-		_ = c.logger.Log("BasicPost", "Rewrite Deployment", "err", err.Error())
+		_ = level.Error(c.logger).Log("BasicPost", "Rewrite Deployment", "err", err.Error())
 		return err
 	}
 
 	// create projectJenkins
 	if err = c.saveJenkins(project, req); err != nil {
-		_ = c.logger.Log("BasicPost", "Save ProjectJenkins", "err", err.Error())
+		_ = level.Error(c.logger).Log("BasicPost", "Save ProjectJenkins", "err", err.Error())
 		return err
 	}
 
@@ -345,7 +346,7 @@ func (c *service) BasicPost(ctx context.Context, name string, req basicRequest) 
 	project.Step = 2
 	project.Language = req.Language
 	if err = c.repository.Project().UpdateProjectById(project); err != nil {
-		_ = c.logger.Log("BasicPost", "Update Project", "err", err.Error())
+		_ = level.Error(c.logger).Log("BasicPost", "Update Project", "err", err.Error())
 		return err
 	}
 
@@ -356,7 +357,7 @@ func (c *service) BasicPost(ctx context.Context, name string, req basicRequest) 
 			repository.ApplyEvent,
 			name, ns,
 			fmt.Sprintf("项目提交审核: %v.%v", name, ns)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Warn(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 	return nil
@@ -379,7 +380,7 @@ func (c *service) List(ctx context.Context, page, limit int, name string, groupI
 		if !isAdmin {
 			res, err := c.repository.Groups().IsInGroup(groupId, memberId)
 			if err != nil {
-				_ = c.logger.Log("groupRepository", "IsInGroup", "err", err.Error())
+				_ = level.Error(c.logger).Log("groupRepository", "IsInGroup", "err", err.Error())
 				return nil, ErrIsInGroupFailed
 			}
 			if !res {
@@ -392,7 +393,7 @@ func (c *service) List(ctx context.Context, page, limit int, name string, groupI
 	}
 
 	if err != nil {
-		_ = c.logger.Log("projectRepository", "GetProjectAndTemplateByNs", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectRepository", "GetProjectAndTemplateByNs", "err", err.Error())
 		return nil, ErrProjectGet
 	}
 
@@ -500,7 +501,7 @@ func (c *service) getPods(ns, name string, index int, podsData *[]map[string]int
 		LabelSelector: fmt.Sprintf("app=%s", name),
 	})
 	if err != nil {
-		_ = c.logger.Log("Pods", "List", "err", err.Error())
+		_ = level.Error(c.logger).Log("Pods", "List", "err", err.Error())
 		return
 	}
 
@@ -551,7 +552,7 @@ func (c *service) ListByNs(ctx context.Context) (res []map[string]interface{}, e
 	ns := ctx.Value(middleware.NamespaceContext).(string)
 	list, err := c.repository.Project().GetProjectByNs(ns)
 	if err != nil {
-		_ = c.logger.Log("Project", "GetProjectByNs", "err", err.Error())
+		_ = level.Error(c.logger).Log("Project", "GetProjectByNs", "err", err.Error())
 		return res, ErrProjectList
 	}
 	var dat map[string]interface{}
@@ -576,14 +577,14 @@ func (c *service) PomFile(ctx context.Context, pomFile string) error {
 
 	projectTemplate, err := c.repository.ProjectTemplate().FindByProjectId(project.ID, repository.Deployment)
 	if err != nil {
-		_ = c.logger.Log("projectTemplateRepository", "FindByProjectId", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectTemplateRepository", "FindByProjectId", "err", err.Error())
 		return ErrProjectTemplateGet
 	}
 
 	projectTemplate.FieldStruct.PomFile = pomFile
 
 	if err = c.repository.ProjectTemplate().UpdateTemplate(projectTemplate); err != nil {
-		_ = c.logger.Log("projectTemplateRepository", "UpdateTemplate", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectTemplateRepository", "UpdateTemplate", "err", err.Error())
 		return ErrProjectTemplateUpdate
 	}
 
@@ -595,14 +596,14 @@ func (c *service) GitAddr(ctx context.Context, gitAddr string) error {
 
 	projectTemplate, err := c.repository.ProjectTemplate().FindByProjectId(project.ID, repository.Deployment)
 	if err != nil {
-		_ = c.logger.Log("projectTemplateRepository", "FindByProjectId", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectTemplateRepository", "FindByProjectId", "err", err.Error())
 		return ErrProjectTemplateGet
 	}
 
 	projectTemplate.FieldStruct.GitAddr = gitAddr
 
 	if err = c.repository.ProjectTemplate().UpdateTemplate(projectTemplate); err != nil {
-		_ = c.logger.Log("projectTemplateRepository", "UpdateTemplate", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectTemplateRepository", "UpdateTemplate", "err", err.Error())
 		return ErrProjectTemplateUpdate
 	}
 
@@ -621,7 +622,7 @@ func (c *service) Detail(ctx context.Context) (res map[string]interface{}, err e
 	}
 
 	// 待审核情况下直接获取项目信息
-	_ = c.logger.Log(project.AuditState)
+	_ = level.Info(c.logger).Log("auditState", project.AuditState)
 	if project.AuditState == int64(repository.AuditSubmit) {
 		if projectTemplate, err := c.repository.ProjectTemplate().FindProjectTemplateByProjectId(project.ID); err == nil {
 			body["templateProject"] = projectTemplate
@@ -639,7 +640,7 @@ func (c *service) Detail(ctx context.Context) (res map[string]interface{}, err e
 
 	tplRes, err := c.repository.ProjectTemplate().FindProjectTemplateByProjectId(project.ID)
 	if err != nil {
-		_ = c.logger.Log("projectTemplateRepository", "FindProjectTemplateByProjectId", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectTemplateRepository", "FindProjectTemplateByProjectId", "err", err.Error())
 		return nil, ErrProjectTemplateGet
 	}
 
@@ -677,7 +678,7 @@ func (c *service) Detail(ctx context.Context) (res map[string]interface{}, err e
 	// 这里好像并没有什么用
 	//eps, err := c.k8sClient.Do().CoreV1().Endpoints(project.Namespace).Get(project.Name, metav1.GetOptions{})
 	//if err != nil {
-	//	_ = c.logger.Log("Endpoints", "Get", "err", err.Error())
+	//	_ = level.Error(c.logger).Log("Endpoints", "Get", "err", err.Error())
 	//}
 	//
 	//fmt.Println(eps)
@@ -687,44 +688,44 @@ func (c *service) Detail(ctx context.Context) (res map[string]interface{}, err e
 
 func (c *service) Delete(ctx context.Context, ns, name, code string) (err error) {
 	if code != name {
-		_ = c.logger.Log("Delete", "Check ProjectName")
+		_ = level.Error(c.logger).Log("Delete", "Check ProjectName")
 		return ErrProjectDeleteName
 	}
 	//step1 delete deployments
 	if err = c.k8sClient.Do().AppsV1().Deployments(ns).Delete(name, nil); err != nil {
-		_ = c.logger.Log("DeleteStep1", "Delete Deployments", "err", err.Error())
+		_ = level.Error(c.logger).Log("DeleteStep1", "Delete Deployments", "err", err.Error())
 	} else {
-		_ = c.logger.Log("DeleteStep1", "Delete Deployments", "Result", "Success")
+		_ = level.Info(c.logger).Log("DeleteStep1", "Delete Deployments", "Result", "Success")
 	}
 
 	//step2 delete service
 	if err = c.k8sClient.Do().CoreV1().Services(ns).Delete(name, nil); err != nil {
-		_ = c.logger.Log("DeleteStep2", "Delete Services", "err", err.Error())
+		_ = level.Error(c.logger).Log("DeleteStep2", "Delete Services", "err", err.Error())
 	} else {
-		_ = c.logger.Log("DeleteStep2", "Delete Services", "Result", "Success")
+		_ = level.Info(c.logger).Log("DeleteStep2", "Delete Services", "Result", "Success")
 	}
 
 	//step3 delete virtualservice
 
 	//step4 delete ingress
 	if err = c.k8sClient.Do().ExtensionsV1beta1().Ingresses(ns).Delete(name, &metav1.DeleteOptions{}); err != nil {
-		_ = c.logger.Log("DeleteStep4", "Delete Ingress", "err", err.Error())
+		_ = level.Error(c.logger).Log("DeleteStep4", "Delete Ingress", "err", err.Error())
 	} else {
-		_ = c.logger.Log("DeleteStep4", "Delete Ingress", "Result", "Success")
+		_ = level.Info(c.logger).Log("DeleteStep4", "Delete Ingress", "Result", "Success")
 	}
 
 	//step5 delete configmap
 	if err = c.k8sClient.Do().CoreV1().ConfigMaps(ns).Delete(name, &metav1.DeleteOptions{}); err != nil {
-		_ = c.logger.Log("DeleteStep5", "Delete ConfigMaps", "err", err.Error())
+		_ = level.Error(c.logger).Log("DeleteStep5", "Delete ConfigMaps", "err", err.Error())
 	} else {
-		_ = c.logger.Log("DeleteStep5", "Delete ConfigMaps", "Result", "Success")
+		_ = level.Info(c.logger).Log("DeleteStep5", "Delete ConfigMaps", "Result", "Success")
 	}
 
 	//step6 delete DB config_map && config_data
 	if err = c.repository.ConfigMap().DeleteByNsName(ns, name); err != nil {
-		_ = c.logger.Log("DeleteStep6", "Delete DB ConfigMap And ConfigData", "err", err.Error())
+		_ = level.Error(c.logger).Log("DeleteStep6", "Delete DB ConfigMap And ConfigData", "err", err.Error())
 	} else {
-		_ = c.logger.Log("DeleteStep6", "Delete DB ConfigMap And ConfigData", "Result", "Success")
+		_ = level.Info(c.logger).Log("DeleteStep6", "Delete DB ConfigMap And ConfigData", "Result", "Success")
 	}
 
 	//step7 delete DB virtual_service
@@ -733,44 +734,44 @@ func (c *service) Delete(ctx context.Context, ns, name, code string) (err error)
 
 	//step10 delete DB builds
 	if err = c.repository.Build().Delete(ns, name); err != nil {
-		_ = c.logger.Log("DeleteStep10", "Delete DB Builds", "err", err.Error())
+		_ = level.Error(c.logger).Log("DeleteStep10", "Delete DB Builds", "err", err.Error())
 	} else {
-		_ = c.logger.Log("DeleteStep10", "Delete DB Builds", "Result", "Success")
+		_ = level.Info(c.logger).Log("DeleteStep10", "Delete DB Builds", "Result", "Success")
 	}
 
 	//step11 delete DB project_jenkins
 	if err = c.repository.ProjectJenkins().Delete(ns, name); err != nil {
-		_ = c.logger.Log("DeleteStep11", "Delete DB ProjectJenkins", "err", err.Error())
+		_ = level.Error(c.logger).Log("DeleteStep11", "Delete DB ProjectJenkins", "err", err.Error())
 	} else {
-		_ = c.logger.Log("DeleteStep11", "Delete DB ProjectJenkins", "Result", "Success")
+		_ = level.Info(c.logger).Log("DeleteStep11", "Delete DB ProjectJenkins", "Result", "Success")
 	}
 
 	//step12 delete DB project_template
 	project, notExist := c.repository.Project().FindByNsNameExist(ns, name)
 	if notExist == false {
 		if err = c.repository.ProjectTemplate().DeleteByProjectId(project.ID); err != nil {
-			_ = c.logger.Log("DeleteStep12", "Delete DB ProjectTemplates", "err", err.Error())
+			_ = level.Error(c.logger).Log("DeleteStep12", "Delete DB ProjectTemplates", "err", err.Error())
 		} else {
-			_ = c.logger.Log("DeleteStep12", "Delete DB ProjectTemplates", "Result", "Success")
+			_ = level.Info(c.logger).Log("DeleteStep12", "Delete DB ProjectTemplates", "Result", "Success")
 		}
 	}
 
 	//step13 delete DB project && groups
 	if err = c.repository.Project().Delete(ns, name); err != nil {
-		_ = c.logger.Log("DeleteStep13", "Delete DB Project", "err", err.Error())
+		_ = level.Error(c.logger).Log("DeleteStep13", "Delete DB Project", "err", err.Error())
 	} else {
-		_ = c.logger.Log("DeleteStep13", "Delete DB Project", "Result", "Success")
+		_ = level.Info(c.logger).Log("DeleteStep13", "Delete DB Project", "Result", "Success")
 	}
 
 	//step14 delete jenkins job
 	if job, err := c.jenkins.GetJob(name + "." + ns); err == nil {
 		if err = c.jenkins.DeleteJob(job); err != nil {
-			_ = c.logger.Log("DeleteStep14", "Delete Jenkins Job", "err", err.Error())
+			_ = level.Error(c.logger).Log("DeleteStep14", "Delete Jenkins Job", "err", err.Error())
 		} else {
-			_ = c.logger.Log("DeleteStep14", "Delete Jenkins Job", "Result", "Success")
+			_ = level.Info(c.logger).Log("DeleteStep14", "Delete Jenkins Job", "Result", "Success")
 		}
 	} else {
-		_ = c.logger.Log("DeleteSetep14", "Delete Jenkins Job", "err", err.Error())
+		_ = level.Error(c.logger).Log("DeleteSetep14", "Delete Jenkins Job", "err", err.Error())
 	}
 
 	go func() {
@@ -778,7 +779,7 @@ func (c *service) Delete(ctx context.Context, ns, name, code string) (err error)
 			repository.DeleteEvent,
 			name, ns,
 			fmt.Sprintf("项目删除: %v.%v", name, ns)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Warn(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 
@@ -795,7 +796,7 @@ func (c *service) parseTemplate(tpl *types.ProjectTemplate, wg *sync.WaitGroup) 
 		var deployment *v1.Deployment
 		_ = yaml.Unmarshal([]byte(tpl.FinalTemplate), &deployment)
 		if deployment, err = c.k8sClient.Do().AppsV1().Deployments(deployment.Namespace).Get(deployment.Name, metav1.GetOptions{}); err != nil {
-			_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+			_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		}
 		return deployment
 	case repository.Service:
@@ -891,12 +892,12 @@ func (c *service) parsePods(pod *corev1.Pod) map[string]interface{} {
 func (c *service) rewriteTemplate(projectId int64, kind repository.TplKind, data map[string]interface{}) error {
 	template, err := c.repository.Template().FindByKindType(kind)
 	if err != nil {
-		_ = c.logger.Log("RewriteTemplate", "FindByKindType", "Kind", kind, "err", err.Error())
+		_ = level.Error(c.logger).Log("RewriteTemplate", "FindByKindType", "Kind", kind, "err", err.Error())
 		return ErrTemplateGet
 	}
 	finalTemplate, err := encode.EncodeTemplate(kind.ToString(), template.Detail, data)
 	if err != nil {
-		_ = c.logger.Log("RewriteTemplate", "EncodeTemplate", "err", err.Error())
+		_ = level.Error(c.logger).Log("RewriteTemplate", "EncodeTemplate", "err", err.Error())
 		return ErrTemplateEncodeGet
 	}
 
@@ -907,7 +908,7 @@ func (c *service) rewriteTemplate(projectId int64, kind repository.TplKind, data
 		FinalTemplate: finalTemplate,
 		Fields:        string(field),
 	}); err != nil {
-		_ = c.logger.Log("RewriteTemplate", "CreateOrUpdate", "err", err.Error())
+		_ = level.Error(c.logger).Log("RewriteTemplate", "CreateOrUpdate", "err", err.Error())
 		return ErrProjectTemplateUpdate
 	}
 	return nil
@@ -941,14 +942,14 @@ func (c *service) saveJenkins(project *types.Project, req basicRequest) error {
 
 	template, err := c.repository.Template().FindByKindType(kind)
 	if err != nil {
-		_ = c.logger.Log("SaveJenkins", "FindTemplate", "err", err.Error())
+		_ = level.Error(c.logger).Log("SaveJenkins", "FindTemplate", "err", err.Error())
 		return ErrTemplateGet
 	}
 
 	// add projectJenkins DB
 	finalTemplate, err := encode.EncodeTemplate(kind.ToString(), template.Detail, dat)
 	if err != nil {
-		_ = c.logger.Log("SaveJenkins", "EncodeTemplate", "err", err.Error())
+		_ = level.Error(c.logger).Log("SaveJenkins", "EncodeTemplate", "err", err.Error())
 		return ErrTemplateEncodeGet
 	}
 	if err = c.repository.ProjectJenkins().CreateOrUpdate(&types.ProjectJenkins{
@@ -959,7 +960,7 @@ func (c *service) saveJenkins(project *types.Project, req basicRequest) error {
 		GitVersion: req.GitVersion,
 		Command:    finalTemplate,
 	}); err != nil {
-		_ = c.logger.Log("SaveJenkins", "Create ProjectJenkins", "err", err.Error())
+		_ = level.Error(c.logger).Log("SaveJenkins", "Create ProjectJenkins", "err", err.Error())
 		return ErrProjectTemplateUpdate
 	}
 
@@ -979,7 +980,7 @@ func (c *service) Workspace(ctx context.Context) (res []map[string]interface{}, 
 	}
 
 	if err != nil {
-		_ = c.logger.Log("Workspace", "get project lists", "err", err.Error())
+		_ = level.Error(c.logger).Log("Workspace", "get project lists", "err", err.Error())
 	}
 
 	for _, v := range projectList {

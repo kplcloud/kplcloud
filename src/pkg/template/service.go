@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	"github.com/kplcloud/kplcloud/src/util/paginator"
@@ -82,7 +83,7 @@ func (c *service) Delete(ctx context.Context, id int) (err error) {
 func (c *service) List(ctx context.Context, name string, page, limit int) (res map[string]interface{}, err error) {
 	count, err := c.repository.Template().Count(name)
 	if err != nil {
-		_ = c.logger.Log("template", "Count", "err", err.Error())
+		_ = level.Error(c.logger).Log("template", "Count", "err", err.Error())
 		return nil, ErrTemplateListCount
 	}
 
@@ -90,7 +91,7 @@ func (c *service) List(ctx context.Context, name string, page, limit int) (res m
 
 	list, err := c.repository.Template().FindOffsetLimit(name, p.Offset(), limit)
 	if err != nil {
-		_ = c.logger.Log("template", "FindOffsetLimit", "err", err.Error())
+		_ = level.Error(c.logger).Log("template", "FindOffsetLimit", "err", err.Error())
 		return nil, ErrTemplateList
 	}
 	res = map[string]interface{}{

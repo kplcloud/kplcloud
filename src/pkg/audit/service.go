@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/ghodss/yaml"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/amqp"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/jenkins"
@@ -66,13 +67,13 @@ func (c *service) AccessAudit(ctx context.Context, ns, name string) error {
 	project := ctx.Value(middleware.ProjectContext).(*types.Project)
 	projectTemplates, err := c.repository.ProjectTemplate().FindProjectTemplateByProjectId(project.ID)
 	if err != nil {
-		_ = c.logger.Log("AccessAudit", "FindProjectTemplateByProjectId", "err", err.Error())
+		_ = level.Error(c.logger).Log("AccessAudit", "FindProjectTemplateByProjectId", "err", err.Error())
 		return err
 	}
 
 	projectJenkins, err := c.repository.ProjectJenkins().Find(project.Namespace, project.Name)
 	if err != nil {
-		_ = c.logger.Log("Audit", "createJob", "projectJenkins", "Find", "err", err.Error())
+		_ = level.Error(c.logger).Log("Audit", "createJob", "projectJenkins", "Find", "err", err.Error())
 		return err
 	}
 
@@ -87,19 +88,19 @@ func (c *service) AccessAudit(ctx context.Context, ns, name string) error {
 	}
 	if project.Language != repository.Java.String() {
 		if err := c.jenkins.CreateJobParams(jenkinsParams); err != nil {
-			_ = c.logger.Log("Aduit", "CreateJob", "err", err.Error())
+			_ = level.Error(c.logger).Log("Aduit", "CreateJob", "err", err.Error())
 			return err
 		}
 	} else {
 		if err := c.jenkins.CreateJavaJobParams(jenkinsParams); err != nil {
-			_ = c.logger.Log("Audit", "CreateJob", "err", err.Error())
+			_ = level.Error(c.logger).Log("Audit", "CreateJob", "err", err.Error())
 			return err
 		}
 	}
 
 	// jenkins build
 	if err := c.buildSvc.Build(ctx, projectJenkins.GitType, projectJenkins.GitVersion, "", "", ""); err != nil {
-		_ = c.logger.Log("Audit", "Build", "err", err.Error())
+		_ = level.Error(c.logger).Log("Audit", "Build", "err", err.Error())
 	}
 
 	for _, v := range projectTemplates {
@@ -108,13 +109,13 @@ func (c *service) AccessAudit(ctx context.Context, ns, name string) error {
 			var configMap *corev1.ConfigMap
 			_ = yaml.Unmarshal([]byte(v.FinalTemplate), &configMap)
 			if _, err := c.k8sClient.Do().CoreV1().ConfigMaps(project.Namespace).Create(configMap); err != nil {
-				_ = c.logger.Log("AccessAudit", "ConfigMap Create", "err", err.Error())
+				_ = level.Error(c.logger).Log("AccessAudit", "ConfigMap Create", "err", err.Error())
 				v.State = 2
 			} else {
 				v.State = 1
 			}
 			if err := c.repository.ProjectTemplate().UpdateState(v); err != nil {
-				_ = c.logger.Log("AccessAudit", "ConfigMap UpdateProjectTemplate", "err", err.Error())
+				_ = level.Error(c.logger).Log("AccessAudit", "ConfigMap UpdateProjectTemplate", "err", err.Error())
 			}
 			continue
 		}
@@ -124,13 +125,13 @@ func (c *service) AccessAudit(ctx context.Context, ns, name string) error {
 			var deployment *v1.Deployment
 			_ = yaml.Unmarshal([]byte(v.FinalTemplate), &deployment)
 			if _, err := c.k8sClient.Do().AppsV1().Deployments(project.Namespace).Create(deployment); err != nil {
-				_ = c.logger.Log("AccessAudit", "Deployment Create", "err", err.Error())
+				_ = level.Error(c.logger).Log("AccessAudit", "Deployment Create", "err", err.Error())
 				v.State = 2
 			} else {
 				v.State = 1
 			}
 			if err := c.repository.ProjectTemplate().UpdateState(v); err != nil {
-				_ = c.logger.Log("AccessAudit", "Deployment UpdateProjectTemplate", "err", err.Error())
+				_ = level.Error(c.logger).Log("AccessAudit", "Deployment UpdateProjectTemplate", "err", err.Error())
 			}
 			continue
 		}
@@ -140,13 +141,13 @@ func (c *service) AccessAudit(ctx context.Context, ns, name string) error {
 			var service *corev1.Service
 			_ = yaml.Unmarshal([]byte(v.FinalTemplate), &service)
 			if _, err := c.k8sClient.Do().CoreV1().Services(project.Namespace).Create(service); err != nil {
-				_ = c.logger.Log("AccessAudit", "Services Create", "err", err.Error())
+				_ = level.Error(c.logger).Log("AccessAudit", "Services Create", "err", err.Error())
 				v.State = 2
 			} else {
 				v.State = 1
 			}
 			if err := c.repository.ProjectTemplate().UpdateState(v); err != nil {
-				_ = c.logger.Log("AccessAudit", "Services UpdateProjectTemplate", "err", err.Error())
+				_ = level.Error(c.logger).Log("AccessAudit", "Services UpdateProjectTemplate", "err", err.Error())
 			}
 			continue
 		}
@@ -155,7 +156,7 @@ func (c *service) AccessAudit(ctx context.Context, ns, name string) error {
 	project.PublishState = int64(repository.PublishPass)
 	project.AuditState = int64(repository.AuditPass)
 	if err := c.repository.Project().UpdateProjectById(project); err != nil {
-		_ = c.logger.Log("AccessAudit", "Update Project State", "err", err.Error())
+		_ = level.Error(c.logger).Log("AccessAudit", "Update Project State", "err", err.Error())
 	}
 
 	go func() {
@@ -163,7 +164,7 @@ func (c *service) AccessAudit(ctx context.Context, ns, name string) error {
 			repository.AuditEvent,
 			name, ns,
 			fmt.Sprintf("项目审核通过: %v.%v", name, ns)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Warn(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 
@@ -182,13 +183,13 @@ func (c *service) AuditStep(ctx context.Context, ns, name, kind string) error {
 		var configMap *corev1.ConfigMap
 		_ = yaml.Unmarshal([]byte(projectTpl.FinalTemplate), &configMap)
 		if _, err := c.k8sClient.Do().CoreV1().ConfigMaps(project.Namespace).Create(configMap); err != nil {
-			_ = c.logger.Log("AuditStep", "ConfigMap Create", "err", err.Error())
+			_ = level.Error(c.logger).Log("AuditStep", "ConfigMap Create", "err", err.Error())
 			projectTpl.State = 2
 		} else {
 			projectTpl.State = 1
 		}
 		if err := c.repository.ProjectTemplate().UpdateState(projectTpl); err != nil {
-			_ = c.logger.Log("AuditStep", "ConfigMap UpdateProjectTemplate", "err", err.Error())
+			_ = level.Error(c.logger).Log("AuditStep", "ConfigMap UpdateProjectTemplate", "err", err.Error())
 			return err
 		}
 	case repository.Deployment.String():
@@ -199,13 +200,13 @@ func (c *service) AuditStep(ctx context.Context, ns, name, kind string) error {
 		var deployment *v1.Deployment
 		_ = yaml.Unmarshal([]byte(projectTpl.FinalTemplate), &deployment)
 		if _, err := c.k8sClient.Do().AppsV1().Deployments(project.Namespace).Create(deployment); err != nil {
-			_ = c.logger.Log("AccessAudit", "Deployment Create", "err", err.Error())
+			_ = level.Error(c.logger).Log("AccessAudit", "Deployment Create", "err", err.Error())
 			projectTpl.State = 2
 		} else {
 			projectTpl.State = 1
 		}
 		if err := c.repository.ProjectTemplate().UpdateState(projectTpl); err != nil {
-			_ = c.logger.Log("AccessAudit", "Deployment UpdateProjectTemplate", "err", err.Error())
+			_ = level.Error(c.logger).Log("AccessAudit", "Deployment UpdateProjectTemplate", "err", err.Error())
 			return err
 		}
 	case repository.Service.String():
@@ -216,17 +217,17 @@ func (c *service) AuditStep(ctx context.Context, ns, name, kind string) error {
 		var service *corev1.Service
 		_ = yaml.Unmarshal([]byte(projectTpl.FinalTemplate), &service)
 		if _, err := c.k8sClient.Do().CoreV1().Services(project.Namespace).Create(service); err != nil {
-			_ = c.logger.Log("AccessAudit", "Services Create", "err", err.Error())
+			_ = level.Error(c.logger).Log("AccessAudit", "Services Create", "err", err.Error())
 			projectTpl.State = 2
 		} else {
 			projectTpl.State = 1
 		}
 		if err := c.repository.ProjectTemplate().UpdateState(projectTpl); err != nil {
-			_ = c.logger.Log("AccessAudit", "Services UpdateProjectTemplate", "err", err.Error())
+			_ = level.Error(c.logger).Log("AccessAudit", "Services UpdateProjectTemplate", "err", err.Error())
 			return err
 		}
 	default:
-		_ = c.logger.Log("AuditStep", "Kind Refused")
+		_ = level.Error(c.logger).Log("AuditStep", "Kind Refused")
 		return ErrAduitStepRefused
 	}
 	return nil
@@ -239,19 +240,19 @@ func (c *service) Refused(ctx context.Context, ns, name string) error {
 	project.AuditState = int64(repository.AuditFail)
 	project.Step = 1
 	if err := c.repository.Project().UpdateProjectById(project); err != nil {
-		_ = c.logger.Log("Refused", "UpdateProject", "err", err.Error())
+		_ = level.Error(c.logger).Log("Refused", "UpdateProject", "err", err.Error())
 		return ErrUpdateProject
 	}
 
 	// 2. update projectTemplate DB
 	if err := c.repository.ProjectTemplate().DeleteByProjectId(project.ID); err != nil {
-		_ = c.logger.Log("Refused", "Delete ProjectTemplate", "err", err.Error())
+		_ = level.Error(c.logger).Log("Refused", "Delete ProjectTemplate", "err", err.Error())
 		return ErrUpdateProjectTemplate
 	}
 
 	// 3. delete projectJenkins
 	if err := c.repository.ProjectJenkins().Delete(project.Namespace, project.Name); err != nil {
-		_ = c.logger.Log("Refused", "Delete ProjectJenkins", "err", err.Error())
+		_ = level.Error(c.logger).Log("Refused", "Delete ProjectJenkins", "err", err.Error())
 	}
 
 	go func() {
@@ -259,7 +260,7 @@ func (c *service) Refused(ctx context.Context, ns, name string) error {
 			repository.AuditEvent,
 			name, ns,
 			fmt.Sprintf("项目审核驳回: %v.%v", name, ns)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Warn(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 	return nil

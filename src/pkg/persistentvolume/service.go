@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -44,9 +45,9 @@ func NewService(logger log.Logger, client kubernetes.K8sClient) Service {
 
 func (c *service) Get(ctx context.Context, name string) (rs interface{}, err error) {
 	pv, err := c.k8sClient.Do().CoreV1().PersistentVolumes().Get(name, metav1.GetOptions{})
-	c.k8sClient.Do().Core()
+	c.k8sClient.Do().CoreV1()
 	if err != nil {
-		_ = c.logger.Log("PersistentVolumes", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("PersistentVolumes", "Get", "err", err.Error())
 		return nil, ErrPersistentVolumeK8sGet
 	}
 

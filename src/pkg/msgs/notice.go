@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	amqpClient "github.com/kplcloud/kplcloud/src/amqp"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/email"
@@ -72,7 +73,7 @@ func (c *serviceNotice) DistributeNotice(ctx context.Context, data string) (err 
 	err = json.Unmarshal([]byte(data), &dat)
 
 	if err != nil {
-		_ = c.logger.Log("DistributeNotice", "json.Unmarshal", "err", err)
+		_ = level.Error(c.logger).Log("DistributeNotice", "json.Unmarshal", "err", err)
 		return
 	}
 
@@ -83,10 +84,10 @@ func (c *serviceNotice) DistributeNotice(ctx context.Context, data string) (err 
 
 	num, err := c.CreateNoticeMember(ml, dat)
 	if err != nil {
-		_ = c.logger.Log("DistributeNotice", "c.CreateNoticeMember", "err", err)
+		_ = level.Error(c.logger).Log("DistributeNotice", "c.CreateNoticeMember", "err", err)
 
 	}
-	_ = c.logger.Log("DistributeNotice", "insert db", "num", num, "member-list", ml)
+	_ = level.Info(c.logger).Log("DistributeNotice", "insert db", "num", num, "member-list", ml)
 
 	return
 }
@@ -154,7 +155,7 @@ func (c *serviceNotice) CreateNoticeMember(ml []types.Member, notice *NoticeMqDa
 		if isWechat == true { //微信  增加一个通知模板
 			err := wechatQueueSvc.PublicWechatQueue(v, notice.Notice, notice.WebHooksReq.Member.Username)
 			if err != nil {
-				_ = c.logger.Log("DistributeNotice.amqpClient", "wechatQueueSvc.PublicWechatQueue", "err", err)
+				_ = level.Error(c.logger).Log("DistributeNotice.amqpClient", "wechatQueueSvc.PublicWechatQueue", "err", err)
 			}
 		}
 		if isEmail == true { //邮箱
@@ -181,7 +182,7 @@ func (c *serviceNotice) CreateNoticeMember(ml []types.Member, notice *NoticeMqDa
 	go func() {
 		err = c.SendNoticeEmail(toUser, toCc, *notice)
 		if err != nil {
-			_ = c.logger.Log("DistributeNotice", "c.SendNoticeEmail", "err", err.Error())
+			_ = level.Error(c.logger).Log("DistributeNotice", "c.SendNoticeEmail", "err", err.Error())
 		}
 	}()
 
@@ -190,7 +191,7 @@ func (c *serviceNotice) CreateNoticeMember(ml []types.Member, notice *NoticeMqDa
 		n, err = c.store.NoticeMember().InsertMulti(data)
 		return
 	} else {
-		_ = c.logger.Log("DistributeNotice", "no member subscribe", "action", notice.Notice.Action)
+		_ = level.Error(c.logger).Log("DistributeNotice", "no member subscribe", "action", notice.Notice.Action)
 		return 0, nil
 	}
 }
@@ -207,18 +208,18 @@ func (c *serviceNotice) SendNoticeEmail(toUser, toCc []string, notice NoticeMqDa
 	tmpl := template.New("notice")
 	_, err = tmpl.Parse(tpl)
 	if err != nil {
-		_ = c.logger.Log("SendNoticeEmail", "tmpl.Parse", "err", err.Error())
+		_ = level.Error(c.logger).Log("SendNoticeEmail", "tmpl.Parse", "err", err.Error())
 		return
 	}
 	var body bytes.Buffer
 	err = tmpl.Execute(&body, notice)
 
 	if err != nil {
-		_ = c.logger.Log("SendNoticeEmail", "tmpl.Execute", "err", err.Error())
+		_ = level.Error(c.logger).Log("SendNoticeEmail", "tmpl.Execute", "err", err.Error())
 		return
 	}
 
-	_ = c.logger.Log("sendNoticeEmail-toUser:", toUser, "toCc:", toCc, "HOSTNAME:", notice.FromOs, "string:", body.String())
+	_ = level.Info(c.logger).Log("sendNoticeEmail-toUser:", toUser, "toCc:", toCc, "HOSTNAME:", notice.FromOs, "string:", body.String())
 
 	c.mailClient.SetTitle(notice.Notice.Title)
 	c.mailClient.SetContent(body.String())
@@ -228,7 +229,7 @@ func (c *serviceNotice) SendNoticeEmail(toUser, toCc []string, notice NoticeMqDa
 	err = c.mailClient.Send()
 
 	if err != nil {
-		_ = c.logger.Log("DistributeNotice", "SendNoticeEmail", "err", err.Error())
+		_ = level.Error(c.logger).Log("DistributeNotice", "SendNoticeEmail", "err", err.Error())
 	}
 
 	return

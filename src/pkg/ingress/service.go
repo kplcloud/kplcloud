@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/ghodss/yaml"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/middleware"
@@ -84,13 +85,13 @@ func (c *service) Generate(ctx context.Context) (err error) {
 
 	ingTpl, err := c.repository.Template().FindByKindType(repository.IngressKind)
 	if err != nil {
-		_ = c.logger.Log("templateRepository", "FindByKindType", "err", err.Error())
+		_ = level.Error(c.logger).Log("templateRepository", "FindByKindType", "err", err.Error())
 		return ErrIngressGetTemplate
 	}
 
 	projectTpl, err := c.repository.ProjectTemplate().FindByProjectId(project.ID, repository.Deployment)
 	if err != nil {
-		_ = c.logger.Log("projectTemplateRepository", "FindByProjectId", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectTemplateRepository", "FindByProjectId", "err", err.Error())
 		return ErrIngressGetProjectTemplate
 	}
 
@@ -111,19 +112,19 @@ func (c *service) Generate(ctx context.Context) (err error) {
 	}
 	tpl, err := encode.EncodeTemplate(repository.IngressKind.ToString(), ingTpl.Detail, tplData)
 	if err != nil {
-		_ = c.logger.Log("encode", "EncodeTemplate", "err", err.Error())
+		_ = level.Error(c.logger).Log("encode", "EncodeTemplate", "err", err.Error())
 		return ErrIngressCreateTemplate
 	}
 
 	var ingress *v1beta1.Ingress
 
 	if err = yaml.Unmarshal([]byte(tpl), &ingress); err != nil {
-		_ = c.logger.Log("yaml", "Unmarshal", "err", err.Error())
+		_ = level.Error(c.logger).Log("yaml", "Unmarshal", "err", err.Error())
 		return ErrIngressCreateTemplate
 	}
 
 	if ingress, err = c.k8sClient.Do().ExtensionsV1beta1().Ingresses(project.Namespace).Create(ingress); err != nil {
-		_ = c.logger.Log("Ingresses", "Create", "err", err.Error())
+		_ = level.Error(c.logger).Log("Ingresses", "Create", "err", err.Error())
 		return ErrIngressK8sCreate
 	}
 
@@ -138,7 +139,7 @@ func (c *service) Generate(ctx context.Context) (err error) {
 			Kind:          repository.Ingress.String(),
 			State:         1,
 		}); err != nil {
-			_ = c.logger.Log("projectTemplateRepository", "Create", "err", err.Error())
+			_ = level.Warn(c.logger).Log("projectTemplateRepository", "Create", "err", err.Error())
 		}
 
 		if vsTpl, err := c.repository.Template().FindByKindType(repository.VirtualServiceKind); err == nil {
@@ -160,7 +161,7 @@ func (c *service) Generate(ctx context.Context) (err error) {
 				},
 			}
 			if _, err := encode.EncodeTemplate(repository.VirtualServiceKind.ToString(), vsTpl.Detail, vsData); err != nil {
-				_ = c.logger.Log("encode", "EncodeTemplate", "err", err.Error())
+				_ = level.Error(c.logger).Log("encode", "EncodeTemplate", "err", err.Error())
 			}
 		}
 
@@ -173,7 +174,7 @@ func (c *service) Generate(ctx context.Context) (err error) {
 			repository.IngressGateway,
 			project.Name, project.Namespace,
 			fmt.Sprintf("初始化 Ingress \n 应用: %v.%v", project.Name, project.Namespace)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Warn(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 
@@ -190,7 +191,7 @@ func (c *service) domain(ns, name string) string {
 func (c *service) Get(ctx context.Context, ns string, name string) (res map[string]interface{}, err error) {
 	ing, err := c.k8sClient.Do().ExtensionsV1beta1().Ingresses(ns).Get(name, v1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Ingress", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Ingress", "Get", "err", err.Error())
 		return nil, ErrIngressGet
 	}
 	ing.Kind = "Ingress"
@@ -214,13 +215,13 @@ func (c *service) Get(ctx context.Context, ns string, name string) (res map[stri
 func (c *service) List(ctx context.Context, ns string, page, limit int) (res map[string]interface{}, err error) {
 	count, err := c.repository.ProjectTemplate().Count(ns, repository.Ingress)
 	if err != nil {
-		_ = c.logger.Log("Ingress", "List Count", "err", err.Error())
+		_ = level.Error(c.logger).Log("Ingress", "List Count", "err", err.Error())
 		return nil, ErrIngressGetProjectTemplate
 	}
 	p := paginator.NewPaginator(page, limit, count)
 	list, err := c.repository.ProjectTemplate().FindOffsetLimit(ns, repository.Ingress, p.Offset(), limit)
 	if err != nil {
-		_ = c.logger.Log("Ingress", "List ProjectTemplate", "err", err.Error())
+		_ = level.Error(c.logger).Log("Ingress", "List ProjectTemplate", "err", err.Error())
 		return nil, ErrIngressGetProjectTemplate
 	}
 	var listData []map[string]interface{}
@@ -253,7 +254,7 @@ func (c *service) Post(ctx context.Context, req postRequest) error {
 	//get template and encode it
 	serviceTemp, err := c.repository.Template().FindByKindType(repository.IngressKind)
 	if err != nil {
-		_ = c.logger.Log("Ingress", "Post", "err", err.Error())
+		_ = level.Error(c.logger).Log("Ingress", "Post", "err", err.Error())
 		return ErrIngressGetTemplate
 	}
 	var a map[string]interface{}
@@ -261,38 +262,38 @@ func (c *service) Post(ctx context.Context, req postRequest) error {
 	_ = json.Unmarshal(b, &a)
 	finalTemplate, err := encode.EncodeTemplate(repository.IngressKind.ToString(), serviceTemp.Detail, a)
 	if err != nil {
-		_ = c.logger.Log("Ingress", "Post EncodeTemplate", "err", err.Error())
+		_ = level.Error(c.logger).Log("Ingress", "Post EncodeTemplate", "err", err.Error())
 		return ErrIngressCreateTemplate
 	}
 
 	var ingress *v1beta1.Ingress
 	if err = yaml.Unmarshal([]byte(finalTemplate), &ingress); err != nil {
-		_ = c.logger.Log("Ingress", "Post", "Yaml", "Unmarshal", "err", err.Error())
+		_ = level.Error(c.logger).Log("Ingress", "Post", "Yaml", "Unmarshal", "err", err.Error())
 		return ErrIngressCreateTemplate
 	}
 	if _, err = c.k8sClient.Do().ExtensionsV1beta1().Ingresses(req.Namespace).Get(req.Name, v1.GetOptions{}); err == nil {
 		ingress, err = c.k8sClient.Do().ExtensionsV1beta1().Ingresses(req.Namespace).Update(ingress)
-		_ = c.logger.Log("Ingress", "Post", "Ingress", "Update")
+		_ = level.Error(c.logger).Log("Ingress", "Post", "Ingress", "Update")
 	} else {
 		ingress, err = c.k8sClient.Do().ExtensionsV1beta1().Ingresses(req.Namespace).Create(ingress)
-		_ = c.logger.Log("Ingress", "Post", "Ingress", "Create")
+		_ = level.Error(c.logger).Log("Ingress", "Post", "Ingress", "Create")
 	}
 	if err != nil {
-		_ = c.logger.Log("Ingress", "Post", "err", err.Error())
+		_ = level.Error(c.logger).Log("Ingress", "Post", "err", err.Error())
 		return err
 	}
 
 	// update projectTemplate database
 	projectTemplate, err := c.repository.ProjectTemplate().FirstOrCreate(project.ID, repository.Ingress, string(b), finalTemplate, 1)
 	if err != nil {
-		_ = c.logger.Log("projectTemplateRepository", "FirstOrCreate", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectTemplateRepository", "FirstOrCreate", "err", err.Error())
 		return ErrIngressGetProjectTemplate
 	}
 
 	projectTemplate.FinalTemplate = finalTemplate
 	projectTemplate.Fields = string(b)
 	if err = c.repository.ProjectTemplate().UpdateTemplate(projectTemplate); err != nil {
-		_ = c.logger.Log("projectTemplateRepository", "UpdateTemplate", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectTemplateRepository", "UpdateTemplate", "err", err.Error())
 		return ErrIngressUpdateProjectTemplate
 	}
 
@@ -301,7 +302,7 @@ func (c *service) Post(ctx context.Context, req postRequest) error {
 			repository.IngressGateway,
 			project.Name, project.Namespace,
 			fmt.Sprintf("创建或更新 Ingress \n 应用: %v.%v", project.Name, project.Namespace)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Warn(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 
@@ -314,7 +315,7 @@ func (c *service) Post(ctx context.Context, req postRequest) error {
 func (c *service) GetNoIngressProject(ctx context.Context, ns string) (res []map[string]interface{}, err error) {
 	projects, err := c.repository.Project().GetProjectByNs(ns)
 	if err != nil {
-		_ = c.logger.Log("Ingress", "GetNoIngressProject", "err", err.Error())
+		_ = level.Error(c.logger).Log("Ingress", "GetNoIngressProject", "err", err.Error())
 		return nil, ErrIngressGetProject
 	}
 
@@ -343,7 +344,7 @@ func (c *service) Sync(ctx context.Context, ns string) error {
 		name := strings.Replace(v.Name, "-ingress", "", -1)
 		project, err := c.repository.Project().FindByNsName(v.Namespace, name)
 		if err != nil {
-			_ = c.logger.Log("Ingress", "Sync", "Name", name, "err", err.Error())
+			_ = level.Warn(c.logger).Log("Ingress", "Sync", "Name", name, "err", err.Error())
 			continue
 		}
 		var rule []types.RuleStruct
@@ -368,10 +369,10 @@ func (c *service) Sync(ctx context.Context, ns string) error {
 
 		_, err = c.repository.ProjectTemplate().FirstOrCreate(project.ID, repository.Ingress, string(fields), string(ingressYml), 1)
 		if err != nil {
-			_ = c.logger.Log("Ingress", "Sync", "ProjectTemplate", "FirstOrCreate", "err", err.Error())
+			_ = level.Warn(c.logger).Log("Ingress", "Sync", "ProjectTemplate", "FirstOrCreate", "err", err.Error())
 		}
 
-		_ = c.logger.Log("Ingress", "Sync", "Name", name)
+		_ = level.Info(c.logger).Log("Ingress", "Sync", "Name", name)
 	}
 	return nil
 }

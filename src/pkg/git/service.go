@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/git-repo"
 	"github.com/kplcloud/kplcloud/src/middleware"
@@ -57,7 +58,7 @@ func (c *service) GetDockerfile(ctx context.Context, fileName string) (res strin
 
 	projectTemplate, err := c.repository.ProjectTemplate().FindByProjectId(project.ID, repository.Deployment)
 	if err != nil {
-		_ = c.logger.Log("projectTemplateRepository", "FindByProjectId", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectTemplateRepository", "FindByProjectId", "err", err.Error())
 		return "", ErrProjectTemplateGet
 	}
 
@@ -74,7 +75,7 @@ func (c *service) Tags(ctx context.Context) (res []string, err error) {
 
 	projectTemplate, err := c.repository.ProjectTemplate().FindByProjectId(project.ID, repository.Deployment)
 	if err != nil {
-		_ = c.logger.Log("projectTemplateRepository", "FindByProjectId", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectTemplateRepository", "FindByProjectId", "err", err.Error())
 		return nil, ErrProjectTemplateGet
 	}
 
@@ -82,7 +83,7 @@ func (c *service) Tags(ctx context.Context) (res []string, err error) {
 
 	tags, err := c.gitClient.ListTags(ctx, owner, repo, nil)
 	if err != nil {
-		_ = c.logger.Log("gitClient", "ListTags", "err", err.Error())
+		_ = level.Error(c.logger).Log("gitClient", "ListTags", "err", err.Error())
 		return nil, errors.New(ErrProjectTagsGet.Error() + ":" + err.Error())
 	}
 
@@ -98,7 +99,7 @@ func (c *service) Branches(ctx context.Context) (res []string, err error) {
 
 	projectTemplate, err := c.repository.ProjectTemplate().FindByProjectId(project.ID, repository.Deployment)
 	if err != nil {
-		_ = c.logger.Log("projectTemplateRepository", "FindByProjectId", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectTemplateRepository", "FindByProjectId", "err", err.Error())
 		return nil, ErrProjectTemplateGet
 	}
 
@@ -106,7 +107,7 @@ func (c *service) Branches(ctx context.Context) (res []string, err error) {
 
 	branches, err := c.gitClient.ListBranch(ctx, owner, repo, nil)
 	if err != nil {
-		_ = c.logger.Log("gitClient", "ListBranch", "err", err.Error())
+		_ = level.Error(c.logger).Log("gitClient", "ListBranch", "err", err.Error())
 		return nil, errors.New(ErrProjectTagsBranches.Error() + ":" + err.Error())
 	}
 
@@ -118,11 +119,11 @@ func (c *service) Branches(ctx context.Context) (res []string, err error) {
 }
 
 func (c *service) TagsByGitPath(ctx context.Context, gitPath string) (res []string, err error) {
-	_ = c.logger.Log("gitpaht", gitPath)
+	_ = level.Debug(c.logger).Log("gitpaht", gitPath)
 	owner, repo := parseGitAddr(gitPath)
 	tags, err := c.gitClient.ListTags(ctx, owner, repo, nil)
 	if err != nil {
-		_ = c.logger.Log("gitClient", "ListTags", "err", err.Error())
+		_ = level.Error(c.logger).Log("gitClient", "ListTags", "err", err.Error())
 		return nil, errors.New(ErrProjectTagsGet.Error() + ":" + err.Error())
 	}
 
@@ -137,7 +138,7 @@ func (c *service) BranchesByGitPath(ctx context.Context, gitPath string) (res []
 	owner, repo := parseGitAddr(gitPath)
 	branches, err := c.gitClient.ListBranch(ctx, owner, repo, nil)
 	if err != nil {
-		_ = c.logger.Log("gitClient", "ListBranch", "err", err.Error())
+		_ = level.Error(c.logger).Log("gitClient", "ListBranch", "err", err.Error())
 		return nil, errors.New(ErrProjectTagsBranches.Error() + ":" + err.Error())
 	}
 	for _, branch := range branches {

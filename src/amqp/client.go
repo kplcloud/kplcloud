@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"context"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	kitamqp "github.com/go-kit/kit/transport/amqp"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/streadway/amqp"
@@ -117,7 +118,7 @@ func (c *amqpClient) PublishOnQueue(queueName QueueName, data func() []byte) (er
 func (c *amqpClient) SubscribeToQueue(ctx context.Context, logger log.Logger, call func(ctx context.Context, data string) error) {
 	ch, err := c.conn.Channel()
 	if err != nil {
-		_ = logger.Log("conn", "Channel", "err", err.Error())
+		_ = level.Error(logger).Log("conn", "Channel", "err", err.Error())
 		return
 	}
 
@@ -149,18 +150,18 @@ func (c *amqpClient) SubscribeToQueue(ctx context.Context, logger log.Logger, ca
 
 	q, err := ch.QueueDeclare(topic, false, false, false, false, nil)
 	if err != nil {
-		_ = logger.Log("ch", "QueueDeclare", "err", err.Error())
+		_ = level.Error(logger).Log("ch", "QueueDeclare", "err", err.Error())
 		return
 	}
 
 	deliveries, err := ch.Consume(q.Name, topic, true, false, false, false, nil)
 	if err != nil {
-		_ = logger.Log("ch", "Consume", "err", err.Error())
+		_ = level.Error(logger).Log("ch", "Consume", "err", err.Error())
 		return
 	}
 
 	if err = ch.QueueBind(topic, c.routingKey, c.exchange, false, nil); err != nil {
-		_ = logger.Log("ch", "QueueBind", "err", err.Error())
+		_ = level.Error(logger).Log("ch", "QueueBind", "err", err.Error())
 		return
 	}
 
@@ -173,17 +174,17 @@ func (c *amqpClient) SubscribeToQueue(ctx context.Context, logger log.Logger, ca
 		break
 
 	case <-time.After(100 * time.Millisecond):
-		_ = logger.Log("time", "after", "err", "Timed out waiting for publishing")
+		_ = level.Error(logger).Log("time", "after", "err", "Timed out waiting for publishing")
 	}
 
-	_ = logger.Log("msgBody", string(msg.Body))
+	_ = level.Debug(logger).Log("msgBody", string(msg.Body))
 
 	forever := make(chan bool)
 	go func() {
 		for d := range deliveries {
 			s := BytesToString(&(d.Body))
 			if err = call(context.Background(), *s); err != nil {
-				_ = logger.Log("svc", "ReceiverBuild", "err", err.Error())
+				_ = level.Error(logger).Log("svc", "ReceiverBuild", "err", err.Error())
 			}
 		}
 	}()

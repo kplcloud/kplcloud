@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	amqpClient "github.com/kplcloud/kplcloud/src/amqp"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/event"
@@ -93,7 +94,7 @@ func (c *serviceWechatQueue) DistributeMsgWechat(ctx context.Context, data strin
 	err = json.Unmarshal([]byte(data), &wxMsg)
 
 	if err != nil {
-		_ = c.logger.Log("DistributeMsgWechat", "json.Unmarshal", "data", wxMsg)
+		_ = level.Error(c.logger).Log("DistributeMsgWechat", "json.Unmarshal", "data", wxMsg)
 		return
 	}
 
@@ -128,14 +129,14 @@ func (c *serviceWechatQueue) PublicWechatQueue(m types.Member, notice types.Noti
 	data.ToUser = m.Openid
 
 	b, err := json.Marshal(data)
-	_ = c.logger.Log("amqpClient", "PublishOnQueue", "data-json", b)
+	_ = level.Debug(c.logger).Log("amqpClient", "PublishOnQueue", "data-json", b)
 
 	defer func() {
 
 		if err := c.amqpClient.PublishOnQueue(amqpClient.MsgWechatTopic, func() []byte {
 			return []byte(b)
 		}); err != nil {
-			_ = c.logger.Log("amqpClient", "PublishOnQueue", "err", err.Error())
+			_ = level.Error(c.logger).Log("amqpClient", "PublishOnQueue", "err", err.Error())
 		}
 		time.Sleep(time.Second * 2)
 	}()
@@ -186,7 +187,7 @@ func (c *serviceWechatQueue) PublicNoticeQueue(req *event.WebhooksRequest) (err 
 		if err := c.amqpClient.PublishOnQueue(amqpClient.NoticeTopic, func() []byte {
 			return []byte(b)
 		}); err != nil {
-			_ = c.logger.Log("amqpClient", "PublicNoticeQueue", "err", err.Error())
+			_ = level.Error(c.logger).Log("amqpClient", "PublicNoticeQueue", "err", err.Error())
 		}
 	}()
 
@@ -195,13 +196,13 @@ func (c *serviceWechatQueue) PublicNoticeQueue(req *event.WebhooksRequest) (err 
 
 func (c *serviceWechatQueue) PublicProclaimQueue(proclaim *types.Notices) (err error) {
 	b, err := json.Marshal(proclaim)
-	_ = c.logger.Log("amqpClient", "PublicProclaimQueue", "data-json", b)
+	_ = level.Debug(c.logger).Log("amqpClient", "PublicProclaimQueue", "data-json", b)
 
 	defer func() {
 		if err := c.amqpClient.PublishOnQueue(amqpClient.ProclaimTopic, func() []byte {
 			return []byte(b)
 		}); err != nil {
-			_ = c.logger.Log("amqpClient", "PublicProclaimQueue", "err", err.Error())
+			_ = level.Error(c.logger).Log("amqpClient", "PublicProclaimQueue", "err", err.Error())
 		}
 	}()
 

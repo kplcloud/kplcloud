@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	amqpClient "github.com/kplcloud/kplcloud/src/amqp"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/jenkins"
@@ -118,7 +119,7 @@ func (c *service) AddCronJob(ctx context.Context, acj addCronJob) (err error) {
 	// 判断是否重名
 	_, isExists := c.repository.CronJob().GetCronJobByNameAndNs(acj.Name, acj.Namespace)
 	if !isExists {
-		_ = c.logger.Log("cronjob", "AddCronJob cronjob name s exists  ")
+		_ = level.Error(c.logger).Log("cronjob", "AddCronJob cronjob name s exists  ")
 		return ErrCronJobNameExists
 	}
 
@@ -140,23 +141,23 @@ func (c *service) AddCronJob(ctx context.Context, acj addCronJob) (err error) {
 	})
 
 	if err != nil {
-		_ = c.logger.Log("cronjob", "AddCronJob create cronjob failed ", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronjob", "AddCronJob create cronjob failed ", "err", err.Error())
 		return ErrCreateCronJobFailed
 	}
 
 	defer func(jobId int64) {
 		// 如果后面的流程失败了需要删除当前这个job 所以 id 还是需要的
 		if err != nil {
-			_ = c.logger.Log("cronjob", "AddCronJob failed ", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronjob", "AddCronJob failed ", "err", err.Error())
 			if err = c.repository.CronJob().Delete(jobId); err != nil {
-				_ = c.logger.Log("cronjob", "AddCronJob delete cronjob failed ", "err", err.Error())
+				_ = level.Error(c.logger).Log("cronjob", "AddCronJob delete cronjob failed ", "err", err.Error())
 			}
 		}
 	}(cronJobCreate.ID)
 
 	template, err := c.repository.Template().GetTemplateByKind("CronJob")
 	if err != nil {
-		_ = c.logger.Log("cronjob", "AddCronJob get template by kind failed ", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronjob", "AddCronJob get template by kind failed ", "err", err.Error())
 		return ErrGetTempByKindFailed
 	}
 
@@ -176,7 +177,7 @@ func (c *service) AddCronJob(ctx context.Context, acj addCronJob) (err error) {
 	}
 	exchangeTemplate, err := encode.EncodeTemplate("cronjob", template.Detail, param)
 	if err != nil {
-		_ = c.logger.Log("cronjob", "AddCronJob create cronjob yaml template failed ", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronjob", "AddCronJob create cronjob yaml template failed ", "err", err.Error())
 		return ErrCreateCronYamlFailed
 	}
 
@@ -201,7 +202,7 @@ func (c *service) AddCronJob(ctx context.Context, acj addCronJob) (err error) {
 
 		tmp, err := c.repository.Template().GetTemplateByKind("JenkinsCommand")
 		if err != nil {
-			_ = c.logger.Log("cronjob", "AddCronJob get template by kind failed ", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronjob", "AddCronJob get template by kind failed ", "err", err.Error())
 			return ErrGetTempByKindFailed
 		}
 
@@ -213,14 +214,14 @@ func (c *service) AddCronJob(ctx context.Context, acj addCronJob) (err error) {
 		})
 
 		if err != nil {
-			_ = c.logger.Log("cronjob", "AddCronJob encode template failed ", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronjob", "AddCronJob encode template failed ", "err", err.Error())
 			return err
 		}
 
 		jenkinsParam.Command = command
 
 		if err := c.jenkins.CreateJobParams(jenkinsParam); err != nil {
-			_ = c.logger.Log("cronjob", "AddCronJob create project failed ", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronjob", "AddCronJob create project failed ", "err", err.Error())
 			return ErrJenkinsCreateJob
 		}
 
@@ -235,7 +236,7 @@ func (c *service) AddCronJob(ctx context.Context, acj addCronJob) (err error) {
 		name := acj.Name + "-cronjob"
 		name += "." + acj.Namespace
 		if err = c.jenkins.Build(name, params); err != nil {
-			_ = c.logger.Log("cronjob", "AddCronJob jenkins build failed ", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronjob", "AddCronJob jenkins build failed ", "err", err.Error())
 			return ErrJenkinsBuildFailed
 		}
 
@@ -262,24 +263,24 @@ func (c *service) AddCronJob(ctx context.Context, acj addCronJob) (err error) {
 				})
 				return b
 			}); err != nil {
-				_ = c.logger.Log("cronjob", "AddCronJob PublishOnQueue", "err", err.Error())
+				_ = level.Error(c.logger).Log("cronjob", "AddCronJob PublishOnQueue", "err", err.Error())
 				//return ErrBuildQueuePublish
 			}
 		} else {
-			_ = c.logger.Log("cronjob", "AddCronJob create build", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronjob", "AddCronJob create build", "err", err.Error())
 		}
 
 	}
 
 	cronjob, err := convertToV1Beta(exchangeTemplate)
 	if err != nil {
-		_ = c.logger.Log("cronjob", "AddCronJob create build", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronjob", "AddCronJob create build", "err", err.Error())
 		return
 	}
 
 	cron, err := c.k8sClient.Do().BatchV1beta1().CronJobs(acj.Namespace).Create(cronjob)
 	if err != nil {
-		_ = c.logger.Log("cronjob", "AddCronJob k8s create failed", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronjob", "AddCronJob k8s create failed", "err", err.Error())
 		return
 	}
 	cron.Kind = kind
@@ -302,7 +303,7 @@ func (c *service) CronJobQueuePop(ctx context.Context, data string) (err error) 
 			if e := c.amqpClient.PublishOnQueue(amqpClient.CronJobTopic, func() []byte {
 				return []byte(data)
 			}); e != nil {
-				_ = c.logger.Log("amqpClient", "PublishOnQueue", "err", err.Error())
+				_ = level.Error(c.logger).Log("amqpClient", "PublishOnQueue", "err", err.Error())
 			}
 		}
 		time.Sleep(time.Second * 2)
@@ -312,7 +313,7 @@ func (c *service) CronJobQueuePop(ctx context.Context, data string) (err error) 
 	if err != nil {
 		var dat *JenkinsCronjobData
 		if er := json.Unmarshal([]byte(data), &dat); er != nil {
-			_ = c.logger.Log("cronjob", "CronJobQueuePop", "err", er.Error())
+			_ = level.Error(c.logger).Log("cronjob", "CronJobQueuePop", "err", er.Error())
 		}
 		time.Sleep(4 * time.Second)
 	}
@@ -328,14 +329,14 @@ func (c *service) handleBuildCronJob(ctx context.Context, data string) (err erro
 
 	buildsInfo, err := c.repository.Build().FindById(dat.Namespace, dat.Name, dat.BuildId)
 	if err != nil {
-		_ = c.logger.Log("cronjob", "CronJobQueuePop", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronjob", "CronJobQueuePop", "err", err.Error())
 		return err
 	}
 
 	var build jenkins.Build
 	job, err := c.jenkins.GetJob(dat.Name + "." + dat.Namespace)
 	if err != nil {
-		_ = c.logger.Log("cronjob", "CronJobQueuePop", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronjob", "CronJobQueuePop", "err", err.Error())
 		return err
 	}
 	if buildsInfo.BuildID.Int64 > 0 {
@@ -345,13 +346,13 @@ func (c *service) handleBuildCronJob(ctx context.Context, data string) (err erro
 	}
 
 	if err != nil {
-		_ = c.logger.Log("cronjob", "CronJobQueuePop", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronjob", "CronJobQueuePop", "err", err.Error())
 		return err
 	}
 
 	resBody, err := c.jenkins.GetBuildConsoleOutput(build)
 	if err != nil {
-		_ = c.logger.Log("jenkins", "GetBuildConsoleOutput", "err", err.Error())
+		_ = level.Error(c.logger).Log("jenkins", "GetBuildConsoleOutput", "err", err.Error())
 		return err
 	}
 
@@ -366,7 +367,7 @@ func (c *service) handleBuildCronJob(ctx context.Context, data string) (err erro
 
 	go func(buildsInfo *types.Build) {
 		if err = c.repository.Build().Update(buildsInfo); err != nil {
-			_ = c.logger.Log("cronjob", "CronJobQueuePop", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronjob", "CronJobQueuePop", "err", err.Error())
 		}
 	}(&buildsInfo)
 
@@ -381,7 +382,7 @@ func (c *service) handleBuildCronJob(ctx context.Context, data string) (err erro
 func (c *service) getOnePull(name string, ns string) (res map[string]interface{}, pods []map[string]interface{}, events []map[string]interface{}, cronjobYaml *v1beta1.CronJob, err error) {
 	cronjobInfo, err := c.k8sClient.Do().BatchV1beta1().CronJobs(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("cronjob", "getOnePull get cronjob info failed ", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronjob", "getOnePull get cronjob info failed ", "err", err.Error())
 		return nil, nil, nil, &v1beta1.CronJob{}, ErrCronJobInfoFailed
 	}
 	cronjobInfo.Kind = kind
@@ -406,13 +407,13 @@ func (c *service) getOnePull(name string, ns string) (res map[string]interface{}
 		ops.LabelSelector = "job-name=" + p.Name
 		list, err := c.k8sClient.Do().CoreV1().Pods(ns).List(*ops)
 		if err != nil {
-			_ = c.logger.Log("cronjob", "getOnePull get pods list failed ", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronjob", "getOnePull get pods list failed ", "err", err.Error())
 			continue
 		}
 		for _, val := range list.Items {
 			podInfo, err := c.k8sClient.Do().CoreV1().Pods(ns).Get(val.Name, v12.GetOptions{})
 			if err != nil {
-				_ = c.logger.Log("cronjob", "getOnePull get pods by name  failed ", "err", err.Error())
+				_ = level.Error(c.logger).Log("cronjob", "getOnePull get pods by name  failed ", "err", err.Error())
 				continue
 			}
 
@@ -429,7 +430,7 @@ func (c *service) getOnePull(name string, ns string) (res map[string]interface{}
 
 	eventList, err := c.k8sClient.Do().EventsV1beta1().Events(ns).List(metav1.ListOptions{})
 	if err != nil {
-		_ = c.logger.Log("cronjob", "getOnePull get event list failed ", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronjob", "getOnePull get event list failed ", "err", err.Error())
 		return nil, nil, nil, &v1beta1.CronJob{}, err
 	}
 	for _, e := range eventList.Items {
@@ -457,19 +458,19 @@ func (c *service) List(ctx context.Context, name string, ns string, group string
 		var err error
 		groupInt, err = strconv.Atoi(group)
 		if err != nil {
-			_ = c.logger.Log("cronjob", "List", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronjob", "List", "err", err.Error())
 			return nil, ErrStrconvFailed
 		}
 		// 如果不是自己组,不能看
 		if !isAdmin {
 			res, err := c.repository.Groups().IsInGroup(int64(groupInt), memberId)
 			if err != nil {
-				_ = c.logger.Log("cronjob", "List", "err", err.Error())
+				_ = level.Error(c.logger).Log("cronjob", "List", "err", err.Error())
 				return nil, ErrIfIsInGroupFailed
 			}
 			if !res {
 				// 不让看
-				_ = c.logger.Log("cronjob", "List ", "err", "User is not in the group")
+				_ = level.Error(c.logger).Log("cronjob", "List ", "err", "User is not in the group")
 				return nil, ErrUserIsNotInGroup
 			}
 		}
@@ -477,14 +478,14 @@ func (c *service) List(ctx context.Context, name string, ns string, group string
 
 	cnt, err := c.repository.CronJob().CronJobCountWithGroup(name, ns, int64(groupInt))
 	if err != nil {
-		_ = c.logger.Log("cronjob", "List ", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronjob", "List ", "err", err.Error())
 		return nil, ErrCronJobCountFailed
 	}
 	p := paginator.NewPaginator(page, limit, int(cnt))
 
 	cronjobs, err := c.repository.CronJob().CronJobPaginateWithGroup(name, ns, int64(groupInt), p.Offset(), limit)
 	if err != nil {
-		_ = c.logger.Log("cronjob", "List ", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronjob", "List ", "err", err.Error())
 		return nil, ErrCronJobListFailed
 	}
 
@@ -493,7 +494,7 @@ func (c *service) List(ctx context.Context, name string, ns string, group string
 		cjInfo, _, _, _, err := c.getOnePull(v.Name, v.Namespace)
 
 		if err != nil {
-			_ = c.logger.Log("cronjob", "List ", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronjob", "List ", "err", err.Error())
 			return nil, ErrGetCronJobFromK8sFailed
 		}
 
@@ -526,7 +527,7 @@ func (c *service) List(ctx context.Context, name string, ns string, group string
 func (c *service) Detail(ctx context.Context, name string, ns string) (res *DetailReturnData, err error) {
 	cronjobInfo, isExists := c.repository.CronJob().GetCronJobByNameAndNs(name, ns)
 	if isExists {
-		_ = c.logger.Log("cronJob", "Delete ", "err", "cronjob not exists")
+		_ = level.Error(c.logger).Log("cronJob", "Delete ", "err", "cronjob not exists")
 		return nil, ErrCronJobNotExists
 	}
 
@@ -559,7 +560,7 @@ func (c *service) Put(ctx context.Context, name string, acj addCronJob) error {
 
 	cronjobInfo, isExists := c.repository.CronJob().GetCronJobByNameAndNs(name, acj.Namespace)
 	if isExists {
-		_ = c.logger.Log("cronJob", "Delete ", "err", "cronjob not exists")
+		_ = level.Error(c.logger).Log("cronJob", "Delete ", "err", "cronjob not exists")
 		return ErrCronJobNotExists
 	}
 
@@ -581,7 +582,7 @@ func (c *service) Put(ctx context.Context, name string, acj addCronJob) error {
 
 	err := c.repository.CronJob().Update(cronjobInfo, cronjobInfo.ID)
 	if err != nil {
-		_ = c.logger.Log("cronJob", "PUT ", "err", "cronjob not exists")
+		_ = level.Error(c.logger).Log("cronJob", "PUT ", "err", "cronjob not exists")
 		return ErrCronJobUpdateFailed
 	}
 
@@ -604,7 +605,7 @@ func (c *service) Put(ctx context.Context, name string, acj addCronJob) error {
 
 			cronjobInfos, err := c.k8sClient.Do().BatchV1beta1().CronJobs(acj.Namespace).Get(acj.Name, metav1.GetOptions{})
 			if err != nil {
-				_ = c.logger.Log("cronJob", "PUT ", "err", err.Error())
+				_ = level.Error(c.logger).Log("cronJob", "PUT ", "err", err.Error())
 				return ErrGetCronJobFromK8sFailed
 			}
 
@@ -613,7 +614,7 @@ func (c *service) Put(ctx context.Context, name string, acj addCronJob) error {
 			cronjobInfos.Spec.JobTemplate.Spec.Template.Spec.Containers[0].Image = s[0] + ":" + newImage
 			_, err = c.k8sClient.Do().BatchV1beta1().CronJobs(acj.Namespace).Update(cronjobInfos)
 			if err != nil {
-				_ = c.logger.Log("cronJob", "PUT ", "err", err.Error())
+				_ = level.Error(c.logger).Log("cronJob", "PUT ", "err", err.Error())
 				return err
 			}
 			memberId := ctx.Value(middleware.UserIdContext).(int64)
@@ -639,18 +640,18 @@ func (c *service) Put(ctx context.Context, name string, acj addCronJob) error {
 					})
 					return b
 				}); err != nil {
-					_ = c.logger.Log("cronjob", "PUT PublishOnQueue", "err", err.Error())
+					_ = level.Error(c.logger).Log("cronjob", "PUT PublishOnQueue", "err", err.Error())
 					return ErrBuildQueuePublish
 				}
 			} else {
-				_ = c.logger.Log("cronjob", "PUT create build", "err", err.Error())
+				_ = level.Error(c.logger).Log("cronjob", "PUT create build", "err", err.Error())
 			}
 		}
 	}
 
 	_, err = ExchangeCronJobTemp(acj.Name, acj.Namespace, c.k8sClient, c.config, c.repository)
 	if err != nil {
-		_ = c.logger.Log("cronjob", "PUT exchangeCronJobTemp", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronjob", "PUT exchangeCronJobTemp", "err", err.Error())
 		return ErrExchangeCronJobTemp
 	}
 
@@ -664,13 +665,13 @@ func (c *service) Delete(ctx context.Context, name string, ns string) error {
 
 	cronJob, isExists := c.repository.CronJob().GetCronJobByNameAndNs(name, ns)
 	if isExists {
-		_ = c.logger.Log("cronJob", "Delete ", "err", "cronjob not exists")
+		_ = level.Error(c.logger).Log("cronJob", "Delete ", "err", "cronjob not exists")
 		return ErrCronJobNotExists
 	}
 
 	err := c.repository.CronJob().Delete(cronJob.ID)
 	if err != nil {
-		_ = c.logger.Log("cronJob", "Delete ", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronJob", "Delete ", "err", err.Error())
 		return ErrDelCronJobFailed
 	}
 
@@ -681,12 +682,12 @@ func (c *service) Delete(ctx context.Context, name string, ns string) error {
 
 	job, err := c.jenkins.GetJob(cronJob.Name + "-cronjob." + cronJob.Namespace)
 	if err != nil {
-		_ = c.logger.Log("cronJob", "Delete ", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronJob", "Delete ", "err", err.Error())
 		return ErrCronJobInfoFailed
 	}
 
 	if err = c.jenkins.DeleteJob(job); err != nil {
-		_ = c.logger.Log("cronJob", "Delete ", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronJob", "Delete ", "err", err.Error())
 		return ErrK8sDelCronJobFailed
 	}
 
@@ -694,7 +695,7 @@ func (c *service) Delete(ctx context.Context, name string, ns string) error {
 	//先获取CronJob,
 	cronjobInfo, err := c.k8sClient.Do().BatchV1beta1().CronJobs(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("cronJob", "Delete ", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronJob", "Delete ", "err", err.Error())
 		return ErrGetCronJobFromK8sFailed
 	}
 	cronjobInfo.Kind = kind
@@ -706,13 +707,13 @@ func (c *service) Delete(ctx context.Context, name string, ns string) error {
 		ops.LabelSelector = "job-name=" + p.Name
 		list, err := c.k8sClient.Do().CoreV1().Pods(ns).List(*ops)
 		if err != nil {
-			_ = c.logger.Log("cronJob", "Delete ", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronJob", "Delete ", "err", err.Error())
 			continue
 		}
 		for _, val := range list.Items {
 			podInfo, err := c.k8sClient.Do().CoreV1().Pods(ns).Get(val.Name, v12.GetOptions{})
 			if err != nil {
-				_ = c.logger.Log("cronJob", "Delete ", "err", err.Error())
+				_ = level.Error(c.logger).Log("cronJob", "Delete ", "err", err.Error())
 				continue
 			}
 			podName := podInfo.Name
@@ -722,7 +723,7 @@ func (c *service) Delete(ctx context.Context, name string, ns string) error {
 		//del job
 		err = c.k8sClient.Do().BatchV1().Jobs(ns).Delete(name, &metav1.DeleteOptions{})
 		if err != nil {
-			_ = c.logger.Log("cronJob", "Delete ", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronJob", "Delete ", "err", err.Error())
 			continue
 		}
 	}
@@ -730,7 +731,7 @@ func (c *service) Delete(ctx context.Context, name string, ns string) error {
 	//del cronJob
 	cron, err := c.k8sClient.Do().BatchV1beta1().CronJobs(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("cronJob", "Delete ", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronJob", "Delete ", "err", err.Error())
 		return ErrCronJobInfoFailed
 	}
 	cron.Kind = kind
@@ -738,7 +739,7 @@ func (c *service) Delete(ctx context.Context, name string, ns string) error {
 
 	err = c.k8sClient.Do().BatchV1beta1().CronJobs(ns).Delete(name, nil)
 	if err != nil {
-		_ = c.logger.Log("cronJob", "Delete ", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronJob", "Delete ", "err", err.Error())
 		return ErrCronJobInfoFailed
 	}
 
@@ -746,19 +747,19 @@ func (c *service) Delete(ctx context.Context, name string, ns string) error {
 	if configMap, isExists := c.repository.ConfigMap().Find(ns, name); !isExists {
 		conf, err := c.k8sClient.Do().CoreV1().ConfigMaps(ns).Get(name, v12.GetOptions{})
 		if err != nil {
-			_ = c.logger.Log("cronJob", "Delete ", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronJob", "Delete ", "err", err.Error())
 			return err
 		}
 		conf.Kind = "ConfigMap"
 		err = c.k8sClient.Do().CoreV1().ConfigMaps(ns).Delete(name, &v12.DeleteOptions{})
 		if err != nil {
-			_ = c.logger.Log("cronJob", "Delete ", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronJob", "Delete ", "err", err.Error())
 			return err
 		}
 		err = c.repository.ConfigMap().Delete(configMap.ID)
 		err = c.repository.ConfigData().Delete(configMap.ID)
 		if err != nil {
-			_ = c.logger.Log("cronJob", "Delete ", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronJob", "Delete ", "err", err.Error())
 			return ErrConfigMapDelFailed
 		}
 	}
@@ -770,13 +771,13 @@ func (c *service) DeleteJobAll(ctx context.Context, ns string) error {
 
 	list, err := c.k8sClient.Do().BatchV1().Jobs(ns).List(metav1.ListOptions{})
 	if err != nil {
-		_ = c.logger.Log("cronJob", "DeleteJobAll ", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronJob", "DeleteJobAll ", "err", err.Error())
 		return ErrCronJobInfoFailed
 	}
 
 	for _, v := range list.Items {
 		if err = c.k8sClient.Do().BatchV1().Jobs(ns).Delete(v.Name, &metav1.DeleteOptions{}); err != nil {
-			_ = c.logger.Log("cronJob", "DeleteJobAll ", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronJob", "DeleteJobAll ", "err", err.Error())
 			return ErrDelCronJobFailed
 		}
 	}
@@ -787,7 +788,7 @@ func (c *service) UpdateLog(ctx context.Context, req cronJobLogUpdate) error {
 	//获取定时任务信息
 	nr, notFound := c.repository.CronJob().GetCronJobByNameAndNs(req.Name, req.Namespace)
 	if notFound {
-		_ = c.logger.Log("cronJob.UpdateLog", "GetCronJobByNameAndNs ", "err", "data not found")
+		_ = level.Error(c.logger).Log("cronJob.UpdateLog", "GetCronJobByNameAndNs ", "err", "data not found")
 		return ErrCronJobNameExists
 	}
 
@@ -795,7 +796,7 @@ func (c *service) UpdateLog(ctx context.Context, req cronJobLogUpdate) error {
 	nr.LogPath = req.LogPath
 	err := c.repository.CronJob().Update(nr, nr.ID)
 	if err != nil {
-		_ = c.logger.Log("cronJob.UpdateLog", "Update ", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronJob.UpdateLog", "Update ", "err", err.Error())
 		return ErrCronJobUpdateFailed
 	}
 
@@ -807,13 +808,13 @@ func (c *service) UpdateLog(ctx context.Context, req cronJobLogUpdate) error {
 			Type:      null.IntFrom(2),
 		})
 		if err != nil {
-			_ = c.logger.Log("cronJob.UpdateLog", "Create ", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronJob.UpdateLog", "Create ", "err", err.Error())
 			return ErrCreateConfMapFailed
 		}
 	} else {
 		err = configmapyaml.SyncConfigMapYaml(req.Namespace, req.Name, c.logger, c.k8sClient, c.repository)
 		if err != nil {
-			_ = c.logger.Log("cronJob.UpdateLog", "SyncConfigMapYaml ", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronJob.UpdateLog", "SyncConfigMapYaml ", "err", err.Error())
 			return ErrConfMapYamlFailed
 		}
 	}
@@ -827,12 +828,12 @@ func (c *service) UpdateLog(ctx context.Context, req cronJobLogUpdate) error {
 	fileBeat.LogPath = "/" + strings.Trim(nr.LogPath, "/") + "/"
 	template, err := c.repository.Template().FindByKindType("FileBeat")
 	if err != nil {
-		_ = c.logger.Log("cronJob.UpdateLog", "FindByKindType ", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronJob.UpdateLog", "FindByKindType ", "err", err.Error())
 		return ErrGetTemplateFailed
 	}
 	fileBeatYaml, err = helper.FileBeatYaml(fileBeat, template)
 	if err != nil {
-		_ = c.logger.Log("cronJob.UpdateLog", "FileBeatYaml ", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronJob.UpdateLog", "FileBeatYaml ", "err", err.Error())
 		return ErrFileBeatYamlFailed
 	}
 
@@ -851,14 +852,14 @@ func (c *service) UpdateLog(ctx context.Context, req cronJobLogUpdate) error {
 			ConfigMapID: configMap.ID,
 		})
 		if err != nil {
-			_ = c.logger.Log("cronJob.UpdateLog", "CreateConfigMapData", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronJob.UpdateLog", "CreateConfigMapData", "err", err.Error())
 			return ErrCreateConfMapDataFailed
 		}
 	} else {
 		// todo 之后实现
 		err = c.repository.ConfigData().Update(configDataLog.ID, fileBeatYaml, "")
 		if err != nil {
-			_ = c.logger.Log("cronJob.UpdateLog", "UpdateConfigMapData", "err", err.Error())
+			_ = level.Error(c.logger).Log("cronJob.UpdateLog", "UpdateConfigMapData", "err", err.Error())
 			return ErrUpdateConfMapDataFailed
 		}
 	}
@@ -866,13 +867,13 @@ func (c *service) UpdateLog(ctx context.Context, req cronJobLogUpdate) error {
 	//更新configMap yaml
 	err = configmapyaml.UpdateConfigMapYaml(configMapId, c.logger, c.k8sClient, c.repository)
 	if err != nil {
-		_ = c.logger.Log("cronJob.UpdateLog", "UpdateConfigMapYaml", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronJob.UpdateLog", "UpdateConfigMapYaml", "err", err.Error())
 		return ErrConfMapYamlFailed
 	}
 
 	_, err = ExchangeCronJobTemp(req.Name, req.Namespace, c.k8sClient, c.config, c.repository)
 	if err != nil {
-		_ = c.logger.Log("cronJob.UpdateLog", "ExchangeCronJobTemp", "err", err.Error())
+		_ = level.Error(c.logger).Log("cronJob.UpdateLog", "ExchangeCronJobTemp", "err", err.Error())
 		return ErrExchangeCronJobTemp
 	}
 

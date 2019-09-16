@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/middleware"
 	"github.com/kplcloud/kplcloud/src/repository"
@@ -51,7 +52,7 @@ func (c *service) Detail(ctx context.Context) (res map[string]interface{}, err e
 	unRendNum, err := c.store.NoticeMember().CountRead(param, memberId)
 
 	if err != nil {
-		_ = c.logger.Log("account.Detail", "member.GetInfoById", "err", err.Error())
+		_ = level.Error(c.logger).Log("account.Detail", "member.GetInfoById", "err", err.Error())
 		return nil, ErrMemberInfo
 	}
 
@@ -76,7 +77,7 @@ func (c *service) GetReceive(ctx context.Context) (res interface{}, err error) {
 	//获取所有通知事件
 	eventList, err := c.store.Event().FindAllEvents()
 	if err != nil {
-		_ = c.logger.Log("GetReceive.eventList", "event.FindAllEvents", "err", err.Error())
+		_ = level.Error(c.logger).Log("GetReceive.eventList", "event.FindAllEvents", "err", err.Error())
 		return
 	}
 
@@ -186,13 +187,13 @@ func (c *service) UpdateReceive(ctx context.Context, req accountReceiveRequest) 
 		data.ID = curAction.ID
 		err := c.store.NoticeReceive().Update(data)
 		if err != nil {
-			_ = c.logger.Log("UpdateReceive", "c.noticeReceive.Update", "err", err.Error())
+			_ = level.Error(c.logger).Log("UpdateReceive", "c.noticeReceive.Update", "err", err.Error())
 		}
 	} else {
 		//insert
 		err := c.store.NoticeReceive().Create(data)
 		if err != nil {
-			_ = c.logger.Log("UpdateReceive", "c.noticeReceive.Create", "err", err.Error())
+			_ = level.Error(c.logger).Log("UpdateReceive", "c.noticeReceive.Create", "err", err.Error())
 		}
 	}
 	return
@@ -210,7 +211,7 @@ func (c *service) UpdateBase(ctx context.Context, req accountBaseRequest) (err e
 
 	err = c.store.Member().Update(data)
 	if err != nil {
-		_ = c.logger.Log("account.UpdateBase", "c.member.Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("account.UpdateBase", "c.member.Update", "err", err.Error())
 	}
 
 	return

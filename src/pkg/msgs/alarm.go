@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	amqpClient "github.com/kplcloud/kplcloud/src/amqp"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/email"
@@ -79,7 +80,7 @@ func (c *serviceAlarm) DistributeAlarm(ctx context.Context, data string) (err er
 	err = json.Unmarshal([]byte(data), &al)
 
 	if err != nil {
-		_ = c.logger.Log("DistributeAlarm", "json.Unmarshal", "data", al)
+		_ = level.Error(c.logger).Log("DistributeAlarm", "json.Unmarshal", "data", al)
 		return
 	}
 
@@ -103,15 +104,15 @@ func (c *serviceAlarm) DistributeAlarm(ctx context.Context, data string) (err er
 		kaEmailArr := c.config.GetStrings("msg", "alarm_default_email")
 		ml, err = c.store.Member().GetMembersByEmails(kaEmailArr)
 		if err != nil {
-			_ = c.logger.Log("DistributeAlarm", "c.store.Member().GetMembersByEmails", "err", err)
+			_ = level.Error(c.logger).Log("DistributeAlarm", "c.store.Member().GetMembersByEmails", "err", err)
 		}
 	}
 
 	num, err := c.CreateAlarmMember(ctx, ml, v, al)
 	if err != nil {
-		_ = c.logger.Log("DistributeAlarm", "c.CreateAlarmMember", "err", err)
+		_ = level.Error(c.logger).Log("DistributeAlarm", "c.CreateAlarmMember", "err", err)
 	}
-	_ = c.logger.Log("DistributeAlarm", "c.CreateAlarmMember", "num", num)
+	_ = level.Info(c.logger).Log("DistributeAlarm", "c.CreateAlarmMember", "num", num)
 
 	return
 
@@ -183,7 +184,7 @@ func (c *serviceAlarm) CreateAlarmMember(ctx context.Context, ml []types.Member,
 			wxNotice.Content = al.Desc
 			err := wechatQueueSvc.PublicWechatQueue(v, wxNotice, "")
 			if err != nil {
-				_ = c.logger.Log("amqpClient", "wechatQueueSvc.PublicWechatQueue", "err", err)
+				_ = level.Error(c.logger).Log("amqpClient", "wechatQueueSvc.PublicWechatQueue", "err", err)
 			}
 		}
 		if isEmail == true { //邮箱
@@ -216,7 +217,7 @@ func (c *serviceAlarm) CreateAlarmMember(ctx context.Context, ml []types.Member,
 	go func() {
 		err = c.SendAlarmEmail(toUser, toCc, notice)
 		if err != nil {
-			_ = c.logger.Log("amqpClient", "c.SendAlarmEmail", "Err", err)
+			_ = level.Error(c.logger).Log("amqpClient", "c.SendAlarmEmail", "Err", err)
 		}
 	}()
 
@@ -238,7 +239,7 @@ func (c *serviceAlarm) SendAlarmEmail(toUser, toCc []string, notice types.Notice
 	err = json.Unmarshal([]byte(notice.Content), &an.Content)
 
 	if err != nil {
-		_ = c.logger.Log("DistributeAlarm", "SendAlarmEmail", "json.Unmarshal.Err", err.Error())
+		_ = level.Error(c.logger).Log("DistributeAlarm", "SendAlarmEmail", "json.Unmarshal.Err", err.Error())
 		return
 	}
 
@@ -249,7 +250,7 @@ func (c *serviceAlarm) SendAlarmEmail(toUser, toCc []string, notice types.Notice
 	_, err = tmpl.Parse(tpl)
 
 	if err != nil {
-		_ = c.logger.Log("DistributeAlarm", "SendAlarmEmail", "tmpl.Parse.Err", err.Error())
+		_ = level.Error(c.logger).Log("DistributeAlarm", "SendAlarmEmail", "tmpl.Parse.Err", err.Error())
 		return
 	}
 
@@ -257,7 +258,7 @@ func (c *serviceAlarm) SendAlarmEmail(toUser, toCc []string, notice types.Notice
 	err = tmpl.Execute(&body, an)
 
 	if err != nil {
-		_ = c.logger.Log("DistributeAlarm", "SendAlarmEmail", "tmpl.Execute.Err", err.Error())
+		_ = level.Error(c.logger).Log("DistributeAlarm", "SendAlarmEmail", "tmpl.Execute.Err", err.Error())
 		return
 	}
 
@@ -271,7 +272,7 @@ func (c *serviceAlarm) SendAlarmEmail(toUser, toCc []string, notice types.Notice
 	err = c.mailClient.Send()
 
 	if err != nil {
-		_ = c.logger.Log("DistributeAlarm", "SendAlarmEmail", "err", err.Error())
+		_ = level.Error(c.logger).Log("DistributeAlarm", "SendAlarmEmail", "err", err.Error())
 	}
 
 	return

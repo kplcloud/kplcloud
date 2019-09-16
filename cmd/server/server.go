@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	kitlogrus "github.com/go-kit/kit/log/logrus"
 	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/go-kit/kit/transport/amqp"
 	"github.com/jinzhu/gorm"
@@ -17,6 +16,7 @@ import (
 	"github.com/kplcloud/kplcloud/src/git-repo"
 	"github.com/kplcloud/kplcloud/src/jenkins"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
+	"github.com/kplcloud/kplcloud/src/logging"
 	"github.com/kplcloud/kplcloud/src/mysql"
 	"github.com/kplcloud/kplcloud/src/pkg/account"
 	"github.com/kplcloud/kplcloud/src/pkg/audit"
@@ -57,7 +57,6 @@ import (
 	"github.com/kplcloud/kplcloud/src/repository"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	wechatsdk "github.com/yijizhichang/wechat-sdk"
 	"gopkg.in/igm/sockjs-go.v2/sockjs"
@@ -149,30 +148,10 @@ func run() {
 	}
 	_ = cf.SetValue("server", "kube_config", kubeConfig)
 
-	logger = log.With(logger, "caller", log.DefaultCaller)
-	logger = level.NewFilter(logger, logLevel(cf.GetString("server", "log_level")))
-
-	if cf.GetString("server", "logs_path") != "" {
-		file, err := os.OpenFile(cf.GetString("server", "logs_path")+"/kplcloud.log", os.O_CREATE|os.O_WRONLY, 0666)
-		if err != nil {
-			panic(err)
-		}
-
-		defer func() {
-			_ = file.Sync()
-			_ = file.Close()
-		}()
-		logrusLogger := logrus.New()
-		logrusLogger.Out = file
-		logger = kitlogrus.NewLogrusLogger(logrusLogger)
-	} else {
-		logger = log.NewLogfmtLogger(log.StdlibWriter{})
-	}
-
-	logger = log.WithPrefix(logger, "app", cf.GetString("server", "app_name"))
+	logger = logging.SetLogging(logger, cf)
 
 	// mysql client
-	db, err = mysql.NewDb(logger, cf)
+	db, err = mysql.NewDb(cf)
 	if err != nil {
 		_ = level.Error(logger).Log("db", "connect", "err", err)
 		panic(err)

@@ -12,6 +12,7 @@ import (
 	"errors"
 	"github.com/ghodss/yaml"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/middleware"
 	"github.com/kplcloud/kplcloud/src/repository"
@@ -73,7 +74,7 @@ func (c *service) All(ctx context.Context) (resp map[string]interface{}, err err
 	ns := ctx.Value(middleware.NamespaceContext).(string)
 	list, err := c.repository.Pvc().FindBy(ns, 0, 100)
 	if err != nil {
-		_ = c.logger.Log("pvcRepository", "FindBy", "err", err.Error())
+		_ = level.Error(c.logger).Log("pvcRepository", "FindBy", "err", err.Error())
 		return nil, ErrPvcList
 	}
 	return map[string]interface{}{
@@ -83,7 +84,7 @@ func (c *service) All(ctx context.Context) (resp map[string]interface{}, err err
 
 func (c *service) Post(ctx context.Context, ns, name, storage, storageClassName string, accessModes []string) (err error) {
 	if class, err := c.repository.StorageClass().Find(storageClassName); err != nil || class.Name == "" {
-		_ = c.logger.Log("classRepository", "Find", "err", err)
+		_ = level.Error(c.logger).Log("classRepository", "Find", "err", err)
 		return ErrStorageClassNotExists
 	}
 
@@ -92,13 +93,13 @@ func (c *service) Post(ctx context.Context, ns, name, storage, storageClassName 
 	defer func() {
 		b, _ := yaml.Marshal(pvc)
 		if err == nil && c.repository.Pvc().FirstOrCreate(ns, name, accessModes[0], storage, storageClassName, string(b), pvc.Spec.Selector.String(), map[string]string{}) != nil {
-			_ = c.logger.Log("pvcRepository", "FirstOrCreate", "err", "FirstOrCreate err")
+			_ = level.Warn(c.logger).Log("pvcRepository", "FirstOrCreate", "err", "FirstOrCreate err")
 		}
 	}()
 
 	tpl, err := c.repository.Template().FindByKindType(repository.PersistentVolumeClaimKind)
 	if err != nil {
-		_ = c.logger.Log("templateRepository", "FindByKindType", "err", err.Error())
+		_ = level.Error(c.logger).Log("templateRepository", "FindByKindType", "err", err.Error())
 		return ErrPvcTemplateGet
 	}
 
@@ -111,17 +112,17 @@ func (c *service) Post(ctx context.Context, ns, name, storage, storageClassName 
 	})
 
 	if err != nil {
-		_ = c.logger.Log("encode", "EncodeTemplate", "err", err.Error())
+		_ = level.Error(c.logger).Log("encode", "EncodeTemplate", "err", err.Error())
 		return ErrPvcTemplateEncode
 	}
 	err = yaml.Unmarshal([]byte(enTpl), &pvc)
 	if err != nil {
-		_ = c.logger.Log("yaml", "Unmarshal", "err", err.Error())
+		_ = level.Error(c.logger).Log("yaml", "Unmarshal", "err", err.Error())
 		return
 	}
 
 	if pvc, err = c.k8sClient.Do().CoreV1().PersistentVolumeClaims(ns).Create(pvc); err != nil {
-		_ = c.logger.Log("PersistentVolumeClaims", "Create", "err", err.Error())
+		_ = level.Error(c.logger).Log("PersistentVolumeClaims", "Create", "err", err.Error())
 		return ErrPvcPost
 	}
 
@@ -131,7 +132,7 @@ func (c *service) Post(ctx context.Context, ns, name, storage, storageClassName 
 func (c *service) List(ctx context.Context, ns string, page, limit int) (rs map[string]interface{}, err error) {
 	total, err := c.repository.Pvc().Count(ns)
 	if err != nil {
-		_ = c.logger.Log("pvcRepository", "Count", "err", err.Error())
+		_ = level.Error(c.logger).Log("pvcRepository", "Count", "err", err.Error())
 		return rs, ErrPvcListCount
 	}
 
@@ -139,7 +140,7 @@ func (c *service) List(ctx context.Context, ns string, page, limit int) (rs map[
 
 	res, err := c.repository.Pvc().FindBy(ns, p.Offset(), p.PerPageNums())
 	if err != nil {
-		_ = c.logger.Log("pvcRepository", "FindBy", "err", err.Error())
+		_ = level.Error(c.logger).Log("pvcRepository", "FindBy", "err", err.Error())
 		return rs, ErrPvcList
 	}
 
@@ -160,7 +161,7 @@ func (c *service) List(ctx context.Context, ns string, page, limit int) (rs map[
 func (c *service) Sync(ctx context.Context, ns string) (err error) {
 	pvcs, err := c.k8sClient.Do().CoreV1().PersistentVolumeClaims(ns).List(metav1.ListOptions{})
 	if err != nil {
-		_ = c.logger.Log("PersistentVolumeClaims", "List", "err", err.Error())
+		_ = level.Error(c.logger).Log("PersistentVolumeClaims", "List", "err", err.Error())
 		return ErrPvcK8sList
 	}
 
@@ -172,7 +173,7 @@ func (c *service) Sync(ctx context.Context, ns string) (err error) {
 			*pvc.Spec.StorageClassName,
 			string(b),
 			pvc.Spec.Selector.String(), pvc.Labels); err != nil {
-			_ = c.logger.Log("pvcRepository", "FirstOrCreate", "err", err.Error())
+			_ = level.Warn(c.logger).Log("pvcRepository", "FirstOrCreate", "err", err.Error())
 		}
 	}
 
@@ -182,19 +183,19 @@ func (c *service) Sync(ctx context.Context, ns string) (err error) {
 func (c *service) Get(ctx context.Context, ns, name string) (rs interface{}, err error) {
 	_, err = c.repository.Pvc().Find(ns, name)
 	if err != nil {
-		_ = c.logger.Log("pvcRepository", "Find", "err", err.Error())
+		_ = level.Error(c.logger).Log("pvcRepository", "Find", "err", err.Error())
 		return nil, ErrPvcGet
 	}
 
 	p, err := c.k8sClient.Do().CoreV1().PersistentVolumeClaims(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("PersistentVolumeClaims", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("PersistentVolumeClaims", "Get", "err", err.Error())
 		return nil, ErrPvcGet
 	}
 
 	pv, err := c.k8sClient.Do().CoreV1().PersistentVolumes().Get(p.Spec.VolumeName, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("PersistentVolumes", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("PersistentVolumes", "Get", "err", err.Error())
 		return nil, ErrPvGet
 	}
 
@@ -208,14 +209,14 @@ func (c *service) Delete(ctx context.Context, ns, name string) (err error) {
 	defer func() {
 		if err == nil {
 			if e := c.repository.Pvc().Delete(ns, name); e != nil {
-				_ = c.logger.Log("pvcRepository", "Delete", "err", e.Error())
+				_ = level.Warn(c.logger).Log("pvcRepository", "Delete", "err", e.Error())
 			}
 		}
 	}()
 
 	err = c.k8sClient.Do().CoreV1().PersistentVolumeClaims(ns).Delete(name, &metav1.DeleteOptions{})
 	if err != nil {
-		_ = c.logger.Log("PersistentVolumeClaims", "Delete", "err", err.Error())
+		_ = level.Error(c.logger).Log("PersistentVolumeClaims", "Delete", "err", err.Error())
 		return ErrPvcDelete
 	}
 
