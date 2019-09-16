@@ -145,7 +145,7 @@ func (c *service) Hosts(ctx context.Context, hosts []string) error {
 
 	deployment, err := c.k8sClient.Do().AppsV1().Deployments(project.Namespace).Get(project.Name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return ErrDeploymentK8sGet
 	}
 
@@ -155,7 +155,7 @@ func (c *service) Hosts(ctx context.Context, hosts []string) error {
 				b, _ := yaml.Marshal(deployment)
 				tpl.FinalTemplate = string(b)
 				if ee := c.repository.ProjectTemplate().UpdateTemplate(tpl); ee != nil {
-					_ = c.logger.Log("projectTemplateRepository", "UpdateTemplate", "err", err.Error())
+					_ = level.Error(c.logger).Log("projectTemplateRepository", "UpdateTemplate", "err", err.Error())
 				}
 			}
 
@@ -164,7 +164,7 @@ func (c *service) Hosts(ctx context.Context, hosts []string) error {
 
 	deployment.Spec.Template.Spec.HostAliases = host.Host
 	if deployment, err = c.k8sClient.Do().AppsV1().Deployments(project.Namespace).Update(deployment); err != nil {
-		_ = c.logger.Log("Deployments", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Update", "err", err.Error())
 		return ErrDeploymentK8sUpdate
 	}
 
@@ -173,7 +173,7 @@ func (c *service) Hosts(ctx context.Context, hosts []string) error {
 			repository.VolumeHosts,
 			project.Name, project.Namespace,
 			fmt.Sprintf("服务挂载hosts\n 应用: %s.%s", project.Name, project.Name)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Error(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 
@@ -185,7 +185,7 @@ func (c *service) GetYaml(ctx context.Context) (res interface{}, err error) {
 
 	deployment, err := c.k8sClient.Do().AppsV1().Deployments(project.Namespace).Get(project.Name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return nil, ErrDeploymentK8sGet
 	}
 
@@ -197,7 +197,7 @@ func (c *service) CommandArgs(ctx context.Context, commands []string, args []str
 
 	deployment, err := c.k8sClient.Do().AppsV1().Deployments(project.Namespace).Get(project.Name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return ErrDeploymentK8sGet
 	}
 
@@ -218,7 +218,7 @@ func (c *service) CommandArgs(ctx context.Context, commands []string, args []str
 	}
 
 	if deployment, err = c.k8sClient.Do().AppsV1().Deployments(project.Namespace).Update(deployment); err != nil {
-		_ = c.logger.Log("Deployments", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Update", "err", err.Error())
 		return ErrDeploymentK8sUpdate
 	}
 
@@ -227,7 +227,7 @@ func (c *service) CommandArgs(ctx context.Context, commands []string, args []str
 			repository.CommandEvent,
 			project.Name, project.Namespace,
 			fmt.Sprintf("更新启动参数\n 应用: %s.%s", project.Name, project.Namespace)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Error(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 
@@ -239,7 +239,7 @@ func (c *service) Expansion(ctx context.Context, requestCpu, limitCpu, requestMe
 
 	deployment, err := c.k8sClient.Do().AppsV1().Deployments(project.Namespace).Get(project.Name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return ErrDeploymentK8sGet
 	}
 
@@ -279,7 +279,7 @@ func (c *service) Expansion(ctx context.Context, requestCpu, limitCpu, requestMe
 	}
 
 	if deployment, err = c.k8sClient.Do().AppsV1().Deployments(project.Namespace).Update(deployment); err != nil {
-		_ = c.logger.Log("Deployments", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Update", "err", err.Error())
 		return ErrDeploymentK8sUpdate
 	}
 
@@ -288,7 +288,7 @@ func (c *service) Expansion(ctx context.Context, requestCpu, limitCpu, requestMe
 			repository.Expansion,
 			project.Name, project.Namespace,
 			fmt.Sprintf("服务扩容\n 应用: %s.%s --> 内存最小值: %v  内存最大值: %v CPU最小值: %v CPU最大值: %v", project.Name, project.Name, requestMemory, limitMemory, requestCpu, limitCpu)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Warn(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 
@@ -300,7 +300,7 @@ func (c *service) Stretch(ctx context.Context, num int) (err error) {
 
 	deployment, err := c.k8sClient.Do().AppsV1().Deployments(project.Namespace).Get(project.Name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return ErrDeploymentK8sGet
 	}
 
@@ -310,7 +310,7 @@ func (c *service) Stretch(ctx context.Context, num int) (err error) {
 
 	deployment, err = c.k8sClient.Do().AppsV1().Deployments(project.Namespace).Patch(project.Name, apitypes.MergePatchType, b, "scale")
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Patch", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Patch", "err", err.Error())
 		return ErrDeploymentK8sScale
 	}
 	//@todo update ProjectTemplate
@@ -319,7 +319,7 @@ func (c *service) Stretch(ctx context.Context, num int) (err error) {
 			repository.Extend,
 			project.Name, project.Namespace,
 			fmt.Sprintf("服务伸缩\n 应用: %v.%v --> 副本数: %d", project.Name, project.Namespace, num)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Warn(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 
@@ -329,7 +329,7 @@ func (c *service) Stretch(ctx context.Context, num int) (err error) {
 func (c *service) GetPvc(ctx context.Context, ns, name string) (res map[string]interface{}, err error) {
 	deployment, err := c.k8sClient.Do().AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return nil, ErrDeploymentK8sGet
 	}
 
@@ -390,7 +390,7 @@ func (c *service) GetPvc(ctx context.Context, ns, name string) (res map[string]i
 	}
 
 	if err = <-channel.Error; err != nil {
-		_ = c.logger.Log("channel.Error", "<-", "err", err.Error())
+		_ = level.Warn(c.logger).Log("channel.Error", "<-", "err", err.Error())
 	}
 
 	pvc := <-channel.Pvc
@@ -418,13 +418,13 @@ func (c *service) GetPvc(ctx context.Context, ns, name string) (res map[string]i
 func (c *service) BindPvc(ctx context.Context, ns, name, path, claimName string) (err error) {
 	_, err = c.repository.Pvc().Find(ns, claimName)
 	if err != nil {
-		_ = c.logger.Log("pvcRepository", "Find", "err", err.Error())
+		_ = level.Error(c.logger).Log("pvcRepository", "Find", "err", err.Error())
 		return ErrDeploymentPvcGet
 	}
 
 	deployment, err := c.k8sClient.Do().AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return ErrDeploymentK8sGet
 	}
 
@@ -451,7 +451,7 @@ func (c *service) BindPvc(ctx context.Context, ns, name, path, claimName string)
 				continue
 			}
 			if v.MountPath == path {
-				_ = c.logger.Log("v.MountPath", v.MountPath, "path", path)
+				_ = level.Error(c.logger).Log("v.MountPath", v.MountPath, "path", path)
 				return ErrDeploymentPvcBindNotVary
 			}
 			volumeIndex = k
@@ -492,7 +492,7 @@ func (c *service) BindPvc(ctx context.Context, ns, name, path, claimName string)
 	}
 
 	if deployment, err = c.k8sClient.Do().AppsV1().Deployments(ns).Update(deployment); err != nil {
-		_ = c.logger.Log("Deployments", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Update", "err", err.Error())
 		return ErrDeploymentK8sScale
 	}
 
@@ -501,7 +501,7 @@ func (c *service) BindPvc(ctx context.Context, ns, name, path, claimName string)
 			repository.StorageEvent,
 			name, ns,
 			fmt.Sprintf("绑定持久化存储\n 应用: %s.%s", name, ns)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Warn(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 
@@ -511,7 +511,7 @@ func (c *service) BindPvc(ctx context.Context, ns, name, path, claimName string)
 func (c *service) UnBindPvc(ctx context.Context, ns, name, claimName string) (err error) {
 	deployment, err := c.k8sClient.Do().AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return ErrDeploymentK8sGet
 	}
 
@@ -551,7 +551,7 @@ func (c *service) UnBindPvc(ctx context.Context, ns, name, claimName string) (er
 	}
 
 	if deployment, err = c.k8sClient.Do().AppsV1().Deployments(ns).Update(deployment); err != nil {
-		_ = c.logger.Log("Deployments", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Update", "err", err.Error())
 		return ErrDeploymentK8sUnBindPvc
 	}
 	//@todo update ProjectTemplate
@@ -564,13 +564,13 @@ func (c *service) AddPort(ctx context.Context, ns, name string, req portRequest)
 
 	deployment, err := c.k8sClient.Do().AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return ErrDeploymentK8sGet
 	}
 
 	svc, err := c.k8sClient.Do().CoreV1().Services(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Services", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Services", "Get", "err", err.Error())
 		return ErrDeploymentK8sGet
 	}
 
@@ -591,12 +591,12 @@ func (c *service) AddPort(ctx context.Context, ns, name string, req portRequest)
 		if err == nil {
 			var e error
 			if svc, e = c.k8sClient.Do().CoreV1().Services(ns).Update(svc); e != nil {
-				_ = c.logger.Log("Services", "Update", "err", e.Error())
+				_ = level.Error(c.logger).Log("Services", "Update", "err", e.Error())
 			}
 			fields, _ := json.Marshal(req)
 			svcTpl, _ := yaml.Marshal(svc)
 			if e = c.repository.ProjectTemplate().UpdateFieldsByNsProjectId(project.ID, repository.Service, string(fields), string(svcTpl)); e != nil {
-				_ = c.logger.Log("projectTemplateRepository", "UpdateFieldsByNsProjectId", "err", e.Error())
+				_ = level.Error(c.logger).Log("projectTemplateRepository", "UpdateFieldsByNsProjectId", "err", e.Error())
 			}
 
 		}
@@ -611,7 +611,7 @@ func (c *service) AddPort(ctx context.Context, ns, name string, req portRequest)
 	}
 
 	if deployment, err = c.k8sClient.Do().AppsV1().Deployments(ns).Update(deployment); err != nil {
-		_ = c.logger.Log("Deployments", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Update", "err", err.Error())
 		return ErrDeploymentK8sUpdate
 	}
 
@@ -621,13 +621,13 @@ func (c *service) AddPort(ctx context.Context, ns, name string, req portRequest)
 func (c *service) DelPort(ctx context.Context, ns, name string, portName string, port int32) (err error) {
 	deployment, err := c.k8sClient.Do().AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return ErrDeploymentK8sGet
 	}
 
 	svc, err := c.k8sClient.Do().CoreV1().Services(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Services", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Services", "Get", "err", err.Error())
 		return ErrDeploymentK8sGet
 	}
 
@@ -646,7 +646,7 @@ func (c *service) DelPort(ctx context.Context, ns, name string, portName string,
 
 	svc.Spec.Ports = ports
 	if svc, err = c.k8sClient.Do().CoreV1().Services(ns).Update(svc); err != nil {
-		_ = c.logger.Log("Services", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("Services", "Update", "err", err.Error())
 		return ErrDeploymentK8sUpdate
 	}
 
@@ -665,7 +665,7 @@ func (c *service) DelPort(ctx context.Context, ns, name string, portName string,
 	}
 
 	if deployment, err = c.k8sClient.Do().AppsV1().Deployments(ns).Update(deployment); err != nil {
-		_ = c.logger.Log("Deployments", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Update", "err", err.Error())
 		return ErrDeploymentK8sUpdate
 	}
 
@@ -686,7 +686,7 @@ func (c *service) Logging(ctx context.Context, ns, name, pattern, suffix string,
 
 	tpl, err := c.repository.Template().FindByKindType(repository.FilebeatConfigMap)
 	if err != nil {
-		_ = c.logger.Log("templateRepository", "FindByKindType", "err", err.Error())
+		_ = level.Error(c.logger).Log("templateRepository", "FindByKindType", "err", err.Error())
 		return ErrDeploymentFilebeatTplGet
 	}
 
@@ -697,7 +697,7 @@ func (c *service) Logging(ctx context.Context, ns, name, pattern, suffix string,
 		"paths":     filePaths,
 	})
 	if err != nil {
-		_ = c.logger.Log("encode", "EncodeTemplate", "err", err.Error())
+		_ = level.Error(c.logger).Log("encode", "EncodeTemplate", "err", err.Error())
 		return ErrDeploymentFilebeatTplEncode
 	}
 
@@ -714,12 +714,12 @@ func (c *service) Logging(ctx context.Context, ns, name, pattern, suffix string,
 	configMap.Data["filebeat.yml"] = filebeat
 	if configMap.ResourceVersion == "" {
 		if configMap, err = c.k8sClient.Do().CoreV1().ConfigMaps(ns).Create(configMap); err != nil {
-			_ = c.logger.Log("ConfigMaps", "Create", "err", err.Error())
+			_ = level.Error(c.logger).Log("ConfigMaps", "Create", "err", err.Error())
 			return ErrDeploymentConfigMapCreate
 		}
 	} else {
 		if configMap, err = c.k8sClient.Do().CoreV1().ConfigMaps(ns).Update(configMap); err != nil {
-			_ = c.logger.Log("ConfigMaps", "Update", "err", err.Error())
+			_ = level.Error(c.logger).Log("ConfigMaps", "Update", "err", err.Error())
 			return ErrDeploymentConfigMapUpdate
 		}
 	}
@@ -733,12 +733,12 @@ func (c *service) Logging(ctx context.Context, ns, name, pattern, suffix string,
 		Kind:          repository.ConfigMap.String(),
 		ProjectID:     project.ID,
 	}); e != nil {
-		_ = c.logger.Log("projectTemplateRepository", "CreateOrUpdate", "err", e.Error())
+		_ = level.Warn(c.logger).Log("projectTemplateRepository", "CreateOrUpdate", "err", e.Error())
 	}
 
 	deployment, err := c.k8sClient.Do().AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return ErrDeploymentK8sGet
 	}
 
@@ -753,20 +753,20 @@ func (c *service) Logging(ctx context.Context, ns, name, pattern, suffix string,
 	if !filebeatExists {
 		tpl, err = c.repository.Template().FindByKindType(repository.FilebeatContainer)
 		if err != nil {
-			_ = c.logger.Log("templateRepository", "FindByKindType", "err", err.Error())
+			_ = level.Error(c.logger).Log("templateRepository", "FindByKindType", "err", err.Error())
 			return ErrDeploymentFilebeatTplGet
 		}
 
 		if filebeat, err = encode.EncodeTemplate(repository.FilebeatContainer.ToString(), tpl.Detail, map[string]interface{}{
 			"name": name,
 		}); err != nil {
-			_ = c.logger.Log("encode", "EncodeTemplate", "err", err.Error())
+			_ = level.Error(c.logger).Log("encode", "EncodeTemplate", "err", err.Error())
 			return ErrDeploymentFilebeatTplEncode
 		}
 
 		var filebeatContainer v1.Container
 		if err = yaml.Unmarshal([]byte(filebeat), &filebeatContainer); err != nil {
-			_ = c.logger.Log("yaml", "Unmarshal", "err", err.Error())
+			_ = level.Error(c.logger).Log("yaml", "Unmarshal", "err", err.Error())
 			return ErrDeploymentFilebeatTplEncode
 		}
 		deployment.Spec.Template.Spec.Containers = append(deployment.Spec.Template.Spec.Containers, filebeatContainer)
@@ -813,7 +813,7 @@ func (c *service) Logging(ctx context.Context, ns, name, pattern, suffix string,
 	}
 
 	if deployment, err = c.k8sClient.Do().AppsV1().Deployments(ns).Update(deployment); err != nil {
-		_ = c.logger.Log("Deployments", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Update", "err", err.Error())
 		return ErrDeploymentK8sUpdate
 	}
 
@@ -822,7 +822,7 @@ func (c *service) Logging(ctx context.Context, ns, name, pattern, suffix string,
 			repository.LoggingEvent,
 			name, ns,
 			fmt.Sprintf("调整日志采集器: %s.%s", name, ns)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Warn(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 
@@ -835,7 +835,7 @@ func (c *service) Probe(ctx context.Context, ns, name string, req probeRequest) 
 
 	deployment, err := c.k8sClient.Do().AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return ErrDeploymentK8sGet
 	}
 
@@ -880,7 +880,7 @@ func (c *service) Probe(ctx context.Context, ns, name string, req probeRequest) 
 	}
 
 	if deployment, err = c.k8sClient.Do().AppsV1().Deployments(ns).Update(deployment); err != nil {
-		_ = c.logger.Log("Deployments", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Update", "err", err.Error())
 		return ErrDeploymentK8sUpdate
 	}
 
@@ -898,7 +898,7 @@ func (c *service) Probe(ctx context.Context, ns, name string, req probeRequest) 
 			repository.ReadinessProbe,
 			name, ns,
 			fmt.Sprintf("修改探针\n 应用: %s.%s --> 端口: %d", name, ns, req.Port)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Warn(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 	return
@@ -909,13 +909,13 @@ func (c *service) Mesh(ctx context.Context, ns, name, model string) (err error) 
 
 	projectTemplate, err := c.repository.ProjectTemplate().FindByProjectId(project.ID, repository.Deployment)
 	if err != nil {
-		_ = c.logger.Log("projectTemplateRepository", "FindByProjectId", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectTemplateRepository", "FindByProjectId", "err", err.Error())
 		return ErrDeploymentProjectTemplateGet
 	}
 
 	deployment, err := c.k8sClient.Do().AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return ErrDeploymentK8sGet
 	}
 
@@ -925,12 +925,12 @@ func (c *service) Mesh(ctx context.Context, ns, name, model string) (err error) 
 		// 初始化相关容器
 		initContainerTpl, err := c.repository.Template().FindByKindType(repository.InitContainersKind)
 		if err != nil {
-			_ = c.logger.Log("templateRepository", "FindByKindType", "err", err.Error())
+			_ = level.Error(c.logger).Log("templateRepository", "FindByKindType", "err", err.Error())
 			return ErrDeploymentInitContainerTemplateGet
 		}
 		proxyContainerTpl, err := c.repository.Template().FindByKindType(repository.IstioProxyKind)
 		if err != nil {
-			_ = c.logger.Log("templateRepository", "FindByKindType", "err", err.Error())
+			_ = level.Error(c.logger).Log("templateRepository", "FindByKindType", "err", err.Error())
 			return ErrDeploymentProxyContainerTemplateGet
 		}
 		if deployment.Spec.Template.Annotations == nil {
@@ -960,22 +960,22 @@ func (c *service) Mesh(ctx context.Context, ns, name, model string) (err error) 
 
 		initContainerYml, err := encode.EncodeTemplate(repository.InitContainersKind.ToString(), initContainerTpl.Detail, fields)
 		if err != nil {
-			_ = c.logger.Log("encode", "EncodeTemplate", "err", err.Error())
+			_ = level.Error(c.logger).Log("encode", "EncodeTemplate", "err", err.Error())
 			return ErrDeploymentInitContainerTemplateParse
 		}
 		proxyContainerYml, err := encode.EncodeTemplate(repository.IstioProxyKind.ToString(), proxyContainerTpl.Detail, fields)
 		if err != nil {
-			_ = c.logger.Log("encode", "EncodeTemplate", "err", err.Error())
+			_ = level.Error(c.logger).Log("encode", "EncodeTemplate", "err", err.Error())
 			return ErrDeploymentProxyContainerTemplateParse
 		}
 		var container v1.Container
 		var initContainer v1.PodSpec
 		if err = yaml.Unmarshal([]byte(initContainerYml), &initContainer); err != nil {
-			_ = c.logger.Log("yaml", "Unmarshal", "err", err.Error())
+			_ = level.Error(c.logger).Log("yaml", "Unmarshal", "err", err.Error())
 			return ErrDeploymentInitContainerTemplateParse
 		}
 		if err = yaml.Unmarshal([]byte(proxyContainerYml), &container); err != nil {
-			_ = c.logger.Log("yaml", "Unmarshal", "err", err.Error())
+			_ = level.Error(c.logger).Log("yaml", "Unmarshal", "err", err.Error())
 			return ErrDeploymentProxyContainerTemplateParse
 		}
 		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, initContainer.InitContainers[0])
@@ -1035,12 +1035,12 @@ func (c *service) Mesh(ctx context.Context, ns, name, model string) (err error) 
 	}
 
 	if deployment, err = c.k8sClient.Do().AppsV1().Deployments(ns).Update(deployment); err != nil {
-		_ = c.logger.Log("Deployments", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Update", "err", err.Error())
 		return ErrDeploymentK8sUpdate
 	}
 
 	if err = c.repository.ProjectTemplate().UpdateTemplate(projectTemplate); err != nil {
-		_ = c.logger.Log("projectTemplateRepository", "UpdateTemplate", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectTemplateRepository", "UpdateTemplate", "err", err.Error())
 	}
 
 	go func() {
@@ -1048,7 +1048,7 @@ func (c *service) Mesh(ctx context.Context, ns, name, model string) (err error) 
 			repository.SwitchModel,
 			name, ns,
 			fmt.Sprintf("修改服务模式\n 应用: %s.%s --> 模式类型: %d", name, ns, model)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Warn(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 
@@ -1061,7 +1061,7 @@ func (c *service) VolumeConfig(ctx context.Context, mountPath, subPath string) e
 
 	deployment, err := c.k8sClient.Do().AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return ErrDeploymentK8sGet
 	}
 
@@ -1082,7 +1082,7 @@ func (c *service) VolumeConfig(ctx context.Context, mountPath, subPath string) e
 
 	deployment, err = c.k8sClient.Do().AppsV1().Deployments(ns).Update(deployment)
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Update", "err", err.Error())
 		return ErrDeploymentK8sUpdate
 	}
 
@@ -1091,7 +1091,7 @@ func (c *service) VolumeConfig(ctx context.Context, mountPath, subPath string) e
 			repository.VolumeConfig,
 			name, ns,
 			fmt.Sprintf("增加挂载配轩文件\n 应用: %s.%s --> 文件名: %s \n 路径: %s\n", name, ns, subPath, mountPath)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Warn(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 

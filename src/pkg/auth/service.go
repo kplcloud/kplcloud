@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/google/go-github/v26/github"
 	"github.com/jtblin/go-ldap-client"
 	kplcasbin "github.com/kplcloud/kplcloud/src/casbin"
@@ -120,14 +121,14 @@ func (c *service) AuthLoginGithubCallback(w http.ResponseWriter, r *http.Request
 		if strings.Contains(err.Error(), "server response missing access_token") {
 			http.Redirect(w, r, c.config.GetString("server", "domain")+"/#/user/login", http.StatusPermanentRedirect)
 		}
-		_ = c.logger.Log("githubOauthConfig", "Exchange", "err", err.Error())
+		_ = level.Error(c.logger).Log("githubOauthConfig", "Exchange", "err", err.Error())
 		resp.Err = err
 		_ = encodeLoginResponse(ctx, w, resp)
 		return
 	}
 
 	if token == nil || !token.Valid() {
-		_ = c.logger.Log("token", "nil", "or", "token.valid is false")
+		_ = level.Error(c.logger).Log("token", "nil", "or", "token.valid is false")
 		resp.Err = errors.New("token is nil or token.valid is false")
 		_ = encodeLoginResponse(ctx, w, resp)
 		return
@@ -136,7 +137,7 @@ func (c *service) AuthLoginGithubCallback(w http.ResponseWriter, r *http.Request
 	client := github.NewClient(githubOauthConfig.Client(ctx, token))
 	user, _, err := client.Users.Get(context.Background(), "")
 	if err != nil {
-		_ = c.logger.Log("client.users", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("client.users", "Get", "err", err.Error())
 		resp.Err = err
 		_ = encodeLoginResponse(ctx, w, resp)
 		return
@@ -162,7 +163,7 @@ func (c *service) AuthLoginGithubCallback(w http.ResponseWriter, r *http.Request
 	oauthState, _ := r.Cookie("oauthstate")
 
 	if r.FormValue("state") != oauthState.Value {
-		_ = c.logger.Log("invalid", "oauth github state")
+		_ = level.Warn(c.logger).Log("invalid", "oauth github state")
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
 	}
@@ -200,12 +201,12 @@ func (c *service) AuthLogin(email, username string) (rs string, member *types.Me
 	if member == nil || err != nil {
 		ns, err := c.repository.Namespace().Find(c.config.GetString("server", "default_namespace"))
 		if err != nil {
-			_ = c.logger.Log("namespaceRepository", "Find", "err", err.Error())
+			_ = level.Error(c.logger).Log("namespaceRepository", "Find", "err", err.Error())
 			return "", nil, nil, ErrAuthLoginDefaultNamespace
 		}
 		role, err := c.repository.Role().FindById(int64(c.config.GetInt("server", "default_role_id")))
 		if err != nil {
-			_ = c.logger.Log("roleRepository", "FindById", "err", err.Error())
+			_ = level.Error(c.logger).Log("roleRepository", "FindById", "err", err.Error())
 			return "", nil, nil, ErrAuthLoginDefaultRoleID
 		}
 		var namespaces []types.Namespace
@@ -222,18 +223,18 @@ func (c *service) AuthLogin(email, username string) (rs string, member *types.Me
 			Roles:      roles,
 		}
 		if err = c.repository.Member().CreateMember(member); err != nil {
-			_ = c.logger.Log("member", "create", "err", err.Error())
+			_ = level.Error(c.logger).Log("member", "create", "err", err.Error())
 			return "", nil, nil, err
 		}
 		for _, role := range roles {
 			if _, err = c.casbin.GetEnforcer().AddGroupingPolicySafe(strconv.Itoa(int(member.ID)), strconv.Itoa(int(role.ID))); err != nil {
-				_ = c.logger.Log("GetEnforcer", "AddGroupingPolicySafe", "err", err.Error())
+				_ = level.Warn(c.logger).Log("GetEnforcer", "AddGroupingPolicySafe", "err", err.Error())
 			}
 		}
 	}
 
 	if member.State == UserStateFail {
-		_ = c.logger.Log("email", "login", "email", email, "state", member.State, "err", "user state is fail")
+		_ = level.Error(c.logger).Log("email", "login", "email", email, "state", member.State, "err", "user state is fail")
 		return rs, member, nss, ErrUserStateFail
 	}
 
@@ -262,7 +263,7 @@ func (c *service) ParseToken(ctx context.Context, token string) (map[string]inte
 	}
 	claim, ok := tk.Claims.(*kpljwt.ArithmeticCustomClaims)
 	if !ok {
-		_ = c.logger.Log("tk", "Claims", "err", ok)
+		_ = level.Error(c.logger).Log("tk", "Claims", "err", ok)
 		return nil, middleware.ErrorASD
 	}
 
@@ -286,19 +287,19 @@ func (c *service) Login(ctx context.Context, email, password string) (rs string,
 		// LDAP登陆
 		ok, user, err = c.ldapLogin(email, password)
 		if err != nil || !ok {
-			_ = c.logger.Log("ldap", "login", "err", err, "ok", ok)
+			_ = level.Error(c.logger).Log("ldap", "login", "err", err, "ok", ok)
 			return rs, ErrUserOrPassword
 		}
 		info, err = c.repository.Member().Find(email)
 		if err != nil {
 			ns, err := c.repository.Namespace().Find(c.config.GetString("server", "default_namespace"))
 			if err != nil {
-				_ = c.logger.Log("namespaceRepository", "Find", "err", err.Error())
+				_ = level.Error(c.logger).Log("namespaceRepository", "Find", "err", err.Error())
 				return "", ErrAuthLoginDefaultNamespace
 			}
 			role, err := c.repository.Role().FindById(int64(c.config.GetInt("server", "default_role_id")))
 			if err != nil {
-				_ = c.logger.Log("roleRepository", "FindById", "err", err.Error())
+				_ = level.Error(c.logger).Log("roleRepository", "FindById", "err", err.Error())
 				return "", ErrAuthLoginDefaultRoleID
 			}
 			var namespaces []types.Namespace
@@ -315,12 +316,12 @@ func (c *service) Login(ctx context.Context, email, password string) (rs string,
 				Roles:      roles,
 			}
 			if err = c.repository.Member().CreateMember(info); err != nil {
-				_ = c.logger.Log("member", "create", "err", err.Error())
+				_ = level.Error(c.logger).Log("member", "create", "err", err.Error())
 				return "", err
 			}
 			for _, role := range roles {
 				if _, err = c.casbin.GetEnforcer().AddGroupingPolicySafe(strconv.Itoa(int(info.ID)), strconv.Itoa(int(role.ID))); err != nil {
-					_ = c.logger.Log("GetEnforcer", "AddGroupingPolicySafe", "err", err.Error())
+					_ = level.Warn(c.logger).Log("GetEnforcer", "AddGroupingPolicySafe", "err", err.Error())
 				}
 			}
 
@@ -329,13 +330,13 @@ func (c *service) Login(ctx context.Context, email, password string) (rs string,
 		// 邮箱登陆
 		info, err = c.emailLogin(email, password)
 		if err != nil {
-			_ = c.logger.Log("email", "login", "err", err)
+			_ = level.Error(c.logger).Log("email", "login", "err", err)
 			return rs, ErrUserOrPassword
 		}
 	}
 
 	if info == nil || info.State == UserStateFail {
-		_ = c.logger.Log("email", "login", "email", email, "err", err)
+		_ = level.Error(c.logger).Log("email", "login", "email", email, "err", err)
 		return rs, ErrUserStateFail
 	}
 
@@ -395,7 +396,7 @@ func (c *service) sign(email string, uid int64, namespaces []string, groups []in
 	}
 	expAt := time.Now().Add(time.Duration(sessionTimeout) * time.Second).Unix()
 
-	_ = c.logger.Log("expAt", expAt)
+	_ = level.Debug(c.logger).Log("expAt", expAt)
 
 	var isTrue bool
 	var roleIds []int64

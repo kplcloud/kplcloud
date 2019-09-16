@@ -83,7 +83,7 @@ func (c *service) Duplication(ctx context.Context, sourceNamespace, sourceAppNam
 
 	project, err := c.repository.Project().FindByNsName(sourceNamespace, sourceAppName)
 	if err != nil {
-		_ = c.logger.Log("projectRepository", "FindByNsName", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectRepository", "FindByNsName", "err", err.Error())
 		return ErrToolProjectGet
 	}
 
@@ -93,7 +93,7 @@ func (c *service) Duplication(ctx context.Context, sourceNamespace, sourceAppNam
 
 	tpls, err := c.repository.ProjectTemplate().FindProjectTemplateByProjectId(project.ID)
 	if err != nil {
-		_ = c.logger.Log("projectTemplateRepository", "FindProjectTemplateByProjectId", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectTemplateRepository", "FindProjectTemplateByProjectId", "err", err.Error())
 		return ErrToolProjectTemplateGet
 	}
 
@@ -107,7 +107,7 @@ func (c *service) Duplication(ctx context.Context, sourceNamespace, sourceAppNam
 	project.UpdatedAt = null.NewTime(time.Now(), true)
 
 	if err = c.repository.Project().Create(project); err != nil {
-		_ = c.logger.Log("projectRepository", "Create", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectRepository", "Create", "err", err.Error())
 		return ErrToolProjectCreate
 	}
 
@@ -132,7 +132,7 @@ func (c *service) Duplication(ctx context.Context, sourceNamespace, sourceAppNam
 		}
 		newTpl.FinalTemplate = c.copyOnWrite(tpl, sourceAppName, sourceNamespace, destinationNamespace)
 		if err = c.repository.ProjectTemplate().Create(newTpl); err != nil {
-			_ = c.logger.Log("projectTemplateRepository", "Create", "err", err.Error())
+			_ = level.Error(c.logger).Log("projectTemplateRepository", "Create", "err", err.Error())
 			continue
 		}
 	}
@@ -141,13 +141,13 @@ func (c *service) Duplication(ctx context.Context, sourceNamespace, sourceAppNam
 	commandKey := "JenkinsCommand"
 	tpl, err := c.repository.Template().FindByKindType(repository.TplKind(commandKey))
 	if err != nil {
-		_ = c.logger.Log("templateRepository", "FindByKindType", "err", err.Error())
+		_ = level.Error(c.logger).Log("templateRepository", "FindByKindType", "err", err.Error())
 		return ErrToolProjectTemplateGet
 	}
 
 	jobItem, err := c.jenkins.GetJobConfig(sourceAppName + "." + sourceNamespace)
 	if err != nil {
-		_ = c.logger.Log("jenkins", "GetJobConfig", "err", err.Error())
+		_ = level.Error(c.logger).Log("jenkins", "GetJobConfig", "err", err.Error())
 		return ErrToolJenkinsGet
 	}
 
@@ -164,7 +164,7 @@ func (c *service) Duplication(ctx context.Context, sourceNamespace, sourceAppNam
 	jobItem.Description = jobItem.Description + fmt.Sprintf(" ps: 从 %s 克隆而来", sourceNamespace)
 
 	if err = c.jenkins.CreateJob(jobItem, sourceAppName+"."+destinationNamespace); err != nil {
-		_ = c.logger.Log("jenkins", "CreateJob", "err", err.Error())
+		_ = level.Error(c.logger).Log("jenkins", "CreateJob", "err", err.Error())
 		return err
 	}
 
@@ -173,7 +173,7 @@ func (c *service) Duplication(ctx context.Context, sourceNamespace, sourceAppNam
 			if e := c.jenkins.CreateView(jenkins.ListView{Name: "local", Properties: jenkins.ViewProperties{
 				Class: "hudson.model.View$PropertyList",
 			}}); e != nil {
-				_ = c.logger.Log("jenkins", "CreateView", "err", e.Error())
+				_ = level.Error(c.logger).Log("jenkins", "CreateView", "err", e.Error())
 			}
 		}
 
@@ -183,7 +183,7 @@ func (c *service) Duplication(ctx context.Context, sourceNamespace, sourceAppNam
 		}
 
 		if err = c.jenkins.AddJobToView("local", job); err != nil {
-			_ = c.logger.Log("jenkins", "AddJobToView", "err", err.Error())
+			_ = level.Error(c.logger).Log("jenkins", "AddJobToView", "err", err.Error())
 			return err
 		}*/
 
@@ -207,7 +207,7 @@ func (c *service) copyOnWrite(tpl *types.ProjectTemplate, appName, sourceNamespa
 		deployment.Status = appsv1.DeploymentStatus{}
 
 		if deployment, err = c.k8sClient.Do().AppsV1().Deployments(destinationNamespace).Create(deployment); err != nil {
-			_ = c.logger.Log("Deployments", "Create", "err", err.Error())
+			_ = level.Error(c.logger).Log("Deployments", "Create", "err", err.Error())
 		}
 
 		b, _ := yaml.Marshal(deployment)
@@ -225,7 +225,7 @@ func (c *service) copyOnWrite(tpl *types.ProjectTemplate, appName, sourceNamespa
 		svc.Spec.ClusterIP = ""
 
 		if svc, err = c.k8sClient.Do().CoreV1().Services(destinationNamespace).Create(svc); err != nil {
-			_ = c.logger.Log("Services", "Create", "err", err.Error())
+			_ = level.Error(c.logger).Log("Services", "Create", "err", err.Error())
 		}
 		b, _ := yaml.Marshal(svc)
 		return string(b)
@@ -240,7 +240,7 @@ func (c *service) copyOnWrite(tpl *types.ProjectTemplate, appName, sourceNamespa
 			ing.Spec.Rules[k].Host = fmt.Sprintf(c.config.GetString("server", "domain_suffix"), appName, destinationNamespace)
 		}
 		if ing, err = c.k8sClient.Do().ExtensionsV1beta1().Ingresses(destinationNamespace).Create(ing); err != nil {
-			_ = c.logger.Log("Ingresses", "Create", "err", err.Error())
+			_ = level.Error(c.logger).Log("Ingresses", "Create", "err", err.Error())
 		}
 		b, _ := yaml.Marshal(ing)
 		return string(b)
@@ -254,7 +254,7 @@ func (c *service) copyOnWrite(tpl *types.ProjectTemplate, appName, sourceNamespa
 		configmap.ObjectMeta.ResourceVersion = ""
 		configmap.SelfLink = ""
 		if configmap, err = c.k8sClient.Do().CoreV1().ConfigMaps(destinationNamespace).Create(configmap); err != nil {
-			_ = c.logger.Log("ConfigMaps", "Create", "err", err.Error())
+			_ = level.Error(c.logger).Log("ConfigMaps", "Create", "err", err.Error())
 		}
 		b, _ := yaml.Marshal(configmap)
 		return string(b)
@@ -263,7 +263,7 @@ func (c *service) copyOnWrite(tpl *types.ProjectTemplate, appName, sourceNamespa
 		var obj crd.IstioObject
 		if err = c.k8sClient.Do().RESTClient().Post().Namespace(destinationNamespace).
 			Resource(crd.VirtualServiceProtoSchema.String()).Body(out).Do().Into(obj); err != nil {
-			_ = c.logger.Log("ConfigMaps", "Create", "err", err.Error())
+			_ = level.Error(c.logger).Log("ConfigMaps", "Create", "err", err.Error())
 		}
 	}
 
@@ -284,7 +284,7 @@ func (c *service) FakeTime(ctx context.Context, fakeTime time.Time, method FakeT
 
 	deployment, err := c.k8sClient.Do().AppsV1().Deployments(project.Namespace).Get(project.Name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return ErrToolDeploymentK8sGet
 	}
 
@@ -348,7 +348,7 @@ func (c *service) FakeTime(ctx context.Context, fakeTime time.Time, method FakeT
 
 	deployment, err = c.k8sClient.Do().AppsV1().Deployments(project.Namespace).Update(deployment)
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Update", "err", err.Error())
 		return errors.New(ErrToolDeploymentK8sUpdate.Error() + err.Error())
 	}
 
@@ -359,7 +359,7 @@ func (c *service) FakeTime(ctx context.Context, fakeTime time.Time, method FakeT
 			Kind:          repository.Deployment.String(),
 			FinalTemplate: string(b),
 		}); e != nil {
-			_ = c.logger.Log("projectTemplateRepository", "UpdateProjectTemplate", "err", err.Error())
+			_ = level.Error(c.logger).Log("projectTemplateRepository", "UpdateProjectTemplate", "err", err.Error())
 		}
 	}()
 

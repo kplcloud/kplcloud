@@ -126,22 +126,3 @@ CREATE:
 
 	return err
 }
-
-func logLevel(logLevel string) (opt level.Option) {
-	switch logLevel {
-	case "warn":
-		opt = level.AllowWarn()
-	case "error":
-		opt = level.AllowError()
-	case "debug":
-		opt = level.AllowDebug()
-	case "info":
-		opt = level.AllowInfo()
-	case "all":
-		opt = level.AllowAll()
-	default:
-		opt = level.AllowNone()
-	}
-
-	return
-}

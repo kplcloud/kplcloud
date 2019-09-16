@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/casbin"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/middleware"
@@ -75,13 +76,13 @@ func (c *service) Me(ctx context.Context) (map[string]interface{}, error) {
 
 	member, err := c.repository.Member().FindById(memberId)
 	if err != nil {
-		_ = c.logger.Log("memberRepository", "FindById", "err", err.Error())
+		_ = level.Error(c.logger).Log("memberRepository", "FindById", "err", err.Error())
 		return nil, ErrMemberGet
 	}
 
 	roles, err := c.repository.Member().GetRolesByMemberId(memberId)
 	if err != nil {
-		_ = c.logger.Log("memberRepository", "GetRolesByMemberId", "err", err.Error())
+		_ = level.Error(c.logger).Log("memberRepository", "GetRolesByMemberId", "err", err.Error())
 		return nil, ErrMemberRoleGet
 	}
 
@@ -89,7 +90,7 @@ func (c *service) Me(ctx context.Context) (map[string]interface{}, error) {
 		"is_read": "0",
 	}, memberId)
 	if err != nil {
-		_ = c.logger.Log("noticeRepository", "CountRead", "err", err.Error())
+		_ = level.Error(c.logger).Log("noticeRepository", "CountRead", "err", err.Error())
 	}
 
 	return map[string]interface{}{
@@ -112,7 +113,7 @@ func (c *service) Namespaces(ctx context.Context) (list []map[string]string, err
 
 	nsList, err := c.repository.Namespace().FindByNames(namespaces)
 	if err != nil {
-		_ = c.logger.Log("namespaceRepository", "FindByNames", "err", err.Error())
+		_ = level.Error(c.logger).Log("namespaceRepository", "FindByNames", "err", err.Error())
 		return nil, ErrMemberNamespaceGet
 	}
 
@@ -132,13 +133,13 @@ func (c *service) Namespaces(ctx context.Context) (list []map[string]string, err
 func (c *service) Detail(ctx context.Context, id int64) (map[string]interface{}, error) {
 	member, err := c.repository.Member().FindById(id)
 	if err != nil {
-		_ = c.logger.Log("memberRepository", "FindById", "err", err.Error())
+		_ = level.Error(c.logger).Log("memberRepository", "FindById", "err", err.Error())
 		return nil, ErrMemberGet
 	}
 
 	roles, err := c.repository.Member().GetRolesByMemberId(member.ID)
 	if err != nil {
-		_ = c.logger.Log("memberRepository", "GetRolesByMemberId", "err", err.Error())
+		_ = level.Error(c.logger).Log("memberRepository", "GetRolesByMemberId", "err", err.Error())
 	}
 
 	return map[string]interface{}{
@@ -157,13 +158,13 @@ func (c *service) Detail(ctx context.Context, id int64) (map[string]interface{},
 func (c *service) Post(ctx context.Context, username, email, password string, state int64, namespaces []string, roleIds []int64) error {
 	nsList, err := c.repository.Namespace().FindByNames(namespaces)
 	if err != nil {
-		_ = c.logger.Log("namespaceRepository", "FindByNames", "err", err.Error())
+		_ = level.Error(c.logger).Log("namespaceRepository", "FindByNames", "err", err.Error())
 		return ErrMemberNamespaceGet
 	}
 
 	roles, err := c.repository.Role().FindByIds(roleIds)
 	if err != nil {
-		_ = c.logger.Log("roleRepository", "FindByIds", "err", err.Error())
+		_ = level.Error(c.logger).Log("roleRepository", "FindByIds", "err", err.Error())
 		return ErrMemberRoleGet
 	}
 
@@ -193,19 +194,19 @@ func (c *service) Post(ctx context.Context, username, email, password string, st
 func (c *service) Update(ctx context.Context, id int64, username, email, password string, state int64, namespaces []string, roleIds []int64) error {
 	member, err := c.repository.Member().FindById(id)
 	if err != nil {
-		_ = c.logger.Log("memberRepository", "FindById", "err", err.Error())
+		_ = level.Error(c.logger).Log("memberRepository", "FindById", "err", err.Error())
 		return ErrMemberGet
 	}
 
 	nsList, err := c.repository.Namespace().FindByNames(namespaces)
 	if err != nil {
-		_ = c.logger.Log("namespaceRepository", "FindByNames", "err", err.Error())
+		_ = level.Error(c.logger).Log("namespaceRepository", "FindByNames", "err", err.Error())
 		return ErrMemberNamespaceGet
 	}
 
 	roles, err := c.repository.Role().FindByIds(roleIds)
 	if err != nil {
-		_ = c.logger.Log("roleRepository", "FindByIds", "err", err.Error())
+		_ = level.Error(c.logger).Log("roleRepository", "FindByIds", "err", err.Error())
 		return ErrMemberRoleGet
 	}
 
@@ -231,7 +232,7 @@ func (c *service) Update(ctx context.Context, id int64, username, email, passwor
 	c.casbin.GetEnforcer().DeleteRolesForUser(strconv.Itoa(int(member.ID)))
 	for _, role := range roleList {
 		if _, err = c.casbin.GetEnforcer().AddGroupingPolicySafe(strconv.Itoa(int(member.ID)), strconv.Itoa(int(role.ID))); err != nil {
-			_ = c.logger.Log("GetEnforcer", "AddGroupingPolicySafe", "err", err.Error())
+			_ = level.Error(c.logger).Log("GetEnforcer", "AddGroupingPolicySafe", "err", err.Error())
 		}
 	}
 	_ = c.casbin.GetEnforcer().LoadPolicy()
@@ -245,14 +246,14 @@ func (c *service) Update(ctx context.Context, id int64, username, email, passwor
 func (c *service) List(ctx context.Context, page, limit int, email string) (map[string]interface{}, error) {
 	count, err := c.repository.Member().Count(email)
 	if err != nil {
-		_ = c.logger.Log("memberRepository", "Count", "err", err.Error())
+		_ = level.Error(c.logger).Log("memberRepository", "Count", "err", err.Error())
 		return nil, ErrMemberCount
 	}
 	p := paginator.NewPaginator(page, limit, int(count))
 
 	members, err := c.repository.Member().FindOffsetLimit(p.Offset(), limit, email)
 	if err != nil {
-		_ = c.logger.Log("memberRepository", "FindOffsetLimit", "err", err.Error())
+		_ = level.Error(c.logger).Log("memberRepository", "FindOffsetLimit", "err", err.Error())
 		return nil, ErrMemberList
 	}
 

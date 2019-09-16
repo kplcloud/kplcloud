@@ -3,12 +3,12 @@ package middleware
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/casbin/casbin"
 	"github.com/dgrijalva/jwt-go"
 	kitcasbin "github.com/go-kit/kit/auth/casbin"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	kithttp "github.com/go-kit/kit/transport/http"
 	kpljwt "github.com/kplcloud/kplcloud/src/jwt"
 	"github.com/kplcloud/kplcloud/src/repository"
@@ -61,13 +61,13 @@ func CheckAuthMiddleware(logger log.Logger) endpoint.Middleware {
 			var clustom kpljwt.ArithmeticCustomClaims
 			tk, err := jwt.ParseWithClaims(token, &clustom, kpljwt.JwtKeyFunc)
 			if err != nil || tk == nil {
-				_ = logger.Log("jwt", "ParseWithClaims", "err", err)
+				_ = level.Error(logger).Log("jwt", "ParseWithClaims", "err", err)
 				return
 			}
 
 			claim, ok := tk.Claims.(*kpljwt.ArithmeticCustomClaims)
 			if !ok {
-				_ = logger.Log("tk", "Claims", "err", ok)
+				_ = level.Error(logger).Log("tk", "Claims", "err", ok)
 				err = ErrorASD
 				return
 			}
@@ -125,11 +125,9 @@ func NamespaceMiddleware(logger log.Logger) endpoint.Middleware {
 			}
 
 			if !permission {
-				_ = logger.Log("name", name, "namespace", namespace, "permission", permission)
+				_ = level.Error(logger).Log("name", name, "namespace", namespace, "permission", permission)
 				return nil, ErrorASD
 			}
-
-			fmt.Println("NamespaceMiddleware", "........")
 
 			return next(ctx, request)
 		}
@@ -144,7 +142,7 @@ func CronJobMiddleware(logger log.Logger, cronjobRepository repository.CronjobRe
 			if name != "" {
 				cronjob, notFound := cronjobRepository.GetCronJobByNameAndNs(name, namespace)
 				if notFound {
-					_ = logger.Log("cronJobRepository", "GetCronJobByNameAndNs", "err", "data not found")
+					_ = level.Error(logger).Log("cronJobRepository", "GetCronJobByNameAndNs", "err", "data not found")
 					return nil, ErrCronJobNotExists
 				}
 
@@ -159,18 +157,18 @@ func CronJobMiddleware(logger log.Logger, cronjobRepository repository.CronjobRe
 					if cronjob.MemberID != memberId {
 						notFound, err := groupsRepository.CheckPermissionForMidCronJob(cronjob.ID, groupIds)
 						if err != nil {
-							_ = logger.Log("cronJobRepository", "CheckPermissionForMidCronJob", "err", err.Error())
+							_ = level.Error(logger).Log("cronJobRepository", "CheckPermissionForMidCronJob", "err", err.Error())
 							return nil, ErrCheckPermissionFailed
 						}
 						if notFound {
-							_ = logger.Log("cronJobRepository", "CheckPermissionForMidCronJob", "err", "cronjob not in this group")
+							_ = level.Error(logger).Log("cronJobRepository", "CheckPermissionForMidCronJob", "err", "cronjob not in this group")
 							return nil, ErrNotPermission
 						}
 					}
 				}
 
 				ctx = context.WithValue(ctx, CronJobContext, cronjob)
-				_ = logger.Log("CronJobMiddleware", "ctx", "name", name)
+				_ = level.Info(logger).Log("CronJobMiddleware", "ctx", "name", name)
 				// 如果为 post 或 put 是否需要考虑存历史? 使用defer 但必须有返回结果才行？
 			}
 			return next(ctx, request)
@@ -187,7 +185,7 @@ func ProjectMiddleware(logger log.Logger, projectRepository repository.ProjectRe
 			if name != "" {
 				project, err := projectRepository.FindByNsNameOnly(namespace, name)
 				if err != nil {
-					_ = logger.Log("projectRepository", "FindByNsName", "err", err.Error())
+					_ = level.Error(logger).Log("projectRepository", "FindByNsName", "err", err.Error())
 					return nil, ErrProjectNotExists
 				}
 
@@ -202,11 +200,11 @@ func ProjectMiddleware(logger log.Logger, projectRepository repository.ProjectRe
 					if method != http.MethodGet && project.MemberID != memberId {
 						notFound, err := groupsRepository.CheckPermissionForMidProject(project.ID, groupIds)
 						if err != nil {
-							_ = logger.Log("groupsRepository", "CheckPermissionForMidProject", "err", err.Error())
+							_ = level.Error(logger).Log("groupsRepository", "CheckPermissionForMidProject", "err", err.Error())
 							return nil, ErrCheckPermissionFailed
 						}
 						if notFound {
-							_ = logger.Log("groupsRepository", "CheckPermissionForMidProject", "err", "project not in this group")
+							_ = level.Error(logger).Log("groupsRepository", "CheckPermissionForMidProject", "err", "project not in this group")
 							return nil, ErrNotPermission
 						}
 
@@ -214,7 +212,7 @@ func ProjectMiddleware(logger log.Logger, projectRepository repository.ProjectRe
 				}
 
 				ctx = context.WithValue(ctx, ProjectContext, project)
-				_ = logger.Log("ProjectMiddleware", "ctx", "name", name)
+				_ = level.Info(logger).Log("ProjectMiddleware", "ctx", "name", name)
 			}
 
 			defer func() {

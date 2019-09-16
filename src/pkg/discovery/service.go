@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/ghodss/yaml"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/middleware"
@@ -95,7 +96,7 @@ func (c *service) Update(ctx context.Context, req createRequest) (err error) {
 
 	svc, err := c.k8sClient.Do().CoreV1().Services(ns).Get(req.Name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Services", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Services", "Get", "err", err.Error())
 		return ErrServiceK8sGet
 	}
 
@@ -114,7 +115,7 @@ func (c *service) Update(ctx context.Context, req createRequest) (err error) {
 
 	serviceTpl, err := c.repository.Template().FindByKindType(repository.ServiceKind)
 	if err != nil {
-		_ = c.logger.Log("templateRepository", "FindByKindType", "err", err.Error())
+		_ = level.Error(c.logger).Log("templateRepository", "FindByKindType", "err", err.Error())
 		return ErrServiceTplGet
 	}
 	svcYaml, err := encode.EncodeTemplate(repository.ServiceKind.ToString(), serviceTpl.Detail, map[string]interface{}{
@@ -127,19 +128,19 @@ func (c *service) Update(ctx context.Context, req createRequest) (err error) {
 	_ = yaml.Unmarshal([]byte(svcYaml), &svc)
 
 	if err != nil {
-		_ = c.logger.Log("encode", "EncodeTemplate", "err", err.Error())
+		_ = level.Error(c.logger).Log("encode", "EncodeTemplate", "err", err.Error())
 		return ErrServiceTplParse
 	}
 
 	if svc, err = c.k8sClient.Do().CoreV1().Services(ns).Update(svc); err != nil {
-		_ = c.logger.Log("Services", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("Services", "Update", "err", err.Error())
 		return ErrServiceK8sUpdate
 	}
 
 	if ResourceType(req.ResourceType) == ServiceResourceType {
 		project, err := c.repository.Project().FindByNsName(ns, req.ServiceProject)
 		if err != nil {
-			_ = c.logger.Log("projectRepository", "FindByNsName", "err", err.Error())
+			_ = level.Error(c.logger).Log("projectRepository", "FindByNsName", "err", err.Error())
 			return ErrProjectGet
 		}
 
@@ -152,7 +153,7 @@ func (c *service) Update(ctx context.Context, req createRequest) (err error) {
 					svcTpl.FinalTemplate = string(finalTpl)
 					svcTpl.Fields = string(fields)
 					if err = c.repository.ProjectTemplate().UpdateTemplate(svcTpl); err != nil {
-						_ = c.logger.Log("projectTemplate", "FirstOrCreate", "err", err.Error())
+						_ = level.Error(c.logger).Log("projectTemplate", "FirstOrCreate", "err", err.Error())
 					}
 				}
 			}()
@@ -163,7 +164,7 @@ func (c *service) Update(ctx context.Context, req createRequest) (err error) {
 		// 如果选择的是 端点的话
 		endpointTpl, err := c.repository.Template().FindByKindType(repository.EndpointsKind)
 		if err != nil {
-			_ = c.logger.Log("templateRepository", "FindByKindType", "err", err.Error())
+			_ = level.Error(c.logger).Log("templateRepository", "FindByKindType", "err", err.Error())
 			return ErrEndpointsTplGet
 		}
 		var addressPorts []map[string]interface{}
@@ -185,17 +186,17 @@ func (c *service) Update(ctx context.Context, req createRequest) (err error) {
 			"addresses": address,
 		})
 		if err != nil {
-			_ = c.logger.Log("encode", "EncodeTemplate", "err", err.Error())
+			_ = level.Error(c.logger).Log("encode", "EncodeTemplate", "err", err.Error())
 			return ErrEndpointsParse
 		}
 		ep, err := c.k8sClient.Do().CoreV1().Endpoints(ns).Get(req.Name, metav1.GetOptions{})
 		if err != nil {
-			_ = c.logger.Log("endpoints", "Get", "err", err.Error())
+			_ = level.Error(c.logger).Log("endpoints", "Get", "err", err.Error())
 			return ErrEndpointsK8sGet
 		}
 		_ = yaml.Unmarshal([]byte(epYaml), &ep)
 		if ep, err = c.k8sClient.Do().CoreV1().Endpoints(ns).Update(ep); err != nil {
-			_ = c.logger.Log("Endpoints", "Create", "err", err.Error())
+			_ = level.Error(c.logger).Log("Endpoints", "Create", "err", err.Error())
 			return ErrEndpointsK8sCreate
 		}
 	}
@@ -221,7 +222,7 @@ func (c *service) Create(ctx context.Context, req createRequest) (err error) {
 
 	serviceTpl, err := c.repository.Template().FindByKindType(repository.ServiceKind)
 	if err != nil {
-		_ = c.logger.Log("templateRepository", "FindByKindType", "err", err.Error())
+		_ = level.Error(c.logger).Log("templateRepository", "FindByKindType", "err", err.Error())
 		return ErrServiceTplGet
 	}
 	svcYaml, err := encode.EncodeTemplate(repository.ServiceKind.ToString(), serviceTpl.Detail, map[string]interface{}{
@@ -231,7 +232,7 @@ func (c *service) Create(ctx context.Context, req createRequest) (err error) {
 		"resourceType": req.ResourceType,
 	})
 	if err != nil {
-		_ = c.logger.Log("encode", "EncodeTemplate", "err", err.Error())
+		_ = level.Error(c.logger).Log("encode", "EncodeTemplate", "err", err.Error())
 		return ErrServiceTplParse
 	}
 
@@ -240,14 +241,14 @@ func (c *service) Create(ctx context.Context, req createRequest) (err error) {
 
 	svc, err = c.k8sClient.Do().CoreV1().Services(ns).Create(svc)
 	if err != nil {
-		_ = c.logger.Log("Services", "Create", "err", err.Error())
+		_ = level.Error(c.logger).Log("Services", "Create", "err", err.Error())
 		return ErrServiceK8sCreate
 	}
 
 	if ResourceType(req.ResourceType) == ServiceResourceType {
 		project, err := c.repository.Project().FindByNsName(ns, req.ServiceProject)
 		if err != nil {
-			_ = c.logger.Log("projectRepository", "FindByNsName", "err", err.Error())
+			_ = level.Error(c.logger).Log("projectRepository", "FindByNsName", "err", err.Error())
 			return ErrProjectGet
 		}
 
@@ -258,7 +259,7 @@ func (c *service) Create(ctx context.Context, req createRequest) (err error) {
 			go func() {
 				_, err = c.repository.ProjectTemplate().FirstOrCreate(project.ID, repository.Service, string(fields), string(finalTpl), 1)
 				if err != nil {
-					_ = c.logger.Log("projectTemplate", "FirstOrCreate", "err", err.Error())
+					_ = level.Error(c.logger).Log("projectTemplate", "FirstOrCreate", "err", err.Error())
 				}
 			}()
 		}
@@ -268,7 +269,7 @@ func (c *service) Create(ctx context.Context, req createRequest) (err error) {
 		// 如果选择的是 端点的话
 		endpointTpl, err := c.repository.Template().FindByKindType(repository.EndpointsKind)
 		if err != nil {
-			_ = c.logger.Log("templateRepository", "FindByKindType", "err", err.Error())
+			_ = level.Error(c.logger).Log("templateRepository", "FindByKindType", "err", err.Error())
 			return ErrEndpointsTplGet
 		}
 		var addressPorts []map[string]interface{}
@@ -290,13 +291,13 @@ func (c *service) Create(ctx context.Context, req createRequest) (err error) {
 			"addresses": address,
 		})
 		if err != nil {
-			_ = c.logger.Log("encode", "EncodeTemplate", "err", err.Error())
+			_ = level.Error(c.logger).Log("encode", "EncodeTemplate", "err", err.Error())
 			return ErrEndpointsParse
 		}
 		var ep *v1.Endpoints
 		_ = yaml.Unmarshal([]byte(epYaml), &ep)
 		if ep, err = c.k8sClient.Do().CoreV1().Endpoints(ns).Create(ep); err != nil {
-			_ = c.logger.Log("Endpoints", "Create", "err", err.Error())
+			_ = level.Error(c.logger).Log("Endpoints", "Create", "err", err.Error())
 			return ErrEndpointsK8sCreate
 		}
 	}
@@ -324,7 +325,7 @@ func (c *service) PostYaml(ctx context.Context, body []byte) error {
 
 		// todo templateId 没什么用，可以去掉
 		if _, err = c.repository.ProjectTemplate().FirstOrCreate(project.ID, repository.Service, string(fields), string(final), 1); err != nil {
-			_ = c.logger.Log("projectTemplate", "FirstOrCreate", "err", err.Error())
+			_ = level.Error(c.logger).Log("projectTemplate", "FirstOrCreate", "err", err.Error())
 		}
 	}
 
@@ -338,7 +339,7 @@ func (c *service) List(ctx context.Context, page, limit int) (res []*serviceList
 
 	svcList, err := c.k8sClient.Do().CoreV1().Services(ns).List(metav1.ListOptions{})
 	if err != nil {
-		_ = c.logger.Log("Services", "List", "err", err.Error())
+		_ = level.Error(c.logger).Log("Services", "List", "err", err.Error())
 		return nil, ErrServiceK8sList
 	}
 	length := len(svcList.Items)
@@ -378,7 +379,7 @@ func (c *service) Detail(ctx context.Context, svcName string) (map[string]interf
 	ns := ctx.Value(middleware.NamespaceContext).(string)
 	svc, err := c.k8sClient.Do().CoreV1().Services(ns).Get(svcName, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Services", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Services", "Get", "err", err.Error())
 		return nil, ErrServiceK8sGet
 	}
 	var pods []map[string]interface{}
@@ -390,7 +391,7 @@ func (c *service) Detail(ctx context.Context, svcName string) (map[string]interf
 				endpointList = append(endpointList, subset)
 			}
 		} else {
-			_ = c.logger.Log("Endpoints", "Get", "err", err.Error())
+			_ = level.Error(c.logger).Log("Endpoints", "Get", "err", err.Error())
 		}
 	}
 	var selectorKey, selectorVal string
@@ -472,7 +473,7 @@ func (c *service) Detail(ctx context.Context, svcName string) (map[string]interf
 			})
 		}
 	} else {
-		_ = c.logger.Log("Pods", "List", "err", err.Error())
+		_ = level.Error(c.logger).Log("Pods", "List", "err", err.Error())
 	}
 
 	var eps v1.EndpointSubset
@@ -496,20 +497,20 @@ func (c *service) Delete(ctx context.Context, svcName string) error {
 		if err == nil {
 			if project, err := c.repository.Project().FindByNsName(ns, svcName); err == nil && project.ID != 0 {
 				if err = c.repository.ProjectTemplate().Delete(project.ID, repository.Service); err != nil {
-					_ = c.logger.Log("projectTemplate", "delete", "err", err)
+					_ = level.Error(c.logger).Log("projectTemplate", "delete", "err", err)
 				}
 			}
 		}
 	}()
 
 	if err = c.k8sClient.Do().CoreV1().Services(ns).Delete(svcName, &metav1.DeleteOptions{}); err != nil {
-		_ = c.logger.Log("Services", "Delete", "err", err.Error())
+		_ = level.Error(c.logger).Log("Services", "Delete", "err", err.Error())
 		return ErrServiceK8sDelete
 	}
 
 	go func() {
 		if err := c.k8sClient.Do().CoreV1().Endpoints(ns).Delete(svcName, &metav1.DeleteOptions{}); err != nil {
-			_ = c.logger.Log("Endpoints", "Delete", "err", err.Error())
+			_ = level.Error(c.logger).Log("Endpoints", "Delete", "err", err.Error())
 		}
 	}()
 

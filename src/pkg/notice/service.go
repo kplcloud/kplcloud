@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	amqpClient "github.com/kplcloud/kplcloud/src/amqp"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/event"
@@ -97,7 +98,7 @@ func (c *service) Create(ctx context.Context, req *event.WebhooksRequest) (err e
 		if err := c.amqpClient.PublishOnQueue(amqpClient.NoticeTopic, func() []byte {
 			return []byte(b)
 		}); err != nil {
-			_ = c.logger.Log("amqpClient", "PublicNoticeQueue", "err", err.Error())
+			_ = level.Warn(c.logger).Log("amqpClient", "PublicNoticeQueue", "err", err.Error())
 		}
 	}()
 	return
@@ -108,7 +109,7 @@ func (c *service) List(ctx context.Context, param map[string]string, page int, l
 	memberId := ctx.Value(middleware.UserIdContext).(int64)
 	count, err := c.store.NoticeMember().CountMessage(param, memberId)
 	if err != nil {
-		_ = c.logger.Log("notice", "CountMessage", "err", err.Error())
+		_ = level.Error(c.logger).Log("notice", "CountMessage", "err", err.Error())
 		return nil, ErrNoticeListCount
 	}
 
@@ -116,7 +117,7 @@ func (c *service) List(ctx context.Context, param map[string]string, page int, l
 
 	list, err := c.store.NoticeMember().FindMessageLimit(param, memberId, p.Offset(), limit)
 	if err != nil {
-		_ = c.logger.Log("notice", "FindMessageLimit", "err", err.Error())
+		_ = level.Error(c.logger).Log("notice", "FindMessageLimit", "err", err.Error())
 		return nil, ErrNoticeList
 	}
 
@@ -181,7 +182,7 @@ func (c *service) Tips(ctx context.Context) (res interface{}, err error) {
 	myNotices = append(myNotices, myNotices3)
 
 	if err != nil {
-		_ = c.logger.Log("notice.Tips", "FindMessageLimit", "err", err.Error())
+		_ = level.Error(c.logger).Log("notice.Tips", "FindMessageLimit", "err", err.Error())
 		return nil, ErrNoticeList
 	}
 
@@ -237,13 +238,13 @@ func (c *service) CountRead(ctx context.Context, param map[string]string) (res m
 	param["is_read"] = "0"
 	countUnRead, err := c.store.NoticeMember().CountRead(param, memberId)
 	if err != nil {
-		_ = c.logger.Log("notice", "CountRead", "err", err.Error())
+		_ = level.Error(c.logger).Log("notice", "CountRead", "err", err.Error())
 		return nil, ErrNoticeMemberListCount
 	}
 	param["is_read"] = "1"
 	countRead, err := c.store.NoticeMember().CountRead(param, memberId)
 	if err != nil {
-		_ = c.logger.Log("notice", "CountRead", "err", err.Error())
+		_ = level.Error(c.logger).Log("notice", "CountRead", "err", err.Error())
 		return nil, ErrNoticeMemberListCount
 	}
 

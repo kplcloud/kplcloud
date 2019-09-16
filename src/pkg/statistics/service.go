@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/middleware"
 	"github.com/kplcloud/kplcloud/src/repository"
@@ -58,13 +59,13 @@ func (c *service) Build(ctx context.Context, req buildRequest) (res map[string]i
 			isIn, err := c.store.Groups().IsInGroup(int64(req.GroupID), memberId)
 
 			if isIn == false {
-				_ = c.logger.Log("statistics", "c.group.IsInGroup", "err", err.Error())
+				_ = level.Error(c.logger).Log("statistics", "c.group.IsInGroup", "err", err.Error())
 				return nil, ErrNotInGroupRefused
 			}
 
 			project, err = c.store.Project().GetProjectByGroupId(int64(req.GroupID))
 			if err != nil {
-				_ = c.logger.Log("statistics", "c.project.GetProjectByGroupId", "err", err.Error())
+				_ = level.Error(c.logger).Log("statistics", "c.project.GetProjectByGroupId", "err", err.Error())
 				return nil, ErrProjectRefused
 			}
 
@@ -74,14 +75,14 @@ func (c *service) Build(ctx context.Context, req buildRequest) (res map[string]i
 			//获取权限内的项目
 			project, err = c.store.Project().GetProjectByMidAndNs(memberId, req.Namespace)
 			if err != nil {
-				_ = c.logger.Log("statistics", "c.project.GetProjectByMidAndNs", "err", err.Error())
+				_ = level.Error(c.logger).Log("statistics", "c.project.GetProjectByMidAndNs", "err", err.Error())
 				return nil, ErrProjectRefused
 			}
 
 		} else {
 			project, err = c.store.Project().GetProjectByNs(req.Namespace)
 			if err != nil {
-				_ = c.logger.Log("statistics", "c.project.GetProjectByNs", "err", err.Error())
+				_ = level.Error(c.logger).Log("statistics", "c.project.GetProjectByNs", "err", err.Error())
 				return nil, ErrProjectRefused
 			}
 		}
@@ -111,7 +112,7 @@ func (c *service) Build(ctx context.Context, req buildRequest) (res map[string]i
 	list, err := c.store.Build().FindStatisticsOffsetLimit(reqBuild, p.Offset(), req.Limit)
 
 	if err != nil {
-		_ = c.logger.Log("statistics", "c.build.FindStatisticsOffsetLimit", "err", err.Error())
+		_ = level.Error(c.logger).Log("statistics", "c.build.FindStatisticsOffsetLimit", "err", err.Error())
 		return nil, ErrBuildRefused
 	}
 
@@ -142,7 +143,7 @@ func (c *service) Build(ctx context.Context, req buildRequest) (res map[string]i
 		}, "namespace,name,status")
 
 		if err != nil {
-			_ = c.logger.Log("statistics", "c.build.GetGroupByBuilds", "err", err.Error())
+			_ = level.Error(c.logger).Log("statistics", "c.build.GetGroupByBuilds", "err", err.Error())
 			return nil, ErrGroupBuildRefused
 		}
 		list := ResponseList{
@@ -198,7 +199,7 @@ func (c *service) Build(ctx context.Context, req buildRequest) (res map[string]i
 	}, "status")
 
 	if err != nil {
-		_ = c.logger.Log("statistics", "c.build.GetGroupByBuilds-allBuilds", "err", err.Error())
+		_ = level.Error(c.logger).Log("statistics", "c.build.GetGroupByBuilds-allBuilds", "err", err.Error())
 		return nil, ErrGroupBuildRefused
 	}
 

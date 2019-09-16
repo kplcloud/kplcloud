@@ -126,7 +126,7 @@ func NewService(logger log.Logger, config *config.Config,
 func (c *service) GetOne(ctx context.Context, ns, name string) (res map[string]interface{}, err error) {
 	confData, err := c.repository.ConfigData().Find(ns, name)
 	if err != nil {
-		_ = c.logger.Log("ConfigMap", "GetOne", "err", err.Error())
+		_ = level.Error(c.logger).Log("ConfigMap", "GetOne", "err", err.Error())
 		return nil, ErrConfigMapGetDB
 	}
 	var data []map[string]interface{}
@@ -154,20 +154,20 @@ func (c *service) GetOne(ctx context.Context, ns, name string) (res map[string]i
 func (c *service) DeleteData(ctx context.Context, ns, name string, id int64) (err error) {
 	configMapData, err := c.repository.ConfigData().FindById(id)
 	if err != nil {
-		_ = c.logger.Log("confDataRepository", "FindById", "err", err.Error())
+		_ = level.Error(c.logger).Log("confDataRepository", "FindById", "err", err.Error())
 		return ErrConfigMapDataGet
 	}
 	defer func() {
 		if err == nil {
 			if e := c.repository.ConfigData().Delete(id); e != nil {
-				_ = c.logger.Log("confDataRepository", "Delete", "err", e.Error())
+				_ = level.Warn(c.logger).Log("confDataRepository", "Delete", "err", e.Error())
 			}
 		}
 	}()
 
 	configMap, err := c.k8sClient.Do().CoreV1().ConfigMaps(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("ConfigMaps", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("ConfigMaps", "Get", "err", err.Error())
 		return ErrConfigMapK8sGet
 	}
 
@@ -177,7 +177,7 @@ func (c *service) DeleteData(ctx context.Context, ns, name string, id int64) (er
 
 	configMap, err = c.k8sClient.Do().CoreV1().ConfigMaps(ns).Update(configMap)
 	if err != nil {
-		_ = c.logger.Log("ConfigMaps", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("ConfigMaps", "Update", "err", err.Error())
 		return ErrConfigMapK8sUpdate
 	}
 
@@ -190,7 +190,7 @@ func (c *service) DeleteData(ctx context.Context, ns, name string, id int64) (er
 func (c *service) GetOnePull(ctx context.Context, ns, name string) (res interface{}, err error) {
 	cf, err := c.k8sClient.Do().CoreV1().ConfigMaps(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("ConfigMap", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("ConfigMap", "Get", "err", err.Error())
 		return
 	}
 	cf.APIVersion = "v1"
@@ -204,7 +204,7 @@ func (c *service) GetOnePull(ctx context.Context, ns, name string) (res interfac
 func (c *service) List(ctx context.Context, req listRequest) (res map[string]interface{}, err error) {
 	count, err := c.repository.ConfigMap().Count(req.Namespace, req.Name)
 	if err != nil {
-		_ = c.logger.Log("ConfigMap", "List Count", "err", err.Error())
+		_ = level.Error(c.logger).Log("ConfigMap", "List Count", "err", err.Error())
 		return nil, ErrConfigMapGetDB
 	}
 
@@ -213,7 +213,7 @@ func (c *service) List(ctx context.Context, req listRequest) (res map[string]int
 	list, err := c.repository.ConfigMap().FindOffsetLimit(req.Namespace, req.Name, p.Offset(), req.Limit)
 
 	if err != nil {
-		_ = c.logger.Log("ConfigMap", "List", "err", err.Error())
+		_ = level.Error(c.logger).Log("ConfigMap", "List", "err", err.Error())
 		return nil, ErrConfigMapGetDB
 	}
 	res = map[string]interface{}{
@@ -228,7 +228,7 @@ func (c *service) List(ctx context.Context, req listRequest) (res map[string]int
  */
 func (c *service) Post(ctx context.Context, req postRequest) error {
 	if _, state := c.repository.ConfigMap().Find(req.Namespace, req.Name); state == false {
-		_ = c.logger.Log("ConfigMap", "Post", "Error", "exist", state, "state")
+		_ = level.Error(c.logger).Log("ConfigMap", "Post", "Error", "exist", state, "state")
 		return ErrConfigMapExist
 	}
 
@@ -240,7 +240,7 @@ func (c *service) Post(ctx context.Context, req postRequest) error {
 		Type:      null.IntFrom(1),
 	})
 	if err != nil {
-		_ = c.logger.Log("ConfigMap", "Post", "Create Error", err.Error())
+		_ = level.Error(c.logger).Log("ConfigMap", "Post", "Create Error", err.Error())
 		return ErrConfigMapCreate
 	}
 
@@ -251,7 +251,7 @@ func (c *service) Post(ctx context.Context, req postRequest) error {
 			Value:       v.Value,
 			ConfigMapID: confMap.ID,
 		}); err != nil {
-			_ = c.logger.Log("ConfigMap", "Post", "ConfData Create Error", err.Error())
+			_ = level.Error(c.logger).Log("ConfigMap", "Post", "ConfData Create Error", err.Error())
 		}
 		if v.Key != "" {
 			dat[v.Key] = v.Value
@@ -266,7 +266,7 @@ func (c *service) Post(ctx context.Context, req postRequest) error {
 
 	cf, err := c.k8sClient.Do().CoreV1().ConfigMaps(req.Namespace).Create(conf)
 	if err != nil {
-		_ = c.logger.Log("ConfigMap", "Post", "ConfigMaps Create Error", err.Error())
+		_ = level.Error(c.logger).Log("ConfigMap", "Post", "ConfigMaps Create Error", err.Error())
 		return ErrConfigMapCreate
 	}
 	cf.Kind = repository.ConfigMap.String()
@@ -274,7 +274,7 @@ func (c *service) Post(ctx context.Context, req postRequest) error {
 	//校验项目Deployment是否需要创建ConfigMap
 	if project, err := c.repository.Project().FindByNsName(req.Namespace, req.Name); err == nil && project.ID > 0 {
 		if err = c.updateDeployment(req.Namespace, req.Name); err != nil {
-			_ = c.logger.Log("ConfigMap", "Post", "UpdateDeployment Error", err.Error())
+			_ = level.Error(c.logger).Log("ConfigMap", "Post", "UpdateDeployment Error", err.Error())
 		}
 	}
 
@@ -289,7 +289,7 @@ func (c *service) Post(ctx context.Context, req postRequest) error {
 func (c *service) Update(ctx context.Context, req postRequest) error {
 	confMap, state := c.repository.ConfigMap().Find(req.Namespace, req.Name)
 	if state != false {
-		_ = c.logger.Log("ConfigMap", "Update Error. Not Exist")
+		_ = level.Error(c.logger).Log("ConfigMap", "Update Error. Not Exist")
 		return ErrConfigMapNotExist
 	}
 	if confMap.ID <= 0 {
@@ -297,12 +297,12 @@ func (c *service) Update(ctx context.Context, req postRequest) error {
 	}
 
 	if err := c.repository.ConfigMap().Update(req.Namespace, req.Name, req.Desc); err != nil {
-		_ = c.logger.Log("ConfigMap", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("ConfigMap", "Update", "err", err.Error())
 		return ErrConfigMapUpdate
 	}
 
 	if err := c.repository.ConfigData().Delete(confMap.ID); err != nil {
-		_ = c.logger.Log("ConfData", "Delete", "err", err.Error())
+		_ = level.Error(c.logger).Log("ConfData", "Delete", "err", err.Error())
 		return ErrConfigMapUpdate
 	}
 
@@ -313,7 +313,7 @@ func (c *service) Update(ctx context.Context, req postRequest) error {
 			Value:       v.Value,
 			ConfigMapID: confMap.ID,
 		}); err != nil {
-			_ = c.logger.Log("ConfigMap", "Update", "ConfData Create Error", err.Error())
+			_ = level.Error(c.logger).Log("ConfigMap", "Update", "ConfData Create Error", err.Error())
 		}
 		dat[v.Key] = v.Value
 	}
@@ -324,7 +324,7 @@ func (c *service) Update(ctx context.Context, req postRequest) error {
 
 	configInfo, err := c.k8sClient.Do().CoreV1().ConfigMaps(req.Namespace).Update(conf)
 	if err != nil {
-		_ = c.logger.Log("ConfigMap", "Update", "ConfigMaps Update Error", err.Error())
+		_ = level.Error(c.logger).Log("ConfigMap", "Update", "ConfigMaps Update Error", err.Error())
 		return ErrConfigMapCreate
 	}
 	configInfo.Kind = repository.ConfigMap.String()
@@ -332,7 +332,7 @@ func (c *service) Update(ctx context.Context, req postRequest) error {
 	//校验项目Deployment是否需要创建ConfigMap
 	if project, err := c.repository.Project().FindByNsName(req.Namespace, req.Name); err == nil && project.ID > 0 {
 		if err = c.updateDeployment(req.Namespace, req.Name); err != nil {
-			_ = c.logger.Log("ConfigMap", "Post", "UpdateDeployment Error", err.Error())
+			_ = level.Error(c.logger).Log("ConfigMap", "Post", "UpdateDeployment Error", err.Error())
 		}
 	}
 
@@ -347,20 +347,20 @@ func (c *service) Update(ctx context.Context, req postRequest) error {
 func (c *service) Delete(ctx context.Context, ns, name string) error {
 	confMap, state := c.repository.ConfigMap().Find(ns, name)
 	if state == true {
-		_ = c.logger.Log("ConfigMap", "Delete", "Find", "Error")
+		_ = level.Error(c.logger).Log("ConfigMap", "Delete", "Find", "Error")
 	} else {
 		if err := c.repository.ConfigMap().Delete(confMap.ID); err != nil {
-			_ = c.logger.Log("ConfigMap", "Delete", "Error", err.Error())
+			_ = level.Error(c.logger).Log("ConfigMap", "Delete", "Error", err.Error())
 		}
 		if err := c.repository.ConfigData().Delete(confMap.ID); err != nil {
-			_ = c.logger.Log("ConfigData", "Delete", "Error", err.Error())
+			_ = level.Error(c.logger).Log("ConfigData", "Delete", "Error", err.Error())
 		}
 	}
 
 	//远程删除数据
 	err := c.k8sClient.Do().CoreV1().ConfigMaps(ns).Delete(name, &metav1.DeleteOptions{})
 	if err != nil {
-		_ = c.logger.Log("ConfigMap", "Delete", "Error", err.Error())
+		_ = level.Error(c.logger).Log("ConfigMap", "Delete", "Error", err.Error())
 		return ErrConfigMapDelete
 	}
 	return nil
@@ -372,12 +372,12 @@ func (c *service) Delete(ctx context.Context, ns, name string) error {
 func (c *service) Sync(ctx context.Context, ns string) error {
 	confMapList, err := c.k8sClient.Do().CoreV1().ConfigMaps(ns).List(metav1.ListOptions{})
 	if err != nil {
-		_ = c.logger.Log("ConfigMap", "Sync", "Error", err.Error())
+		_ = level.Error(c.logger).Log("ConfigMap", "Sync", "Error", err.Error())
 		return err
 	}
 	for _, v := range confMapList.Items {
 		if err = c.updateOrCreateDB(v.Namespace, v.Name, v.Data); err != nil {
-			_ = c.logger.Log("ConfMap", "Sync", "UpdateOrCreateDB Error", err.Error())
+			_ = level.Error(c.logger).Log("ConfMap", "Sync", "UpdateOrCreateDB Error", err.Error())
 		}
 	}
 	return nil
@@ -428,7 +428,7 @@ func (c *service) updateOrCreateDB(ns, name string, data map[string]string) (err
 			Value:       v,
 			ConfigMapID: confMap.ID,
 		}); err != nil {
-			_ = c.logger.Log("ConfigMap", "Update", "ConfData Create Error", err.Error())
+			_ = level.Error(c.logger).Log("ConfigMap", "Update", "ConfData Create Error", err.Error())
 		}
 	}
 
@@ -447,7 +447,7 @@ func (c *service) CreateConfigMap(ctx context.Context, req createConfigMapReques
 	})
 
 	if err != nil {
-		_ = c.logger.Log("configmap", "Post", "CreateConfigMap", err.Error())
+		_ = level.Error(c.logger).Log("configmap", "Post", "CreateConfigMap", err.Error())
 		return ErrConfigMapCreate
 	}
 
@@ -456,18 +456,18 @@ func (c *service) CreateConfigMap(ctx context.Context, req createConfigMapReques
 	conf.Namespace = confMap.Namespace
 	conf.Name = confMap.Name
 
-	config, err := c.k8sClient.Do().CoreV1().ConfigMaps(req.Namespace).Create(conf)
+	_, err = c.k8sClient.Do().CoreV1().ConfigMaps(req.Namespace).Create(conf)
 	if err != nil {
-		_ = c.logger.Log("CreateConfigMap", "Post", "ConfigMaps Create Error", err.Error())
+		_ = level.Error(c.logger).Log("CreateConfigMap", "Post", "ConfigMaps Create Error", err.Error())
 		return ErrConfigMapCreateYaml
 	}
-	config.Kind = repository.ConfigMap.String()
+	//cfg.Kind = repository.ConfigMap.String()
 
 	if req.Type == 1 {
 		//校验项目Deployment是否需要创建ConfigMap
 		if project, err := c.repository.Project().FindByNsName(req.Namespace, req.Name); err == nil && project.ID > 0 {
 			if err = c.updateDeployment(req.Namespace, req.Name); err != nil {
-				_ = c.logger.Log("CreateConfigMap", "Post", "UpdateDeployment Error", err.Error())
+				_ = level.Error(c.logger).Log("CreateConfigMap", "Post", "UpdateDeployment Error", err.Error())
 			}
 		}
 	}
@@ -495,7 +495,7 @@ func (c *service) GetConfigMapData(ctx context.Context, ns, name string, page in
 	}
 	count, err := c.repository.ConfigData().Count(configMap.ID)
 	if err != nil {
-		_ = c.logger.Log("GetConfigMapData", "Count", "err", err.Error())
+		_ = level.Error(c.logger).Log("GetConfigMapData", "Count", "err", err.Error())
 		return nil, ErrConfigMapDataCount
 	}
 	p := paginator.NewPaginator(page, limit, count)
@@ -503,7 +503,7 @@ func (c *service) GetConfigMapData(ctx context.Context, ns, name string, page in
 	list, err := c.repository.ConfigData().FindOffsetLimit(configMap.ID, p.Offset(), limit)
 
 	if err != nil {
-		_ = c.logger.Log("GetConfigMapData", "FindOffsetLimit", "err", err.Error())
+		_ = level.Error(c.logger).Log("GetConfigMapData", "FindOffsetLimit", "err", err.Error())
 		return nil, ErrConfigMapDataList
 	}
 	res = map[string]interface{}{
@@ -650,7 +650,7 @@ func (c *service) DeleteConfigMapData(ctx context.Context, req configMapDataRequ
 func (c *service) GetConfigEnv(ctx context.Context, name string, ns string, page int, limit int) (res map[string]interface{}, err error) {
 	cnt, err := c.repository.ConfigEnv().GetConfigEnvCountByNameNs(name, ns)
 	if err != nil {
-		_ = c.logger.Log("GetConfigEnv", "GetConfigEnvCountByNameNs", "err", err.Error())
+		_ = level.Error(c.logger).Log("GetConfigEnv", "GetConfigEnvCountByNameNs", "err", err.Error())
 		return nil, ErrConfigEnvFailed
 	}
 	p := paginator.NewPaginator(page, limit, int(cnt))
@@ -658,7 +658,7 @@ func (c *service) GetConfigEnv(ctx context.Context, name string, ns string, page
 	list, err := c.repository.ConfigEnv().GetConfigEnvPaginate(name, ns, p.Offset(), limit)
 
 	if err != nil {
-		_ = c.logger.Log("GetConfigEnv", "GetConfigEnvPaginate", "err", err.Error())
+		_ = level.Error(c.logger).Log("GetConfigEnv", "GetConfigEnvPaginate", "err", err.Error())
 		return nil, ErrConfigEnvFailed
 	}
 	res = map[string]interface{}{
@@ -676,12 +676,12 @@ func (c *service) GetConfigEnv(ctx context.Context, name string, ns string, page
 func (c *service) CreateConfigEnv(ctx context.Context, req configEnvRequest) error {
 	err := c.repository.ConfigEnv().CreateConfEnv(req.Name, req.Namespace, req.EnvKey, req.EnvVar, req.EnvDesc)
 	if err != nil {
-		_ = c.logger.Log("CreateConfigEnv", "CreateConfEnv", "err", err.Error())
+		_ = level.Error(c.logger).Log("CreateConfigEnv", "CreateConfEnv", "err", err.Error())
 		return ErrCreateConfEnvFailed
 	}
 
 	if _, err = cronjob.ExchangeCronJobTemp(req.Name, req.Namespace, c.k8sClient, c.config, c.repository); err != nil {
-		_ = c.logger.Log("CreateConfigEnv", "ExchangeCronJobTemp", "err", err.Error())
+		_ = level.Error(c.logger).Log("CreateConfigEnv", "ExchangeCronJobTemp", "err", err.Error())
 		return ErrExchangeCronJobTemp
 	}
 
@@ -694,7 +694,7 @@ func (c *service) CreateConfigEnv(ctx context.Context, req configEnvRequest) err
 func (c *service) ConfigEnvUpdate(ctx context.Context, req configEnvRequest) error {
 	confEnv, notFound := c.repository.ConfigEnv().FindById(req.Id)
 	if notFound {
-		_ = c.logger.Log("ConfigEnvUpdate", "FindById", "err", "data not found")
+		_ = level.Error(c.logger).Log("ConfigEnvUpdate", "FindById", "err", "data not found")
 		return ErrConfigEnvFailed
 	}
 
@@ -702,11 +702,11 @@ func (c *service) ConfigEnvUpdate(ctx context.Context, req configEnvRequest) err
 	confEnv.EnvVar = req.EnvVar
 	err := c.repository.ConfigEnv().Update(req.Id, confEnv)
 	if err != nil {
-		_ = c.logger.Log("ConfigEnvUpdate", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("ConfigEnvUpdate", "Update", "err", err.Error())
 		return ErrUpdateConfEnvFailed
 	}
 	if _, err := cronjob.ExchangeCronJobTemp(req.Name, req.Namespace, c.k8sClient, c.config, c.repository); err != nil {
-		_ = c.logger.Log("ConfigEnvUpdate", "ExchangeCronJobTemp", "err", err.Error())
+		_ = level.Error(c.logger).Log("ConfigEnvUpdate", "ExchangeCronJobTemp", "err", err.Error())
 		return ErrExchangeCronJobTemp
 	}
 
@@ -719,18 +719,18 @@ func (c *service) ConfigEnvUpdate(ctx context.Context, req configEnvRequest) err
 func (c *service) ConfigEnvDel(ctx context.Context, req configEnvRequest) error {
 	confEnv, notFound := c.repository.ConfigEnv().FindById(req.Id)
 	if notFound {
-		_ = c.logger.Log("ConfigEnvDel", "FindById", "err", "data not found")
+		_ = level.Error(c.logger).Log("ConfigEnvDel", "FindById", "err", "data not found")
 		return ErrConfigEnvFailed
 	}
 
 	err := c.repository.ConfigEnv().Delete(req.Id)
 	if err != nil {
-		_ = c.logger.Log("ConfigEnvDel", "Delete", "err", err.Error())
+		_ = level.Error(c.logger).Log("ConfigEnvDel", "Delete", "err", err.Error())
 		return ErrConfigEnvFailed
 	}
 
 	if _, err = cronjob.ExchangeCronJobTemp(confEnv.Name, confEnv.Namespace, c.k8sClient, c.config, c.repository); err != nil {
-		_ = c.logger.Log("ConfigEnvDel", "ExchangeCronJobTemp", "err", err.Error())
+		_ = level.Error(c.logger).Log("ConfigEnvDel", "ExchangeCronJobTemp", "err", err.Error())
 		return ErrExchangeCronJobTemp
 	}
 

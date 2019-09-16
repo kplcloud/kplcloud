@@ -10,6 +10,7 @@ package ingress
 import (
 	"context"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"time"
 )
@@ -20,7 +21,7 @@ type loggingService struct {
 }
 
 func NewLoggingService(logger log.Logger, s Service) Service {
-	return &loggingService{logger: logger, Service: s}
+	return &loggingService{logger: level.Info(logger), Service: s}
 }
 
 func (s loggingService) Get(ctx context.Context, ns string, name string) (res map[string]interface{}, err error) {

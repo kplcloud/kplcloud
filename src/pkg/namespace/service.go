@@ -3,6 +3,7 @@ package namespace
 import (
 	"context"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/repository"
@@ -62,7 +63,7 @@ func (c *service) Get(ctx context.Context, name string) (resp *types.Namespace, 
 func (c *service) Post(ctx context.Context, name, displayName string) error {
 	res, err := c.repository.Namespace().Find(name)
 	if err == nil || res != nil {
-		_ = c.logger.Log("displayName", name)
+		_ = level.Error(c.logger).Log("displayName", name)
 		return ErrNamespaceIsExists
 	}
 
@@ -70,7 +71,7 @@ func (c *service) Post(ctx context.Context, name, displayName string) error {
 	namespace.Name = name
 
 	if _, err := c.k8sClient.Do().CoreV1().Namespaces().Create(namespace); err != nil {
-		_ = c.logger.Log("k8s", "create", "err", err.Error())
+		_ = level.Error(c.logger).Log("k8s", "create", "err", err.Error())
 		return ErrNamespaceCreate
 	}
 
@@ -78,7 +79,7 @@ func (c *service) Post(ctx context.Context, name, displayName string) error {
 		DisplayName: displayName,
 		Name:        name,
 	}); err != nil {
-		_ = c.logger.Log("ns", "create", "err", err.Error())
+		_ = level.Error(c.logger).Log("ns", "create", "err", err.Error())
 		return ErrNamespaceCreate
 	}
 
@@ -91,7 +92,7 @@ func (c *service) Post(ctx context.Context, name, displayName string) error {
 				Namespace: name,
 			},
 		}); err != nil {
-			_ = c.logger.Log("k8s", "secrets", "err", err.Error())
+			_ = level.Warn(c.logger).Log("k8s", "secrets", "err", err.Error())
 		}
 	}
 
@@ -104,7 +105,7 @@ func (c *service) Sync(ctx context.Context) error {
 
 	nsList, err := c.k8sClient.Do().CoreV1().Namespaces().List(metav1.ListOptions{})
 	if err != nil {
-		_ = c.logger.Log("namespace", "list", "err", err.Error())
+		_ = level.Error(c.logger).Log("namespace", "list", "err", err.Error())
 		return ErrNamespaceList
 	}
 
@@ -114,7 +115,7 @@ func (c *service) Sync(ctx context.Context) error {
 				DisplayName: ns.Name,
 				Name:        ns.Name,
 			}); err != nil {
-				_ = c.logger.Log("namespace", "create", "err", err.Error())
+				_ = level.Warn(c.logger).Log("namespace", "create", "err", err.Error())
 			}
 		}
 	}

@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	amqpClient "github.com/kplcloud/kplcloud/src/amqp"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/email"
@@ -78,7 +79,7 @@ func (c *serviceProclaim) DistributeProclaim(ctx context.Context, data string) (
 	var dat *types.Notices
 	err = json.Unmarshal([]byte(data), &dat)
 	if err != nil {
-		_ = c.logger.Log("DistributeProclaim", "json.Unmarshal", "err", err.Error())
+		_ = level.Error(c.logger).Log("DistributeProclaim", "json.Unmarshal", "err", err.Error())
 		return
 	}
 
@@ -87,37 +88,37 @@ func (c *serviceProclaim) DistributeProclaim(ctx context.Context, data string) (
 	case "all":
 		ml, err := c.store.Member().GetMembersAll()
 		if err != nil {
-			_ = c.logger.Log("DistributeProclaim", "c.member.GetMembersAll", "err", err.Error())
+			_ = level.Error(c.logger).Log("DistributeProclaim", "c.member.GetMembersAll", "err", err.Error())
 		}
 
 		num, err := c.CreateProclaimMember(ml, dat)
 		if err != nil {
-			_ = c.logger.Log("DistributeProclaim", "c.CreateProclaimMember", "err", err.Error())
+			_ = level.Error(c.logger).Log("DistributeProclaim", "c.CreateProclaimMember", "err", err.Error())
 		}
-		_ = c.logger.Log("DistributeProclaim", "c.CreateProclaimMember", "num", num, "case", "all")
+		_ = level.Info(c.logger).Log("DistributeProclaim", "c.CreateProclaimMember", "num", num, "case", "all")
 	case "namespace":
 		idStrArr := strings.Split(dat.ProclaimReceive, ",")
 		ml, err := c.store.Member().GetMembersByNss(idStrArr)
 
 		if err != nil {
-			_ = c.logger.Log("DistributeProclaim", "c.member.GetMembersByNss", "err", err.Error())
+			_ = level.Error(c.logger).Log("DistributeProclaim", "c.member.GetMembersByNss", "err", err.Error())
 		}
 		num, err := c.CreateProclaimMember(ml, dat)
 		if err != nil {
-			_ = c.logger.Log("DistributeProclaim", "c.CreateProclaimMember", "err", err.Error())
+			_ = level.Error(c.logger).Log("DistributeProclaim", "c.CreateProclaimMember", "err", err.Error())
 		}
-		_ = c.logger.Log("DistributeProclaim", "c.CreateProclaimMember", "num", num, "case", "namespace")
+		_ = level.Info(c.logger).Log("DistributeProclaim", "c.CreateProclaimMember", "num", num, "case", "namespace")
 	case "user":
 		idStrArr := strings.Split(dat.ProclaimReceive, ",")
 		ml, err := c.store.Member().GetMembersByEmails(idStrArr) //获取用户列表*/
 		if err != nil {
-			_ = c.logger.Log("DistributeProclaim", "c.member.GetMembersByEmails", "err", err.Error())
+			_ = level.Error(c.logger).Log("DistributeProclaim", "c.member.GetMembersByEmails", "err", err.Error())
 		}
 		num, err := c.CreateProclaimMember(ml, dat)
 		if err != nil {
-			_ = c.logger.Log("DistributeProclaim", "c.CreateProclaimMember", "err", err.Error())
+			_ = level.Error(c.logger).Log("DistributeProclaim", "c.CreateProclaimMember", "err", err.Error())
 		}
-		_ = c.logger.Log("DistributeProclaim", "c.CreateProclaimMember", "num", num, "case", "user")
+		_ = level.Info(c.logger).Log("DistributeProclaim", "c.CreateProclaimMember", "num", num, "case", "user")
 	}
 
 	return
@@ -154,7 +155,7 @@ func (c *serviceProclaim) CreateProclaimMember(ml []types.Member, notice *types.
 	go func() {
 		err = c.SendProclaimEmail(toUser, toCc, *notice)
 		if err != nil {
-			_ = c.logger.Log("DistributeProclaim", "c.SendProclaimEmail", "err", err.Error())
+			_ = level.Error(c.logger).Log("DistributeProclaim", "c.SendProclaimEmail", "err", err.Error())
 			return
 		}
 	}()
@@ -171,7 +172,7 @@ func (c *serviceProclaim) SendProclaimEmail(toUser, toCc []string, notice types.
 	err = c.mailClient.Send()
 
 	if err != nil {
-		_ = c.logger.Log("DistributeProclaim", "SendProclaimEmail", "err", err.Error())
+		_ = level.Error(c.logger).Log("DistributeProclaim", "SendProclaimEmail", "err", err.Error())
 	}
 
 	return

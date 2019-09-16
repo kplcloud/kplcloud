@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/middleware"
@@ -70,7 +71,7 @@ func (c *service) PodsMetrics(ctx context.Context) (res map[string]interface{}, 
 
 	dep, err := c.k8sClient.Do().AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return nil, ErrPodDeploymentGet
 	}
 
@@ -85,7 +86,7 @@ func (c *service) PodsMetrics(ctx context.Context) (res map[string]interface{}, 
 	})
 
 	if err != nil {
-		_ = c.logger.Log("Pods", "List", "err", err.Error())
+		_ = level.Error(c.logger).Log("Pods", "List", "err", err.Error())
 		return nil, ErrProjectPodsList
 	}
 	var currMemory int64
@@ -159,7 +160,7 @@ func (c *service) Delete(ctx context.Context, podName string) (err error) {
 		GracePeriodSeconds: &gracePeriodSeconds,
 		PropagationPolicy:  &policy,
 	}); err != nil {
-		_ = c.logger.Log("Pods", "Delete", "err", err.Error())
+		_ = level.Error(c.logger).Log("Pods", "Delete", "err", err.Error())
 		return ErrPodDelete
 	}
 
@@ -169,7 +170,7 @@ func (c *service) Delete(ctx context.Context, podName string) (err error) {
 			repository.RebootEvent,
 			name, ns,
 			fmt.Sprintf("重启容器: %v.%v, 容器名称: %v", name, ns, podName)); err != nil {
-			_ = c.logger.Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
+			_ = level.Warn(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
 
@@ -191,7 +192,7 @@ func (c *service) DownloadLog(ctx context.Context, podName, container string, pr
 			Timestamps: false,
 		}, scheme.ParameterCodec).Stream()
 	if err != nil {
-		_ = c.logger.Log("pods.log", "Stream", "err", err.Error())
+		_ = level.Error(c.logger).Log("pods.log", "Stream", "err", err.Error())
 		return nil, ErrPodDownloadLogGet
 	}
 
@@ -202,7 +203,7 @@ func (c *service) GetLog(ctx context.Context, podName, container string, previou
 	ns := ctx.Value(middleware.NamespaceContext).(string)
 	pod, err := c.k8sClient.Do().CoreV1().Pods(ns).Get(podName, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Pods", "List", "err", err.Error())
+		_ = level.Error(c.logger).Log("Pods", "List", "err", err.Error())
 		return nil, ErrPodGet
 	}
 
@@ -230,7 +231,7 @@ func (c *service) GetLog(ctx context.Context, podName, container string, previou
 
 	result, err := c.getLogDetails(ns, podName, container, logSelector, previous)
 	if err != nil {
-		_ = c.logger.Log("c", "getLogDetails", "err", err.Error())
+		_ = level.Error(c.logger).Log("c", "getLogDetails", "err", err.Error())
 		return nil, ErrPodLogGet
 	}
 
@@ -322,7 +323,7 @@ func (c *service) ProjectPods(ctx context.Context) (res []map[string]interface{}
 
 	dep, err := c.k8sClient.Do().AppsV1().Deployments(project.Namespace).Get(project.Name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return nil, ErrPodDeploymentGet
 	}
 
@@ -337,7 +338,7 @@ func (c *service) ProjectPods(ctx context.Context) (res []map[string]interface{}
 	})
 
 	if err != nil {
-		_ = c.logger.Log("Pods", "List", "err", err.Error())
+		_ = level.Error(c.logger).Log("Pods", "List", "err", err.Error())
 		return nil, ErrProjectPodsList
 	}
 
@@ -366,7 +367,7 @@ func (c *service) Detail(ctx context.Context, podName string) (res map[string]in
 
 	pod, err := c.k8sClient.Do().CoreV1().Pods(project.Namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Pods", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Pods", "Get", "err", err.Error())
 		return nil, ErrPodGet
 	}
 

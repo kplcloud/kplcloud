@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/middleware"
@@ -151,13 +152,13 @@ func (c *service) Index(ctx context.Context, podName, container string) (*IndexD
 
 	pod, err := c.k8sClient.Do().CoreV1().Pods(project.Namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Pods", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Pods", "Get", "err", err.Error())
 		return nil, ErrPodK8sGet
 	}
 
 	sessionId, err := genTerminalSessionId()
 	if err != nil {
-		_ = c.logger.Log("genTerminalSessionId", "fail", "err", err.Error())
+		_ = level.Error(c.logger).Log("genTerminalSessionId", "fail", "err", err.Error())
 		return nil, ErrSessionIdGenerate
 	}
 
@@ -201,29 +202,29 @@ func (c *service) HandleTerminalSession(session sockjs.Session) {
 	)
 
 	if buf, err = session.Recv(); err != nil {
-		_ = c.logger.Log("handleTerminalSession", "can't Recv:", "err", err.Error())
+		_ = level.Error(c.logger).Log("handleTerminalSession", "can't Recv:", "err", err.Error())
 		return
 	}
 
 	if err = json.Unmarshal([]byte(buf), &msg); err != nil {
-		_ = c.logger.Log("handleTerminalSession", "can't UnMarshal", "err", err.Error(), "buf", buf)
+		_ = level.Error(c.logger).Log("handleTerminalSession", "can't UnMarshal", "err", err.Error(), "buf", buf)
 		return
 	}
 
 	if msg.Op != "bind" {
-		_ = c.logger.Log("handleTerminalSession: expected 'bind' message, got:", buf)
+		_ = level.Error(c.logger).Log("handleTerminalSession: expected 'bind' message, got:", buf)
 		return
 	}
 
 	var tr TerminalResult
 	if err := json.Unmarshal([]byte(msg.Data), &tr); err != nil {
-		_ = c.logger.Log("handleTerminalResult", "can't UnMarshal", "err", err.Error())
+		_ = level.Error(c.logger).Log("handleTerminalResult", "can't UnMarshal", "err", err.Error())
 		return
 	}
 
 	err = c.checkShellToken(tr.Token, tr.Namespace, tr.Pod)
 	if err != nil {
-		_ = c.logger.Log("http.status", http.StatusBadRequest, "token", "not valid", "token", tr.Token, "err", err.Error())
+		_ = level.Error(c.logger).Log("http.status", http.StatusBadRequest, "token", "not valid", "token", tr.Token, "err", err.Error())
 		return
 	}
 	ts := TerminalSession{

@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/casbin"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
@@ -64,7 +65,7 @@ func NewService(logger log.Logger, casbin casbin.Casbin, repository repository.R
 func (c *service) PermissionSelected(ctx context.Context, id int64) (ids []int64, err error) {
 	perms, err := c.repository.Role().FindPermission(id)
 	if err != nil {
-		_ = c.logger.Log("roleRepository", "FindPermission", "err", err.Error())
+		_ = level.Error(c.logger).Log("roleRepository", "FindPermission", "err", err.Error())
 		return nil, ErrRolePermissionGet
 	}
 
@@ -78,36 +79,36 @@ func (c *service) PermissionSelected(ctx context.Context, id int64) (ids []int64
 func (c *service) Detail(ctx context.Context, id int64) (role *types.Role, err error) {
 	role, err = c.repository.Role().FindById(id)
 	if err != nil {
-		_ = c.logger.Log("roleRepository", "FindById", "err", err.Error())
+		_ = level.Error(c.logger).Log("roleRepository", "FindById", "err", err.Error())
 		return nil, ErrRoleGet
 	}
 	return
 }
 
-func (c *service) Post(ctx context.Context, name, desc string, level int) error {
+func (c *service) Post(ctx context.Context, name, desc string, lv int) error {
 	if err := c.repository.Role().Create(&types.Role{
 		Name:        name,
 		Description: desc,
-		Level:       level,
+		Level:       lv,
 	}); err != nil {
-		_ = c.logger.Log("roleRepository", "Create", "err", err.Error())
+		_ = level.Error(c.logger).Log("roleRepository", "Create", "err", err.Error())
 		return ErrRoleCreate
 	}
 	return nil
 }
 
-func (c *service) Update(ctx context.Context, id int64, name, desc string, level int) error {
+func (c *service) Update(ctx context.Context, id int64, name, desc string, lv int) error {
 	role, err := c.repository.Role().FindById(id)
 	if err != nil {
-		_ = c.logger.Log("roleRepository", "FindById", "err", err.Error())
+		_ = level.Error(c.logger).Log("roleRepository", "FindById", "err", err.Error())
 		return ErrRoleGet
 	}
 
 	role.Name = name
 	role.Description = desc
-	role.Level = level
+	role.Level = lv
 	if err := c.repository.Role().Update(role); err != nil {
-		_ = c.logger.Log("roleRepository", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("roleRepository", "Update", "err", err.Error())
 		return ErrRoleUpdate
 	}
 	return nil
@@ -124,23 +125,23 @@ func (c *service) Delete(ctx context.Context, id int64) error {
 func (c *service) RolePermission(ctx context.Context, id int64, permIds []int64) error {
 	role, err := c.repository.Role().FindById(id)
 	if err != nil {
-		_ = c.logger.Log("roleRepository", "FindById", "err", err.Error())
+		_ = level.Error(c.logger).Log("roleRepository", "FindById", "err", err.Error())
 		return ErrRoleGet
 	}
 
 	if err = c.repository.Role().DeletePermission(role); err != nil {
-		_ = c.logger.Log("roleRepository", "DeletePermission", "err", err.Error())
+		_ = level.Error(c.logger).Log("roleRepository", "DeletePermission", "err", err.Error())
 		return ErrRolePermissionDelete
 	}
 
 	perms, err := c.repository.Permission().FindByIds(permIds)
 	if err != nil {
-		_ = c.logger.Log("roleRepository", "FindByIds", "err", err.Error())
+		_ = level.Error(c.logger).Log("roleRepository", "FindByIds", "err", err.Error())
 		return ErrRolePermissionGet
 	}
 
 	if err = c.repository.Role().AddRolePermission(role, perms...); err != nil {
-		_ = c.logger.Log("roleRepository", "AddRolePermission", "err", err.Error())
+		_ = level.Error(c.logger).Log("roleRepository", "AddRolePermission", "err", err.Error())
 		return ErrRolePermission
 	}
 
@@ -162,7 +163,7 @@ func (c *service) RolePermission(ctx context.Context, id int64, permIds []int64)
 	perms = append(perms, res...)
 	for _, perm := range perms {
 		if _, err = c.casbin.GetEnforcer().AddPolicySafe(strconv.Itoa(int(role.ID)), perm.Path, perm.Method.String); err != nil {
-			_ = c.logger.Log("GetEnforcer", "AddPolicySafe", "err", err.Error())
+			_ = level.Warn(c.logger).Log("GetEnforcer", "AddPolicySafe", "err", err.Error())
 		}
 	}
 

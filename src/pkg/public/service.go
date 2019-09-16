@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	amqpClient "github.com/kplcloud/kplcloud/src/amqp"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/jenkins"
@@ -115,7 +116,7 @@ func (c *service) PrometheusAlert(ctx context.Context, req *prometheusAlerts) (e
 		if err := c.amqpClient.PublishOnQueue(amqpClient.AlarmTopic, func() []byte {
 			return []byte(b)
 		}); err != nil {
-			_ = c.logger.Log("amqpClient", "PublicAlarmQueue", "err", err.Error())
+			_ = level.Error(c.logger).Log("amqpClient", "PublicAlarmQueue", "err", err.Error())
 		}
 	}()
 
@@ -125,23 +126,23 @@ func (c *service) PrometheusAlert(ctx context.Context, req *prometheusAlerts) (e
 func (c *service) GitPost(ctx context.Context, namespace, name, token, keyWord, branch string, req gitlabHook) (err error) {
 	project, err := c.repository.Project().FindByNsName(namespace, name)
 	if err != nil {
-		_ = c.logger.Log("projectRepository", "FindByNsName", "err", err.Error())
+		_ = level.Error(c.logger).Log("projectRepository", "FindByNsName", "err", err.Error())
 		return ErrProjectFind
 	}
 
 	deployment, err := c.k8sClient.Do().AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
-		_ = c.logger.Log("Deployments", "Get", "err", err.Error())
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return ErrProjectDeploymentK8sGet
 	}
 
 	if deployment.ObjectMeta.GetUID() != types.UID(token) {
-		_ = c.logger.Log("dep", deployment.ObjectMeta.GetUID(), "token", token)
+		_ = level.Error(c.logger).Log("dep", deployment.ObjectMeta.GetUID(), "token", token)
 		return ErrProjectToken
 	}
 
 	if req.EventName != "push" {
-		_ = c.logger.Log("req", "EventName", "err", "not push")
+		_ = level.Error(c.logger).Log("req", "EventName", "err", "not push")
 		return ErrProjectEventNotPush
 	}
 
@@ -156,13 +157,13 @@ func (c *service) GitPost(ctx context.Context, namespace, name, token, keyWord, 
 	}
 
 	//if !build {
-	//	_ = c.logger.Log("req", "build", "err", "not build")
+	//	_ = level.Error(c.logger).Log("req", "build", "err", "not build")
 	//	return
 	//}
 
 	pt, err := c.repository.ProjectTemplate().FindByProjectId(project.ID, repository.Deployment)
 	if err != nil {
-		_ = c.logger.Log("templateRepository", "FindByProjectId", "err", err.Error())
+		_ = level.Error(c.logger).Log("templateRepository", "FindByProjectId", "err", err.Error())
 		return ErrProjectDeploymentGet
 	}
 
@@ -172,17 +173,17 @@ func (c *service) GitPost(ctx context.Context, namespace, name, token, keyWord, 
 
 	refs := strings.Split(req.Ref, "/")
 	if refs[len(refs)-1] != branch {
-		_ = c.logger.Log("refs", refs[len(refs)-1], "branch", branch)
+		_ = level.Error(c.logger).Log("refs", refs[len(refs)-1], "branch", branch)
 		return
 	}
 
 	member, err := c.repository.Member().Find(email)
 	if err != nil {
-		_ = c.logger.Log("memberRepository", "Find", "err", err.Error())
+		_ = level.Error(c.logger).Log("memberRepository", "Find", "err", err.Error())
 		return ErrProjectMemberGet
 	}
 
-	_ = c.logger.Log("email", email, "project", project.ID, "member", member.Username)
+	_ = level.Info(c.logger).Log("email", email, "project", project.ID, "member", member.Username)
 
 	jobName := project.Name + "." + project.Namespace
 	var tagName string
@@ -191,7 +192,7 @@ func (c *service) GitPost(ctx context.Context, namespace, name, token, keyWord, 
 	}
 	// jenkins build
 	if err = c.jenkins.Build(jobName, params); err != nil {
-		_ = c.logger.Log("jenkins", "Build", "err", err.Error())
+		_ = level.Error(c.logger).Log("jenkins", "Build", "err", err.Error())
 		return ErrProjectJenkinsBuild
 	}
 

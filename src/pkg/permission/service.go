@@ -11,6 +11,7 @@ import (
 	"context"
 	"errors"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/casbin"
 	"github.com/kplcloud/kplcloud/src/middleware"
 	"github.com/kplcloud/kplcloud/src/repository"
@@ -66,7 +67,7 @@ func NewService(logger log.Logger,
 
 func (c *service) Delete(ctx context.Context, id int64) ([]*types.Permission, error) {
 	if err := c.repository.Permission().Delete(id); err != nil {
-		_ = c.logger.Log("permissionRepository", "Delete", "err", err.Error())
+		_ = level.Error(c.logger).Log("permissionRepository", "Delete", "err", err.Error())
 		return nil, ErrPermissionDelete
 	}
 
@@ -86,25 +87,25 @@ func (c *service) Update(ctx context.Context, id int64, icon, keyType string, me
 	if keyType == "1" {
 		permis, err := c.repository.Permission().FindById(id)
 		if err != nil {
-			_ = c.logger.Log("permissionRepository", "FindById", "err", err.Error())
+			_ = level.Error(c.logger).Log("permissionRepository", "FindById", "err", err.Error())
 			return nil, ErrPermissionGet
 		}
 		permission.ParentID = permis.ParentID
 		if err = c.repository.Permission().Create(permission); err != nil {
-			_ = c.logger.Log("permissionRepository", "Create", "err", err.Error())
+			_ = level.Error(c.logger).Log("permissionRepository", "Create", "err", err.Error())
 			return nil, ErrPermissionCreate
 		}
 	} else if keyType == "2" {
 		//permission.ParentID =
 		permission.ParentID = null.IntFromPtr(&id)
 		if err := c.repository.Permission().Create(permission); err != nil {
-			_ = c.logger.Log("permissionRepository", "Create", "err", err.Error())
+			_ = level.Error(c.logger).Log("permissionRepository", "Create", "err", err.Error())
 			return nil, ErrPermissionCreate
 		}
 	} else if keyType == "4" {
 		permission, err := c.repository.Permission().FindById(id)
 		if err != nil {
-			_ = c.logger.Log("permissionRepository", "FindById", "err", err.Error())
+			_ = level.Error(c.logger).Log("permissionRepository", "FindById", "err", err.Error())
 			return nil, ErrPermissionGet
 		}
 		permission.Path = path
@@ -113,17 +114,17 @@ func (c *service) Update(ctx context.Context, id int64, icon, keyType string, me
 		permission.Menu = null.BoolFromPtr(&menu)
 		permission.Icon = null.StringFrom(icon)
 		if err = c.repository.Permission().Update(permission); err != nil {
-			_ = c.logger.Log("permissionRepository", "Update", "err", err.Error())
+			_ = level.Error(c.logger).Log("permissionRepository", "Update", "err", err.Error())
 			return nil, ErrPermissionUpdate
 		}
 	}
 
 	go func() {
 		if _, err := c.casbin.GetEnforcer().AddPolicySafe("1", permission.Path, permission.Method.String); err != nil {
-			_ = c.logger.Log("enforcer", "AddPolicySafe", "err", err.Error())
+			_ = level.Error(c.logger).Log("enforcer", "AddPolicySafe", "err", err.Error())
 		}
 		if err := c.repository.Role().AddRolePermission(&types.Role{ID: 1}, permission); err != nil {
-			_ = c.logger.Log("roleRepository", "AddRolePermission", "err", err.Error())
+			_ = level.Error(c.logger).Log("roleRepository", "AddRolePermission", "err", err.Error())
 		}
 	}()
 
@@ -144,12 +145,12 @@ func (c *service) Post(ctx context.Context, name, path, method, icon string, isM
 		ParentID: null.IntFromPtr(&parentId),
 		Menu:     null.BoolFromPtr(&isMenu),
 	}); err != nil {
-		_ = c.logger.Log("permissionRepository", "Create", "err", err.Error())
+		_ = level.Error(c.logger).Log("permissionRepository", "Create", "err", err.Error())
 		return ErrPermissionCreate
 	}
 
 	if !c.casbin.GetEnforcer().AddPolicy("1", path, method) {
-		_ = c.logger.Log("GetEnforcer", "AddPolicy", "bool", false)
+		_ = level.Error(c.logger).Log("GetEnforcer", "AddPolicy", "bool", false)
 	}
 
 	return nil
@@ -158,19 +159,19 @@ func (c *service) Post(ctx context.Context, name, path, method, icon string, isM
 func (c *service) Drag(ctx context.Context, dragKey, dropKey int64) (res []*types.Permission, err error) {
 	dragPerm, err := c.repository.Permission().FindById(dragKey)
 	if err != nil {
-		_ = c.logger.Log("permissionRepository", "FindById", "err", err.Error())
+		_ = level.Error(c.logger).Log("permissionRepository", "FindById", "err", err.Error())
 		return nil, ErrPermissionDragGet
 	}
 	dropPerm, err := c.repository.Permission().FindById(dropKey)
 	if err != nil {
-		_ = c.logger.Log("permissionRepository", "FindById", "err", err.Error())
+		_ = level.Error(c.logger).Log("permissionRepository", "FindById", "err", err.Error())
 		return nil, ErrPermissionDropGet
 	}
 
 	dragPerm.ParentID = null.IntFromPtr(&dropPerm.ID)
 
 	if err = c.repository.Permission().Update(dragPerm); err != nil {
-		_ = c.logger.Log("permissionRepository", "Update", "err", err.Error())
+		_ = level.Error(c.logger).Log("permissionRepository", "Update", "err", err.Error())
 		return nil, ErrPermissionUpdate
 	}
 
@@ -182,12 +183,12 @@ func (c *service) Menu(ctx context.Context) (res []*types.Permission, err error)
 
 	menus, err := c.repository.Permission().FindMenus()
 	if err != nil {
-		_ = c.logger.Log("permissionRepository", "FindMenus", "err", err.Error())
+		_ = level.Error(c.logger).Log("permissionRepository", "FindMenus", "err", err.Error())
 		return nil, ErrPermissionMenusGet
 	}
 	roles, err := c.casbin.GetEnforcer().GetRolesForUser(strconv.Itoa(int(userId)))
 	if err != nil {
-		_ = c.logger.Log("GetEnforcer", "GetRolesForUser", "err", err.Error())
+		_ = level.Error(c.logger).Log("GetEnforcer", "GetRolesForUser", "err", err.Error())
 		return nil, ErrPermissionRole
 	}
 
