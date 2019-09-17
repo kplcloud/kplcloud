@@ -44,7 +44,7 @@
             ws.onopen = function () {
                 var startData = {
                     Op: 'bind',
-                    SessionID: '` + sessionId + `',
+                    SessionID: '{{.SessionId}}',
                     Data: "{\"namespace\":\"{{.Namespace}}\",\"container\":\"{{.Container}}\",\"pod\":\"{{.PodName}}\", \"token\": \"{{.Token}}\"}"
                 };
                 ws.send(JSON.stringify(startData));
@@ -68,9 +68,9 @@
                         case 'stdout':
                             if ((msg['Data'].toString()).indexOf('{{.BashStr}}') == -1) {
                                 // console.log("data",msg['Data'])
-                                if (msg['Data'] == " ") {
+                                if (msg['Data'] == "") {
                                     ws.send(JSON.stringify({'Op': 'resize', 'Cols': xterm.cols, 'Rows': xterm.rows}));
-                                    ws.send(JSON.stringify({'Op': 'resize', 'Cols': xterm.cols, 'Rows': xterm.rows}));
+                                    // ws.send(JSON.stringify({'Op': 'resize', 'Cols': xterm.cols, 'Rows': xterm.rows}));
                                 } else {
                                     xterm.write(msg['Data']);
                                 }

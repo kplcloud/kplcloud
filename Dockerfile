@@ -1,4 +1,4 @@
-FROM golang:latest as build-env
+FROM golang:1.13.0-alpine3.10 as build-env
 
 ENV GO111MODULE=on
 ENV BUILDPATH=github.com/kplcloud/kplcloud
