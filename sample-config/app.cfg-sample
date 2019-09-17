@@ -28,7 +28,7 @@
 app_name = kplcloud
 http_static = ./static/
 ;http_proxy =
-;logs_path = /var/log
+;logs_path = /var/log/kplcloud.log
 upload_path = /go/bin/upload
 domain = https://kplcloud.nsini.com
 login_type = auth
@@ -49,6 +49,7 @@ auth_login = github
 default_namespace = default
 default_role_id = 4
 debug = false
+log_level = all
 
 
 ; ;[cors]
