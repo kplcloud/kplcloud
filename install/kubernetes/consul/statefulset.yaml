@@ -37,7 +37,7 @@ spec:
               topologyKey: kubernetes.io/hostname
 #          # 单节点用这个
 #          preferredDuringSchedulingIgnoredDuringExecution:
-#            - wight: 100
+#            - weight: 100
 #              podAffinityTerm:
 #                topologyKey: kubernetes.io/hostname
       terminationGracePeriodSeconds: 10
