@@ -20,12 +20,13 @@ services:
       - "5672:5672"
   kplcloud:
     image: kplcloud/kplcloud
-    command: /go/bin/server start -p :8080 -c /etc/kplcloud/app.cfg -k /etc/kplcloud/config.yaml
+    command: /go/bin/kplcloud start -p :8080 -c /etc/kplcloud/app.cfg -k /etc/kplcloud/config.yaml
     environment:
       GOPATH: "/go"
+      ADMIN_PASSWORD: "admin"
     volumes:
       - ./../../app.cfg:/etc/kplcloud/app.cfg
-      - ./../../config_189.yaml:/etc/kplcloud/config.yaml
+      - ./../../config.yaml:/etc/kplcloud/config.yaml
     depends_on:
       - mysql
       - rabbitmq
