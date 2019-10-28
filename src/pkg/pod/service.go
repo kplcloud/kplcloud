@@ -52,6 +52,8 @@ type Service interface {
 
 	// pods的内存及CPU使用
 	PodsMetrics(ctx context.Context) (res map[string]interface{}, err error)
+
+	PodsNetwork(ctx context.Context) (res map[string]interface{}, err error)
 }
 
 type service struct {
@@ -63,6 +65,37 @@ type service struct {
 
 func NewService(logger log.Logger, k8sClient kubernetes.K8sClient, config *config.Config, hookQueueSvc hooks.ServiceHookQueue) Service {
 	return &service{logger, k8sClient, config, hookQueueSvc}
+}
+
+func (c *service) PodsNetwork(ctx context.Context) (res map[string]interface{}, err error) {
+	ns := ctx.Value(middleware.NamespaceContext).(string)
+	name := ctx.Value(middleware.NameContext).(string)
+
+	dep, err := c.k8sClient.Do().AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
+	if err != nil {
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
+		return nil, ErrPodDeploymentGet
+	}
+
+	var selectorKey, selectorVal string
+	for key, val := range dep.Spec.Selector.MatchLabels {
+		selectorKey = key
+		selectorVal = val
+	}
+
+	podList, err := c.k8sClient.Do().CoreV1().Pods(ns).List(metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", selectorKey, selectorVal),
+	})
+
+	if err != nil {
+		_ = level.Error(c.logger).Log("Pods", "List", "err", err.Error())
+		return nil, ErrProjectPodsList
+	}
+
+	for _, pod := range podList.Items {
+
+	}
+
 }
 
 func (c *service) PodsMetrics(ctx context.Context) (res map[string]interface{}, err error) {
