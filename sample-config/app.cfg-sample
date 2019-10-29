@@ -8,6 +8,7 @@
 ; ;login_type: 登陆类型
 ; ;  1. ldap 需要在下面的 [ldap] 填写相关的ldap地址及配置信息
 ; ;  2. email 邮箱登陆
+; ;  3. auth github 或 gitlab 授权登陆
 ; ;consul_kv: 是否启consul kv功能, 如果启用, 将可以在平台上操作consul kv
 ; ;app_key: 通常用来加密使用
 ; ;session_timeout: sesstion时长, 单位秒
@@ -31,7 +32,7 @@ http_static = ./static/
 ;logs_path = /var/log/kplcloud.log
 upload_path = /go/bin/upload
 domain = https://kplcloud.nsini.com
-login_type = auth
+login_type = email
 consul_kv = true
 app_key = 6c47q0-w39euf!#%13a79
 session_timeout = 7200
@@ -75,8 +76,8 @@ headers = Origin,Content-Type,Authorization,x-requested-with,Access-Control-Allo
 [mysql]
 mysql_host = mysql
 mysql_port = 3306
-mysql_user = kplcloud
-mysql_password = 32-0@g03wje;dm
+mysql_user = root
+mysql_password = admin
 mysql_database = kplcloud
 
 
@@ -107,7 +108,7 @@ image_pull_secrets = regcred
 ; ;credentials_id: 访问jenkins的凭据, 可以在jenkins的 credentials/store/system/domain/_/credential进行配置或创建
 [jenkins]
 host = http://jenkins:8080/
-token = 1c8da3c07ccab3c127f1f04d1ca05bac2c
+token = 1c8da3c07ccab3c121f1f04d1ca05bac2c
 user = admin
 credentials_id =
 
