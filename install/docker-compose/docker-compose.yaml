@@ -16,8 +16,10 @@ services:
     image: rabbitmq:3.6.14-management-alpine
     expose:
       - "5672"
+      - "15672"
     ports:
       - "5672:5672"
+      - "15672:15672"
   kplcloud:
     image: kplcloud/kplcloud
     command: /go/bin/kplcloud start -p :8080 -c /etc/kplcloud/app.cfg -k /etc/kplcloud/config.yaml
