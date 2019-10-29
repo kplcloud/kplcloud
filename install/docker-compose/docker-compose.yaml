@@ -8,9 +8,17 @@ services:
       - "3306"
     ports:
       - "3306:3306"
+  redis:
+      image: redis
+      expose:
+        - "6379"
+      ports:
+        - "6379:6379"
+      volumes:
+        - ./redis-data:/data
   rabbitmq:
     environment:
-      RABBITMQ_NODENAME: "rabbit"
+      RABBITMQ_NODENAME: "rabbitmq"
       RABBITMQ_DEFAULT_USER: "kplcloud"
       RABBITMQ_DEFAULT_PASS: "kplcloud"
     image: rabbitmq:3.6.14-management-alpine
@@ -25,13 +33,14 @@ services:
     command: /go/bin/kplcloud start -p :8080 -c /etc/kplcloud/app.cfg -k /etc/kplcloud/config.yaml
     environment:
       GOPATH: "/go"
-      ADMIN_PASSWORD: "admin"
+      ADMIN_PASSWORD: "admin" # 如果是login_type: email 那这是初始化管理员的登陆密码
     volumes:
-      - ./../../app.cfg:/etc/kplcloud/app.cfg
-      - ./../../config.yaml:/etc/kplcloud/config.yaml
+      - ../../sample-config/app.cfg-sample:/etc/kplcloud/app.cfg
+      - ../../sample-config/config.yaml-sample:/etc/kplcloud/config.yaml
     depends_on:
       - mysql
       - rabbitmq
+      - redis
     restart: always
     ports:
       - "8080:8080"
