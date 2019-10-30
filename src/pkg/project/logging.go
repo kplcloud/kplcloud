@@ -172,3 +172,18 @@ func (s *loggingService) Config(ctx context.Context) (res map[string]interface{}
 	}(time.Now())
 	return s.Service.Config(ctx)
 }
+
+func (s *loggingService) Monitor(ctx context.Context, metrics, podName, container string) (res monitorResponse, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			"uri", ctx.Value(kithttp.ContextKeyRequestURI),
+			"method", "Monitor",
+			"metrics", metrics,
+			"podName", podName,
+			"container", container,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.Service.Monitor(ctx, metrics, podName, container)
+}

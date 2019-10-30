@@ -421,7 +421,7 @@ func run() {
 
 	errs := make(chan error, 2)
 	go func() {
-		_ = logger.Log("transport", "http", "address", httpAddr, "config", configPath, "kubeconfig", kubeConfig, "msg", "listening")
+		_ = level.Debug(logger).Log("transport", "http", "address", httpAddr, "config", configPath, "kubeconfig", kubeConfig, "msg", "listening")
 		//errs <- http.ListenAndServe(httpAddr, addCors())
 		errs <- http.ListenAndServe(httpAddr, nil)
 	}()
@@ -431,7 +431,7 @@ func run() {
 		errs <- fmt.Errorf("%s", <-c)
 	}()
 
-	_ = logger.Log("terminated", <-errs)
+	_ = level.Error(logger).Log("terminated", <-errs)
 }
 
 func subscribeToQueue(logger log.Logger, client kplamqp.AmqpClient, buildSvc build.Service, cronSvc cronjob.Service,

@@ -12,6 +12,7 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	"github.com/kplcloud/kplcloud/src/util/encode"
+	"github.com/kplcloud/kplcloud/src/util/pods"
 )
 
 type getRequest struct {
@@ -47,6 +48,25 @@ type listRequest struct {
 type deleteRequest struct {
 	getRequest
 	Code string `json:"code"`
+}
+
+type monitorRequest struct {
+	Metrics   string
+	PodName   string
+	Container string
+}
+
+type metrics struct {
+	X string `json:"x"`
+	Y int64  `json:"y"`
+}
+
+type monitorResponse struct {
+	Memory    map[string]pods.XYRes `json:"memory"`
+	Network   map[string]pods.XYRes `json:"network"`
+	Container string                `json:"container"`
+	PodName   string                `json:"pod_name"`
+	Metrics   string                `json:"metrics"`
 }
 
 func makePostEndpoint(s Service) endpoint.Endpoint {
@@ -135,6 +155,14 @@ func makeDeleteEndpoint(s Service) endpoint.Endpoint {
 func makeConfigEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		data, err := s.Config(ctx)
+		return encode.Response{Err: err, Data: data}, err
+	}
+}
+
+func makeMonitorEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(monitorRequest)
+		data, err := s.Monitor(ctx, req.Metrics, req.PodName, req.Container)
 		return encode.Response{Err: err, Data: data}, err
 	}
 }

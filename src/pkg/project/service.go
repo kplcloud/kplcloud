@@ -48,6 +48,9 @@ var (
 	ErrProjectDeleteName     = errors.New("项目删除失败，项目名不正确")
 	ErrIsInGroupFailed       = errors.New("判断是否在组里失败")
 	ErrGroupNoPermission     = errors.New("没有相关组的权限")
+	ErrPodDeploymentGet      = errors.New("项目获取错误")
+	ErrPodDeploymentPodList  = errors.New("项目pods获取错误")
+	ErrParamsMetrics         = errors.New("metrics不能为空")
 )
 
 type Service interface {
@@ -87,6 +90,9 @@ type Service interface {
 
 	// 获取配置信息
 	Config(ctx context.Context) (res map[string]interface{}, err error)
+
+	// 获取项目监控指标 /project/{ns}/monitor/{projectName}?podName=xxxxx&metrics=memory/request&container
+	Monitor(ctx context.Context, metrics, podName, container string) (res monitorResponse, err error)
 }
 
 type service struct {
@@ -117,6 +123,85 @@ func NewService(logger log.Logger, config *config.Config,
 		jenkins,
 		repository,
 		hookQueueSvc}
+}
+
+func (c *service) Monitor(ctx context.Context, metrics, podName, container string) (res monitorResponse, err error) {
+	ns := ctx.Value(middleware.NamespaceContext).(string)
+	project := ctx.Value(middleware.ProjectContext).(*types.Project)
+
+	var podNames []string
+
+	if podName == "" {
+		dep, err := c.k8sClient.Do().AppsV1().Deployments(ns).Get(project.Name, metav1.GetOptions{})
+		if err != nil {
+			_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
+			return res, ErrPodDeploymentGet
+		}
+
+		var selectorKey, selectorVal string
+		for key, val := range dep.Spec.Selector.MatchLabels {
+			selectorKey = key
+			selectorVal = val
+		}
+
+		podList, err := c.k8sClient.Do().CoreV1().Pods(ns).List(metav1.ListOptions{
+			LabelSelector: fmt.Sprintf("%s=%s", selectorKey, selectorVal),
+		})
+
+		if err != nil {
+			_ = level.Error(c.logger).Log("Pods", "List", "err", err.Error())
+			return res, ErrPodDeploymentPodList
+		}
+
+		for _, pod := range podList.Items {
+			podNames = append(podNames, pod.Name)
+		}
+	} else {
+		podNames = append(podNames, podName)
+	}
+
+	metricsCh := make(chan map[string]interface{}, len(podNames))
+	for _, v := range podNames {
+		metricsCh <- pods.GetPodContainerMetrics(ns, v, c.config.GetString("server", "heapster_url"), container, []string{
+			"memory/usage",
+			"cpu/usage",
+			"network/tx_rate", // 每秒通过网络发送的字节数。
+			"network/rx_rate", // 每秒通过网络接收的字节数。
+		})
+	}
+
+	close(metricsCh)
+
+	for v := range metricsCh {
+		fmt.Println("v", v["cpu-usage"])
+		res.Memory[v["pod"].(string)] = v["cpu-usage"].(pods.XYRes)
+	}
+
+	res.Container = container
+	res.PodName = podName
+	res.Metrics = metrics
+
+	//var metricsApi string
+	//if podName != "" {
+	//	metricsApi = fmt.Sprintf("%s/api/v1/model/namespaces/%s/pods/%s/metrics/%s",
+	//		c.config.GetString("server", "heapster_url"), ns, podName, metrics)
+	//}
+	//
+	//if container != "" {
+	//	metricsApi = fmt.Sprintf("%s/api/v1/model/namespaces/%s/pods/%s/containers/%s/metrics/%s",
+	//		c.config.GetString("server", "heapster_url"), ns, podName, container, metrics)
+	//}
+
+	// 如果 podName 及 metrics 和 container 都没
+
+	// /api/v1/model/namespaces/kube-public/pods/kplcloud-6f5987d5df-lhsh5/metrics/ 容器指示
+	// /api/v1/model/namespaces/kube-public/pods/kplcloud-6f5987d5df-lhsh5/containers/kplcloud/metrics 容器指示
+
+	// 各个容器的内存指标
+	// 各个容器的网络指标
+	// 各个容器的CPU指标
+
+	return
 }
 
 func (c *service) Sync(ctx context.Context) (err error) {
@@ -494,6 +579,7 @@ func (sm *SafeMap) writeMap(key string, value *v1.Deployment) {
 	sm.Map[key] = value
 	sm.Unlock()
 }
+
 func (c *service) getPods(ns, name string, index int, podsData *[]map[string]interface{}, wg *sync.WaitGroup) {
 
 	defer wg.Done()

@@ -39,6 +39,7 @@ type endpoints struct {
 	SyncEndpoint      endpoint.Endpoint
 	DeleteEndpoint    endpoint.Endpoint
 	ConfigEndpoint    endpoint.Endpoint
+	MonitorEndpoint   endpoint.Endpoint
 }
 
 func MakeHandler(svc Service, logger log.Logger, repository repository.Repository) http.Handler {
@@ -64,6 +65,7 @@ func MakeHandler(svc Service, logger log.Logger, repository repository.Repositor
 		SyncEndpoint:      makeSyncEndpoint(svc),
 		DeleteEndpoint:    makeDeleteEndpoint(svc),
 		ConfigEndpoint:    makeConfigEndpoint(svc),
+		MonitorEndpoint:   makeMonitorEndpoint(svc),
 	}
 
 	ems := []endpoint.Middleware{
@@ -86,6 +88,7 @@ func MakeHandler(svc Service, logger log.Logger, repository repository.Repositor
 		"Sync":          ems[1:],
 		"DeleteProject": ems,
 		"Config":        ems[2:],
+		"Monitor":       ems,
 	}
 
 	for _, m := range mw["PomFile"] {
@@ -123,6 +126,9 @@ func MakeHandler(svc Service, logger log.Logger, repository repository.Repositor
 	}
 	for _, m := range mw["Config"] {
 		eps.ConfigEndpoint = m(eps.ConfigEndpoint)
+	}
+	for _, m := range mw["Monitor"] {
+		eps.MonitorEndpoint = m(eps.MonitorEndpoint)
 	}
 
 	r := mux.NewRouter()
@@ -212,7 +218,29 @@ func MakeHandler(svc Service, logger log.Logger, repository repository.Repositor
 		opts...,
 	)).Methods("GET")
 
+	r.Handle("/project/{namespace}/monitor/{name}", kithttp.NewServer(
+		eps.MonitorEndpoint,
+		decodeMonitorRequest,
+		encode.EncodeResponse,
+		opts...,
+	)).Methods("GET")
+
 	return r
+}
+
+func decodeMonitorRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	metrics := r.URL.Query().Get("metrics")
+	podName := r.URL.Query().Get("podName")
+	container := r.URL.Query().Get("container")
+	//if metrics == "" {
+	//	return nil, ErrParamsMetrics
+	//}
+
+	return monitorRequest{
+		metrics,
+		podName,
+		container,
+	}, nil
 }
 
 func decodeUpdateRequest(_ context.Context, r *http.Request) (interface{}, error) {

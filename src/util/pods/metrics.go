@@ -8,10 +8,12 @@
 package pods
 
 import (
+	"errors"
+	"fmt"
 	"github.com/kplcloud/request"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strings"
 	"time"
-	"fmt"
 )
 
 type jsonRes struct {
@@ -81,11 +83,10 @@ func getMetrics(ns string, podName string, httpUrl, metricName string) (res json
 	if podName == "" {
 		uri = fmt.Sprintf("%s/api/v1/model/namespaces/%s/metrics/%s",
 			httpUrl, ns, metricName)
-	}else{
+	} else {
 		uri = fmt.Sprintf("%s/api/v1/model/namespaces/%s/pods/%s/metrics/%s",
 			httpUrl, ns, podName, metricName)
 	}
-
 
 	req := request.NewRequest(uri, "GET")
 	// 集群内部不需要代理先注释掉
@@ -108,4 +109,52 @@ func getMetrics(ns string, podName string, httpUrl, metricName string) (res json
 	}
 
 	return
+}
+
+func getContainerMetrics(httpUrl, ns, podName, metrics, container string) (res *jsonRes, err error) {
+	var uri string
+
+	if podName == "" {
+		uri = fmt.Sprintf("%s/api/v1/model/namespaces/%s/metrics/%s",
+			httpUrl, ns, metrics)
+	} else if podName != "" && container == "" {
+		uri = fmt.Sprintf("%s/api/v1/model/namespaces/%s/pods/%s/metrics/%s",
+			httpUrl, ns, podName, metrics)
+	} else if podName != "" && container != "" {
+		uri = fmt.Sprintf("%s/api/v1/model/namespaces/%s/pods/%s/container/%s/metrics/%s",
+			httpUrl, ns, podName, container, metrics)
+	} else {
+		return res, errors.New("参数错误")
+	}
+
+	err = request.NewRequest(uri, "GET").Do().Into(&res)
+
+	fmt.Println(uri)
+	return
+}
+
+func GetPodContainerMetrics(ns, name, httpUrl, container string, metricsNames []string) map[string]interface{} {
+	if httpUrl == "" {
+		httpUrl = "http://heapster.kube-system"
+	}
+
+	metrics := make(map[string]interface{})
+
+	for _, val := range metricsNames {
+		if res, err := getContainerMetrics(httpUrl, ns, name, val, container); err == nil {
+			var xyRes []XYRes
+			for _, v := range res.Metrics {
+				curTime := v.Timestamp.Local().In(time.Local).Unix()
+				xyRes = append(xyRes, XYRes{
+					X: time.Unix(curTime, 0).Format("2006-01-02 15:04:05"),
+					Y: v.Value,
+				})
+			}
+			valName := strings.ReplaceAll(val, "/", "-")
+			metrics[valName] = xyRes
+			metrics["pod"] = name
+		}
+	}
+
+	return metrics
 }
