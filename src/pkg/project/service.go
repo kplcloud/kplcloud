@@ -172,9 +172,20 @@ func (c *service) Monitor(ctx context.Context, metrics, podName, container strin
 
 	close(metricsCh)
 
+	res.Memory = map[string][]pods.XYRes{}
+	res.Cpu = map[string][]pods.XYRes{}
+	res.NetworkTx = map[string][]pods.XYRes{}
+	res.NetworkRx = map[string][]pods.XYRes{}
 	for v := range metricsCh {
-		fmt.Println("v", v["cpu-usage"])
-		res.Memory[v["pod"].(string)] = v["cpu-usage"].(pods.XYRes)
+		mUsage, _ := v["memory-usage"].([]pods.XYRes)
+		cUsage, _ := v["cpu-usage"].([]pods.XYRes)
+		nrUsage, _ := v["network-rx_rate"].([]pods.XYRes)
+		ntUsage, _ := v["network-tx_rate"].([]pods.XYRes)
+
+		res.Memory[v["pod"].(string)] = mUsage
+		res.Cpu[v["pod"].(string)] = cUsage
+		res.NetworkRx[v["pod"].(string)] = nrUsage
+		res.NetworkTx[v["pod"].(string)] = ntUsage
 	}
 
 	res.Container = container

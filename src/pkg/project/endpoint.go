@@ -62,11 +62,13 @@ type metrics struct {
 }
 
 type monitorResponse struct {
-	Memory    map[string]pods.XYRes `json:"memory"`
-	Network   map[string]pods.XYRes `json:"network"`
-	Container string                `json:"container"`
-	PodName   string                `json:"pod_name"`
-	Metrics   string                `json:"metrics"`
+	Memory    map[string][]pods.XYRes `json:"memory"`
+	Cpu       map[string][]pods.XYRes `json:"cpu"`
+	NetworkRx map[string][]pods.XYRes `json:"network_rx"`
+	NetworkTx map[string][]pods.XYRes `json:"network_tx"`
+	Container string                  `json:"container"`
+	PodName   string                  `json:"pod_name"`
+	Metrics   string                  `json:"metrics"`
 }
 
 func makePostEndpoint(s Service) endpoint.Endpoint {
