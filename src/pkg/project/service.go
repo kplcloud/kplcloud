@@ -129,79 +129,68 @@ func (c *service) Monitor(ctx context.Context, metrics, podName, container strin
 	ns := ctx.Value(middleware.NamespaceContext).(string)
 	project := ctx.Value(middleware.ProjectContext).(*types.Project)
 
-	var podNames []string
-
-	if podName == "" {
-		dep, err := c.k8sClient.Do().AppsV1().Deployments(ns).Get(project.Name, metav1.GetOptions{})
-		if err != nil {
-			_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
-			return res, ErrPodDeploymentGet
-		}
-
-		var selectorKey, selectorVal string
-		for key, val := range dep.Spec.Selector.MatchLabels {
-			selectorKey = key
-			selectorVal = val
-		}
-
-		podList, err := c.k8sClient.Do().CoreV1().Pods(ns).List(metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("%s=%s", selectorKey, selectorVal),
-		})
-
-		if err != nil {
-			_ = level.Error(c.logger).Log("Pods", "List", "err", err.Error())
-			return res, ErrPodDeploymentPodList
-		}
-
-		for _, pod := range podList.Items {
-			podNames = append(podNames, pod.Name)
-		}
-	} else {
-		podNames = append(podNames, podName)
+	dep, err := c.k8sClient.Do().AppsV1().Deployments(ns).Get(project.Name, metav1.GetOptions{})
+	if err != nil {
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
+		return res, ErrPodDeploymentGet
 	}
 
-	metricsCh := make(chan map[string]interface{}, len(podNames))
-	for _, v := range podNames {
-		metricsCh <- pods.GetPodContainerMetrics(ns, v, c.config.GetString("server", "heapster_url"), container, []string{
-			"memory/usage",
-			"cpu/usage",
-			"network/tx_rate", // 每秒通过网络发送的字节数。
-			"network/rx_rate", // 每秒通过网络接收的字节数。
-		})
+	var selectorKey, selectorVal string
+	for key, val := range dep.Spec.Selector.MatchLabels {
+		selectorKey = key
+		selectorVal = val
+	}
+
+	podList, err := c.k8sClient.Do().CoreV1().Pods(ns).List(metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", selectorKey, selectorVal),
+	})
+
+	if err != nil {
+		_ = level.Error(c.logger).Log("Pods", "List", "err", err.Error())
+		return res, ErrPodDeploymentPodList
+	}
+	var n int
+	var containers []string
+	for _, v := range podList.Items {
+		for _, c := range v.Spec.Containers {
+			n++
+			containers = append(containers, c.Name)
+		}
+	}
+
+	metricsCh := make(chan pods.ContainerMetrics, n)
+	for _, pod := range podList.Items {
+		for _, v := range pod.Spec.Containers {
+			metricsCh <- pods.GetPodContainerMetrics(ns, pod.Name, c.config.GetString("server", "heapster_url"), v.Name, []string{
+				"memory/usage",
+				"cpu/usage",
+				"network/tx_rate", // 每秒通过网络发送的字节数。
+				"network/rx_rate", // 每秒通过网络接收的字节数。
+			})
+		}
+
 	}
 
 	close(metricsCh)
 
-	res.Memory = map[string][]pods.XYRes{}
-	res.Cpu = map[string][]pods.XYRes{}
-	res.NetworkTx = map[string][]pods.XYRes{}
-	res.NetworkRx = map[string][]pods.XYRes{}
 	for v := range metricsCh {
-		mUsage, _ := v["memory-usage"].([]pods.XYRes)
-		cUsage, _ := v["cpu-usage"].([]pods.XYRes)
-		nrUsage, _ := v["network-rx_rate"].([]pods.XYRes)
-		ntUsage, _ := v["network-tx_rate"].([]pods.XYRes)
+		var containers []podContainer
+		for k, val := range v.Metrics {
+			fmt.Println(k, val)
+			containers = append(containers, podContainer{
+				Name:      k,
+				Memory:    val["memory-usage"],
+				Cpu:       val["cpu-usage"],
+				NetworkRx: val["network-rx_rate"],
+				NetworkTx: val["network-tx_rate"],
+			})
+		}
 
-		res.Memory[v["pod"].(string)] = mUsage
-		res.Cpu[v["pod"].(string)] = cUsage
-		res.NetworkRx[v["pod"].(string)] = nrUsage
-		res.NetworkTx[v["pod"].(string)] = ntUsage
+		res.Metrics = append(res.Metrics, podMetrics{
+			Pod:        v.Pod,
+			Containers: containers,
+		})
 	}
-
-	res.Container = container
-	res.PodName = podName
-	res.Metrics = metrics
-
-	//var metricsApi string
-	//if podName != "" {
-	//	metricsApi = fmt.Sprintf("%s/api/v1/model/namespaces/%s/pods/%s/metrics/%s",
-	//		c.config.GetString("server", "heapster_url"), ns, podName, metrics)
-	//}
-	//
-	//if container != "" {
-	//	metricsApi = fmt.Sprintf("%s/api/v1/model/namespaces/%s/pods/%s/containers/%s/metrics/%s",
-	//		c.config.GetString("server", "heapster_url"), ns, podName, container, metrics)
-	//}
 
 	// 如果 podName 及 metrics 和 container 都没
 

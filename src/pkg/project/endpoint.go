@@ -56,20 +56,23 @@ type monitorRequest struct {
 	Container string
 }
 
-type metrics struct {
-	X string `json:"x"`
-	Y int64  `json:"y"`
-}
+type (
+	podContainer struct {
+		Name      string       `json:"name"`
+		Memory    []pods.XYRes `json:"memory"`
+		Cpu       []pods.XYRes `json:"cpu"`
+		NetworkRx []pods.XYRes `json:"network_rx"`
+		NetworkTx []pods.XYRes `json:"network_tx"`
+	}
+	podMetrics struct {
+		Pod        string         `json:"pod"`
+		Containers []podContainer `json:"containers"`
+	}
 
-type monitorResponse struct {
-	Memory    map[string][]pods.XYRes `json:"memory"`
-	Cpu       map[string][]pods.XYRes `json:"cpu"`
-	NetworkRx map[string][]pods.XYRes `json:"network_rx"`
-	NetworkTx map[string][]pods.XYRes `json:"network_tx"`
-	Container string                  `json:"container"`
-	PodName   string                  `json:"pod_name"`
-	Metrics   string                  `json:"metrics"`
-}
+	monitorResponse struct {
+		Metrics []podMetrics `json:"metrics"`
+	}
+)
 
 func makePostEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {

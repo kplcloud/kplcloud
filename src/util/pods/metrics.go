@@ -121,24 +121,44 @@ func getContainerMetrics(httpUrl, ns, podName, metrics, container string) (res *
 		uri = fmt.Sprintf("%s/api/v1/model/namespaces/%s/pods/%s/metrics/%s",
 			httpUrl, ns, podName, metrics)
 	} else if podName != "" && container != "" {
-		uri = fmt.Sprintf("%s/api/v1/model/namespaces/%s/pods/%s/container/%s/metrics/%s",
+		uri = fmt.Sprintf("%s/api/v1/model/namespaces/%s/pods/%s/containers/%s/metrics/%s",
 			httpUrl, ns, podName, container, metrics)
 	} else {
 		return res, errors.New("参数错误")
 	}
 
-	err = request.NewRequest(uri, "GET").Do().Into(&res)
+	err = request.NewRequest(uri, "GET").
+		Param("start", "").
+		Param("end", "").Do().Into(&res)
 
 	fmt.Println(uri)
 	return
 }
 
-func GetPodContainerMetrics(ns, name, httpUrl, container string, metricsNames []string) map[string]interface{} {
+type (
+	Container struct {
+		ContainerName string             `json:"container_name"`
+		Metrics       map[string][]XYRes `json:"metrics"`
+	}
+	ContainerMetrics struct {
+		Pod       string                        `json:"pod"`
+		Container []Container                   `json:"container"`
+		Metrics   map[string]map[string][]XYRes `json:"metrics"`
+	}
+)
+
+func GetPodContainerMetrics(ns, name, httpUrl, container string, metricsNames []string) ContainerMetrics {
 	if httpUrl == "" {
 		httpUrl = "http://heapster.kube-system"
 	}
 
-	metrics := make(map[string]interface{})
+	metrics := ContainerMetrics{
+		Pod: name,
+	}
+
+	m := map[string]map[string][]XYRes{
+		container: map[string][]XYRes{},
+	}
 
 	for _, val := range metricsNames {
 		if res, err := getContainerMetrics(httpUrl, ns, name, val, container); err == nil {
@@ -151,10 +171,11 @@ func GetPodContainerMetrics(ns, name, httpUrl, container string, metricsNames []
 				})
 			}
 			valName := strings.ReplaceAll(val, "/", "-")
-			metrics[valName] = xyRes
-			metrics["pod"] = name
+			m[container][valName] = xyRes
 		}
 	}
+
+	metrics.Metrics = m
 
 	return metrics
 }
