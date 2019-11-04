@@ -168,15 +168,18 @@ func (c *service) Monitor(ctx context.Context, metrics, podName, container strin
 				"network/rx_rate", // 每秒通过网络接收的字节数。
 			})
 		}
-
 	}
 
 	close(metricsCh)
 
+	resp := map[string]interface{}{}
+	for _, v := range podList.Items {
+		resp[v.Name] = podMetrics{}
+	}
+
 	for v := range metricsCh {
 		var containers []podContainer
 		for k, val := range v.Metrics {
-			fmt.Println(k, val)
 			containers = append(containers, podContainer{
 				Name:      k,
 				Memory:    val["memory-usage"],
@@ -186,10 +189,18 @@ func (c *service) Monitor(ctx context.Context, metrics, podName, container strin
 			})
 		}
 
+		fmt.Println(v.Pod, containers)
+
+		resp[v.Pod] = map[string]interface{}{
+			"containers": containers,
+		}
+		resp[v.Pod].Containers = containers
+
 		res.Metrics = append(res.Metrics, podMetrics{
 			Pod:        v.Pod,
 			Containers: containers,
 		})
+
 	}
 
 	// 如果 podName 及 metrics 和 container 都没

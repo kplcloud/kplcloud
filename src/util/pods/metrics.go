@@ -144,6 +144,7 @@ type (
 		Pod       string                        `json:"pod"`
 		Container []Container                   `json:"container"`
 		Metrics   map[string]map[string][]XYRes `json:"metrics"`
+		Network   map[string][]XYRes            `json:"network"`
 	}
 )
 
@@ -159,9 +160,14 @@ func GetPodContainerMetrics(ns, name, httpUrl, container string, metricsNames []
 	m := map[string]map[string][]XYRes{
 		container: map[string][]XYRes{},
 	}
+	n := map[string][]XYRes{}
 
 	for _, val := range metricsNames {
-		if res, err := getContainerMetrics(httpUrl, ns, name, val, container); err == nil {
+		con := container
+		if strings.Contains(val, "network") {
+			con = ""
+		}
+		if res, err := getContainerMetrics(httpUrl, ns, name, val, con); err == nil {
 			var xyRes []XYRes
 			for _, v := range res.Metrics {
 				curTime := v.Timestamp.Local().In(time.Local).Unix()
@@ -171,11 +177,16 @@ func GetPodContainerMetrics(ns, name, httpUrl, container string, metricsNames []
 				})
 			}
 			valName := strings.ReplaceAll(val, "/", "-")
-			m[container][valName] = xyRes
+			if container == "" {
+				n[valName] = xyRes
+			} else {
+				m[container][valName] = xyRes
+			}
 		}
 	}
 
 	metrics.Metrics = m
+	metrics.Network = n
 
 	return metrics
 }
