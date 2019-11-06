@@ -114,12 +114,19 @@ func getMetrics(ns string, podName string, httpUrl, metricName string) (res json
 func getContainerMetrics(httpUrl, ns, podName, metrics, container string) (res *jsonRes, err error) {
 	var uri string
 
+	now := time.Now()
+	local, _ := time.LoadLocation("")
+	fmt.Println(local.String())
+
+	startUnix := now.In(local).Unix() - int64(60*15)
+	start := time.Unix(startUnix, 0).In(local).Format("2006-01-02T15:04:05Z")
+	end := now.In(local).Format("2006-01-02T15:04:05Z")
 	if podName == "" {
 		uri = fmt.Sprintf("%s/api/v1/model/namespaces/%s/metrics/%s",
 			httpUrl, ns, metrics)
 	} else if podName != "" && container == "" {
-		uri = fmt.Sprintf("%s/api/v1/model/namespaces/%s/pods/%s/metrics/%s",
-			httpUrl, ns, podName, metrics)
+		uri = fmt.Sprintf("%s/api/v1/model/namespaces/%s/pods/%s/metrics/%s?start=%s&end=%s",
+			httpUrl, ns, podName, metrics, start, end)
 	} else if podName != "" && container != "" {
 		uri = fmt.Sprintf("%s/api/v1/model/namespaces/%s/pods/%s/containers/%s/metrics/%s",
 			httpUrl, ns, podName, container, metrics)

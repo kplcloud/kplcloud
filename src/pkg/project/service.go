@@ -92,7 +92,10 @@ type Service interface {
 	Config(ctx context.Context) (res map[string]interface{}, err error)
 
 	// 获取项目监控指标 /project/{ns}/monitor/{projectName}?podName=xxxxx&metrics=memory/request&container
-	Monitor(ctx context.Context, metrics, podName, container string) (res monitorResponse, err error)
+	Monitor(ctx context.Context, metrics, podName, container string) (res map[string]map[string]map[string][]pods.XYRes, err error)
+
+	// 告警统计
+	Alerts(ctx context.Context) (res alertsResponse, err error)
 }
 
 type service struct {
@@ -125,7 +128,63 @@ func NewService(logger log.Logger, config *config.Config,
 		hookQueueSvc}
 }
 
-func (c *service) Monitor(ctx context.Context, metrics, podName, container string) (res monitorResponse, err error) {
+func (c *service) Alerts(ctx context.Context) (res alertsResponse, err error) {
+	ns := ctx.Value(middleware.NamespaceContext).(string)
+	project := ctx.Value(middleware.ProjectContext).(*types.Project)
+
+	var wg sync.WaitGroup
+	wg.Add(5)
+
+	go func() {
+		alertTotal, err := c.repository.Notice().CountByAction(ns, project.Name, types.NoticeActionAlarm)
+		if err != nil {
+			_ = level.Warn(c.logger).Log("Notice", "CountByAction", "err", err.Error())
+		}
+		res.AlertTotal = alertTotal
+		wg.Done()
+	}()
+
+	go func() {
+		buildTotal, err := c.repository.Build().CountByStatus(ns, project.Name, "")
+		if err != nil {
+			_ = level.Warn(c.logger).Log("Build", "CountByStatus", "err", err.Error())
+		}
+		res.BuildTotal = buildTotal
+		wg.Done()
+	}()
+
+	go func() {
+		rollbackNum, err := c.repository.Build().CountByStatus(ns, project.Name, repository.BuildRoolback)
+		if err != nil {
+			_ = level.Warn(c.logger).Log("Build", "CountByStatus", "err", err.Error())
+		}
+		res.RollbackTotal = rollbackNum
+		wg.Done()
+	}()
+	go func() {
+		buildFailure, err := c.repository.Build().CountByStatus(ns, project.Name, repository.BuildFailure)
+		if err != nil {
+			_ = level.Warn(c.logger).Log("Build", "CountByStatus", "err", err.Error())
+		}
+		res.BuildFailureTotal = buildFailure
+		wg.Done()
+	}()
+
+	go func() {
+		buildSuccess, err := c.repository.Build().CountByStatus(ns, project.Name, repository.BuildSuccess)
+		if err != nil {
+			_ = level.Warn(c.logger).Log("Build", "CountByStatus", "err", err.Error())
+		}
+		res.BuildSuccessTotal = buildSuccess
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	return
+}
+
+func (c *service) Monitor(ctx context.Context, metrics, podName, container string) (res map[string]map[string]map[string][]pods.XYRes, err error) {
 	ns := ctx.Value(middleware.NamespaceContext).(string)
 	project := ctx.Value(middleware.ProjectContext).(*types.Project)
 
@@ -149,61 +208,23 @@ func (c *service) Monitor(ctx context.Context, metrics, podName, container strin
 		_ = level.Error(c.logger).Log("Pods", "List", "err", err.Error())
 		return res, ErrPodDeploymentPodList
 	}
-	var n int
-	var containers []string
-	for _, v := range podList.Items {
-		for _, c := range v.Spec.Containers {
-			n++
-			containers = append(containers, c.Name)
-		}
-	}
 
-	metricsCh := make(chan pods.ContainerMetrics, n)
+	resp := map[string]map[string]map[string][]pods.XYRes{}
 	for _, pod := range podList.Items {
+		containersList := map[string]map[string][]pods.XYRes{}
 		for _, v := range pod.Spec.Containers {
-			metricsCh <- pods.GetPodContainerMetrics(ns, pod.Name, c.config.GetString("server", "heapster_url"), v.Name, []string{
+
+			metricsData := pods.GetPodContainerMetrics(ns, pod.Name, c.config.GetString("server", "heapster_url"), v.Name, []string{
 				"memory/usage",
 				"cpu/usage",
 				"network/tx_rate", // 每秒通过网络发送的字节数。
 				"network/rx_rate", // 每秒通过网络接收的字节数。
 			})
+
+			containersList[v.Name] = metricsData.Metrics[v.Name]
 		}
+		resp[pod.Name] = containersList
 	}
-
-	close(metricsCh)
-
-	resp := map[string]interface{}{}
-	for _, v := range podList.Items {
-		resp[v.Name] = podMetrics{}
-	}
-
-	for v := range metricsCh {
-		var containers []podContainer
-		for k, val := range v.Metrics {
-			containers = append(containers, podContainer{
-				Name:      k,
-				Memory:    val["memory-usage"],
-				Cpu:       val["cpu-usage"],
-				NetworkRx: val["network-rx_rate"],
-				NetworkTx: val["network-tx_rate"],
-			})
-		}
-
-		fmt.Println(v.Pod, containers)
-
-		resp[v.Pod] = map[string]interface{}{
-			"containers": containers,
-		}
-		resp[v.Pod].Containers = containers
-
-		res.Metrics = append(res.Metrics, podMetrics{
-			Pod:        v.Pod,
-			Containers: containers,
-		})
-
-	}
-
-	// 如果 podName 及 metrics 和 container 都没
 
 	// /api/v1/model/namespaces/kube-public/pods/kplcloud-6f5987d5df-lhsh5/metrics/ 容器指示
 	// /api/v1/model/namespaces/kube-public/pods/kplcloud-6f5987d5df-lhsh5/containers/kplcloud/metrics 容器指示
@@ -212,7 +233,7 @@ func (c *service) Monitor(ctx context.Context, metrics, podName, container strin
 	// 各个容器的网络指标
 	// 各个容器的CPU指标
 
-	return
+	return resp, nil
 }
 
 func (c *service) Sync(ctx context.Context) (err error) {

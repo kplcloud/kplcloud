@@ -72,6 +72,16 @@ type (
 	monitorResponse struct {
 		Metrics []podMetrics `json:"metrics"`
 	}
+
+	alertsResponse struct {
+		AlertTotal        int64 `json:"alert_total"`
+		NotViewed         int64 `json:"not_viewed"`
+		BuildTotal        int64 `json:"build_total"`
+		BuildSuccessTotal int64 `json:"build_success_total"`
+		BuildFailureTotal int64 `json:"build_failure_total"`
+		BuildAbortedTotal int64 `json:"build_aborted_total"`
+		RollbackTotal     int64 `json:"rollback_total"`
+	}
 )
 
 func makePostEndpoint(s Service) endpoint.Endpoint {
@@ -168,6 +178,13 @@ func makeMonitorEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(monitorRequest)
 		data, err := s.Monitor(ctx, req.Metrics, req.PodName, req.Container)
+		return encode.Response{Err: err, Data: data}, err
+	}
+}
+
+func makeAlertsEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		data, err := s.Alerts(ctx)
 		return encode.Response{Err: err, Data: data}, err
 	}
 }
