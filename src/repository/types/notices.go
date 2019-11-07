@@ -16,8 +16,17 @@ type Notices struct {
 	Type            int       `gorm:"column:type" json:"type"`
 }
 
+type NoticeAction string
+
+const (
+	NoticeActionAlarm  NoticeAction = "Alarm"
+	NoticeActionDelete NoticeAction = "Delete"
+	NoticeActionApply  NoticeAction = "Apply"
+	NoticeActionBuild  NoticeAction = "Build"
+	NoticeActionAudit  NoticeAction = "Audit"
+)
+
 // TableName sets the insert table name for this struct type
 func (n *Notices) TableName() string {
 	return "notices"
 }
-

@@ -48,6 +48,7 @@ type BuildRepository interface {
 	CountStatistics(req StatisticsRequest) (count int64, err error)
 	GetGroupByBuilds(req StatisticsRequest, groupBy string) (ress []Ress, err error)
 	Delete(ns, name string) error
+	CountByStatus(ns, name, buildStatus string) (total int64, err error)
 }
 
 type build struct {
@@ -56,6 +57,15 @@ type build struct {
 
 func NewBuildRepository(db *gorm.DB) BuildRepository {
 	return &build{db: db}
+}
+
+func (c *build) CountByStatus(ns, name, buildStatus string) (total int64, err error) {
+	query := c.db.Model(&types.Build{}).Where("namespace = ? AND name = ?", ns, name)
+	if buildStatus != "" {
+		query = query.Where("status = ? ", buildStatus)
+	}
+	err = query.Count(&total).Error
+	return
 }
 
 func (c *build) Count(ns, name string) (count int64, err error) {

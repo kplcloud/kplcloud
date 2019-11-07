@@ -12,6 +12,7 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	"github.com/kplcloud/kplcloud/src/util/encode"
+	"github.com/kplcloud/kplcloud/src/util/pods"
 )
 
 type getRequest struct {
@@ -48,6 +49,40 @@ type deleteRequest struct {
 	getRequest
 	Code string `json:"code"`
 }
+
+type monitorRequest struct {
+	Metrics   string
+	PodName   string
+	Container string
+}
+
+type (
+	podContainer struct {
+		Name      string       `json:"name"`
+		Memory    []pods.XYRes `json:"memory"`
+		Cpu       []pods.XYRes `json:"cpu"`
+		NetworkRx []pods.XYRes `json:"network_rx"`
+		NetworkTx []pods.XYRes `json:"network_tx"`
+	}
+	podMetrics struct {
+		Pod        string         `json:"pod"`
+		Containers []podContainer `json:"containers"`
+	}
+
+	monitorResponse struct {
+		Metrics []podMetrics `json:"metrics"`
+	}
+
+	alertsResponse struct {
+		AlertTotal        int64 `json:"alert_total"`
+		NotViewed         int64 `json:"not_viewed"`
+		BuildTotal        int64 `json:"build_total"`
+		BuildSuccessTotal int64 `json:"build_success_total"`
+		BuildFailureTotal int64 `json:"build_failure_total"`
+		BuildAbortedTotal int64 `json:"build_aborted_total"`
+		RollbackTotal     int64 `json:"rollback_total"`
+	}
+)
 
 func makePostEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
@@ -135,6 +170,21 @@ func makeDeleteEndpoint(s Service) endpoint.Endpoint {
 func makeConfigEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		data, err := s.Config(ctx)
+		return encode.Response{Err: err, Data: data}, err
+	}
+}
+
+func makeMonitorEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(monitorRequest)
+		data, err := s.Monitor(ctx, req.Metrics, req.PodName, req.Container)
+		return encode.Response{Err: err, Data: data}, err
+	}
+}
+
+func makeAlertsEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		data, err := s.Alerts(ctx)
 		return encode.Response{Err: err, Data: data}, err
 	}
 }

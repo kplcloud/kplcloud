@@ -48,6 +48,9 @@ var (
 	ErrProjectDeleteName     = errors.New("项目删除失败，项目名不正确")
 	ErrIsInGroupFailed       = errors.New("判断是否在组里失败")
 	ErrGroupNoPermission     = errors.New("没有相关组的权限")
+	ErrPodDeploymentGet      = errors.New("项目获取错误")
+	ErrPodDeploymentPodList  = errors.New("项目pods获取错误")
+	ErrParamsMetrics         = errors.New("metrics不能为空")
 )
 
 type Service interface {
@@ -87,6 +90,12 @@ type Service interface {
 
 	// 获取配置信息
 	Config(ctx context.Context) (res map[string]interface{}, err error)
+
+	// 获取项目监控指标 /project/{ns}/monitor/{projectName}?podName=xxxxx&metrics=memory/request&container
+	Monitor(ctx context.Context, metrics, podName, container string) (res map[string]map[string]map[string][]pods.XYRes, err error)
+
+	// 告警统计
+	Alerts(ctx context.Context) (res alertsResponse, err error)
 }
 
 type service struct {
@@ -117,6 +126,114 @@ func NewService(logger log.Logger, config *config.Config,
 		jenkins,
 		repository,
 		hookQueueSvc}
+}
+
+func (c *service) Alerts(ctx context.Context) (res alertsResponse, err error) {
+	ns := ctx.Value(middleware.NamespaceContext).(string)
+	project := ctx.Value(middleware.ProjectContext).(*types.Project)
+
+	var wg sync.WaitGroup
+	wg.Add(5)
+
+	go func() {
+		alertTotal, err := c.repository.Notice().CountByAction(ns, project.Name, types.NoticeActionAlarm)
+		if err != nil {
+			_ = level.Warn(c.logger).Log("Notice", "CountByAction", "err", err.Error())
+		}
+		res.AlertTotal = alertTotal
+		wg.Done()
+	}()
+
+	go func() {
+		buildTotal, err := c.repository.Build().CountByStatus(ns, project.Name, "")
+		if err != nil {
+			_ = level.Warn(c.logger).Log("Build", "CountByStatus", "err", err.Error())
+		}
+		res.BuildTotal = buildTotal
+		wg.Done()
+	}()
+
+	go func() {
+		rollbackNum, err := c.repository.Build().CountByStatus(ns, project.Name, repository.BuildRoolback)
+		if err != nil {
+			_ = level.Warn(c.logger).Log("Build", "CountByStatus", "err", err.Error())
+		}
+		res.RollbackTotal = rollbackNum
+		wg.Done()
+	}()
+	go func() {
+		buildFailure, err := c.repository.Build().CountByStatus(ns, project.Name, repository.BuildFailure)
+		if err != nil {
+			_ = level.Warn(c.logger).Log("Build", "CountByStatus", "err", err.Error())
+		}
+		res.BuildFailureTotal = buildFailure
+		wg.Done()
+	}()
+
+	go func() {
+		buildSuccess, err := c.repository.Build().CountByStatus(ns, project.Name, repository.BuildSuccess)
+		if err != nil {
+			_ = level.Warn(c.logger).Log("Build", "CountByStatus", "err", err.Error())
+		}
+		res.BuildSuccessTotal = buildSuccess
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	return
+}
+
+func (c *service) Monitor(ctx context.Context, metrics, podName, container string) (res map[string]map[string]map[string][]pods.XYRes, err error) {
+	ns := ctx.Value(middleware.NamespaceContext).(string)
+	project := ctx.Value(middleware.ProjectContext).(*types.Project)
+
+	dep, err := c.k8sClient.Do().AppsV1().Deployments(ns).Get(project.Name, metav1.GetOptions{})
+	if err != nil {
+		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
+		return res, ErrPodDeploymentGet
+	}
+
+	var selectorKey, selectorVal string
+	for key, val := range dep.Spec.Selector.MatchLabels {
+		selectorKey = key
+		selectorVal = val
+	}
+
+	podList, err := c.k8sClient.Do().CoreV1().Pods(ns).List(metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", selectorKey, selectorVal),
+	})
+
+	if err != nil {
+		_ = level.Error(c.logger).Log("Pods", "List", "err", err.Error())
+		return res, ErrPodDeploymentPodList
+	}
+
+	resp := map[string]map[string]map[string][]pods.XYRes{}
+	for _, pod := range podList.Items {
+		containersList := map[string]map[string][]pods.XYRes{}
+		for _, v := range pod.Spec.Containers {
+
+			metricsData := pods.GetPodContainerMetrics(ns, pod.Name, c.config.GetString("server", "heapster_url"), v.Name, []string{
+				"memory/usage",
+				"cpu/usage",
+				"network/tx_rate", // 每秒通过网络发送的字节数。
+				"network/rx_rate", // 每秒通过网络接收的字节数。
+			})
+
+			containersList[v.Name] = metricsData.Metrics[v.Name]
+		}
+		resp[pod.Name] = containersList
+	}
+
+	// /api/v1/model/namespaces/kube-public/pods/kplcloud-6f5987d5df-lhsh5/metrics/ 容器指示
+	// /api/v1/model/namespaces/kube-public/pods/kplcloud-6f5987d5df-lhsh5/containers/kplcloud/metrics 容器指示
+
+	// 各个容器的内存指标
+	// 各个容器的网络指标
+	// 各个容器的CPU指标
+
+	return resp, nil
 }
 
 func (c *service) Sync(ctx context.Context) (err error) {
@@ -494,6 +611,7 @@ func (sm *SafeMap) writeMap(key string, value *v1.Deployment) {
 	sm.Map[key] = value
 	sm.Unlock()
 }
+
 func (c *service) getPods(ns, name string, index int, podsData *[]map[string]interface{}, wg *sync.WaitGroup) {
 
 	defer wg.Done()

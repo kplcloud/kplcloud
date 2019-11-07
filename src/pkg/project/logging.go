@@ -12,6 +12,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	kithttp "github.com/go-kit/kit/transport/http"
+	"github.com/kplcloud/kplcloud/src/util/pods"
 	"time"
 )
 
@@ -171,4 +172,31 @@ func (s *loggingService) Config(ctx context.Context) (res map[string]interface{}
 		)
 	}(time.Now())
 	return s.Service.Config(ctx)
+}
+
+func (s *loggingService) Monitor(ctx context.Context, metrics, podName, container string) (res map[string]map[string]map[string][]pods.XYRes, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			"uri", ctx.Value(kithttp.ContextKeyRequestURI),
+			"method", "Monitor",
+			"metrics", metrics,
+			"podName", podName,
+			"container", container,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.Service.Monitor(ctx, metrics, podName, container)
+}
+
+func (s *loggingService) Alerts(ctx context.Context) (res alertsResponse, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			"uri", ctx.Value(kithttp.ContextKeyRequestURI),
+			"method", "Alerts",
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.Service.Alerts(ctx)
 }

@@ -11,6 +11,7 @@ type NoticesRepository interface {
 	CreateReturnId(n *types.Notices) int64
 	Count(name string, noticeType int) (count int, err error)
 	FindOffsetLimit(name string, noticeType int, offset, limit int) (res []*types.Notices, err error)
+	CountByAction(ns, name string, action types.NoticeAction) (total int64, err error)
 }
 
 type notices struct {
@@ -63,6 +64,14 @@ func (c *notices) Count(name string, noticeType int) (count int, err error) {
 		query = query.Where("type = ?", noticeType)
 	}
 	err = query.Count(&count).Error
+	return
+}
+
+func (c *notices) CountByAction(ns, name string, action types.NoticeAction) (total int64, err error) {
+	err = c.db.Model(&types.Notices{}).
+		Where("name = ?", name).
+		Where("namespace = ?", ns).
+		Where("action = ?", string(action)).Count(&total).Error
 	return
 }
 

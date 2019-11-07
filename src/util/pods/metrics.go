@@ -8,10 +8,12 @@
 package pods
 
 import (
+	"errors"
+	"fmt"
 	"github.com/kplcloud/request"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strings"
 	"time"
-	"fmt"
 )
 
 type jsonRes struct {
@@ -81,11 +83,10 @@ func getMetrics(ns string, podName string, httpUrl, metricName string) (res json
 	if podName == "" {
 		uri = fmt.Sprintf("%s/api/v1/model/namespaces/%s/metrics/%s",
 			httpUrl, ns, metricName)
-	}else{
+	} else {
 		uri = fmt.Sprintf("%s/api/v1/model/namespaces/%s/pods/%s/metrics/%s",
 			httpUrl, ns, podName, metricName)
 	}
-
 
 	req := request.NewRequest(uri, "GET")
 	// 集群内部不需要代理先注释掉
@@ -108,4 +109,91 @@ func getMetrics(ns string, podName string, httpUrl, metricName string) (res json
 	}
 
 	return
+}
+
+func getContainerMetrics(httpUrl, ns, podName, metrics, container string) (res *jsonRes, err error) {
+	var uri string
+
+	now := time.Now()
+	local, _ := time.LoadLocation("")
+	fmt.Println(local.String())
+
+	startUnix := now.In(local).Unix() - int64(60*15)
+	start := time.Unix(startUnix, 0).In(local).Format("2006-01-02T15:04:05Z")
+	end := now.In(local).Format("2006-01-02T15:04:05Z")
+	if podName == "" {
+		uri = fmt.Sprintf("%s/api/v1/model/namespaces/%s/metrics/%s",
+			httpUrl, ns, metrics)
+	} else if podName != "" && container == "" {
+		uri = fmt.Sprintf("%s/api/v1/model/namespaces/%s/pods/%s/metrics/%s?start=%s&end=%s",
+			httpUrl, ns, podName, metrics, start, end)
+	} else if podName != "" && container != "" {
+		uri = fmt.Sprintf("%s/api/v1/model/namespaces/%s/pods/%s/containers/%s/metrics/%s",
+			httpUrl, ns, podName, container, metrics)
+	} else {
+		return res, errors.New("参数错误")
+	}
+
+	err = request.NewRequest(uri, "GET").
+		Param("start", "").
+		Param("end", "").Do().Into(&res)
+
+	fmt.Println(uri)
+	return
+}
+
+type (
+	Container struct {
+		ContainerName string             `json:"container_name"`
+		Metrics       map[string][]XYRes `json:"metrics"`
+	}
+	ContainerMetrics struct {
+		Pod       string                        `json:"pod"`
+		Container []Container                   `json:"container"`
+		Metrics   map[string]map[string][]XYRes `json:"metrics"`
+		Network   map[string][]XYRes            `json:"network"`
+	}
+)
+
+func GetPodContainerMetrics(ns, name, httpUrl, container string, metricsNames []string) ContainerMetrics {
+	if httpUrl == "" {
+		httpUrl = "http://heapster.kube-system"
+	}
+
+	metrics := ContainerMetrics{
+		Pod: name,
+	}
+
+	m := map[string]map[string][]XYRes{
+		container: map[string][]XYRes{},
+	}
+	n := map[string][]XYRes{}
+
+	for _, val := range metricsNames {
+		con := container
+		if strings.Contains(val, "network") {
+			con = ""
+		}
+		if res, err := getContainerMetrics(httpUrl, ns, name, val, con); err == nil {
+			var xyRes []XYRes
+			for _, v := range res.Metrics {
+				curTime := v.Timestamp.Local().In(time.Local).Unix()
+				xyRes = append(xyRes, XYRes{
+					X: time.Unix(curTime, 0).Format("2006-01-02 15:04:05"),
+					Y: v.Value,
+				})
+			}
+			valName := strings.ReplaceAll(val, "/", "-")
+			if container == "" {
+				n[valName] = xyRes
+			} else {
+				m[container][valName] = xyRes
+			}
+		}
+	}
+
+	metrics.Metrics = m
+	metrics.Network = n
+
+	return metrics
 }

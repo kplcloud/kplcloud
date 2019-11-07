@@ -942,7 +942,11 @@ VALUES
 	('p','4','/dockerfile/list','GET','','',''),
 	('p','4','/ingress/list','GET','','',''),
 	('p','4','/cornjob/list','GET','','',''),
-	('p','4','/statistics','GET','','','');
+	('p','4','/statistics','GET','','',''),
+	('p','1','/project/{namespace}/monitor/{name}','GET','','',''),
+	('p','4','/project/{namespace}/monitor/{name}','GET','','',''),
+    ('p','1','/project/{namespace}/alerts/{name}','GET','','',''),
+	('p','4','/project/{namespace}/alerts/{name}','GET','','','');
 
 INSERT INTO `dockerfiles` (`id`, `name`, `language`, `version`, `detail`, `desc`, `dockerfile`, `status`, `download`,
                            `score`, `sha256`, `full_path`, `created_at`, `updated_at`, `author_id`, `uploader_id`)
@@ -1274,7 +1278,10 @@ VALUES
 	(323,'定时任务-构建历史详情','tags-o','/build/jenkins/{namespace}/cronjob/{name}/console/{number}','GET',0,225,'2019-08-20 11:52:46','2019-08-20 11:52:46'),
 	(324,'组-查询组名是否存在','dashboard','/group/name/exists','GET',0,121,'2019-08-21 18:00:37','2019-08-21 18:00:37'),
 	(325,'组-查询组别名是否存在','dashboard','/group/display_name/exists','GET',0,121,'2019-08-21 18:00:58','2019-08-21 18:00:58'),
-	(326,'消息中心-获取消息提示','','/notice/detail/{id:[0-9]+}','GET',0,114,'2019-09-02 11:59:24','2019-09-02 11:59:24');
+	(326,'消息中心-获取消息提示','','/notice/detail/{id:[0-9]+}','GET',0,114,'2019-09-02 11:59:24','2019-09-02 11:59:24'),
+	(327,'应用详情-监控信息','','/project/{namespace}/monitor/{name}','GET',0,48,'2019-11-06 11:59:24','2019-11-06 11:59:24'),
+	(328,'应用详情-告警统计','','/project/{namespace}/alerts/{name}','GET',0,48,'2019-11-06 11:59:24','2019-11-06 11:59:24');
+
 
 INSERT INTO `roles` (`id`, `name`, `level`, `state`, `created_at`, `updated_at`, `description`)
 VALUES (1, '超级管理员', 100, 1, '2019-01-29 19:09:41', '2019-08-20 10:53:35', '神'),
@@ -1974,6 +1981,8 @@ VALUES
 	(1,324),
 	(1,325),
 	(1,326),
+	(1,327),
+	(1,328),
 	(4,2),
 	(4,10),
 	(4,18),
@@ -2168,7 +2177,9 @@ VALUES
 	(4,323),
 	(4,324),
 	(4,325),
-	(4,326);
+	(4,326),
+	(4,327),
+	(4,328);
 
 INSERT INTO `templates` (`id`, `name`, `kind`, `detail`, `rules`, `created_at`, `updated_at`)
 VALUES

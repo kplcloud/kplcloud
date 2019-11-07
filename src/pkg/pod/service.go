@@ -52,6 +52,8 @@ type Service interface {
 
 	// pods的内存及CPU使用
 	PodsMetrics(ctx context.Context) (res map[string]interface{}, err error)
+
+	PodsNetwork(ctx context.Context) (res map[string]interface{}, err error)
 }
 
 type service struct {
@@ -63,6 +65,10 @@ type service struct {
 
 func NewService(logger log.Logger, k8sClient kubernetes.K8sClient, config *config.Config, hookQueueSvc hooks.ServiceHookQueue) Service {
 	return &service{logger, k8sClient, config, hookQueueSvc}
+}
+
+func (c *service) PodsNetwork(ctx context.Context) (res map[string]interface{}, err error) {
+	return
 }
 
 func (c *service) PodsMetrics(ctx context.Context) (res map[string]interface{}, err error) {
