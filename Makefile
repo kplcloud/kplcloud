@@ -12,7 +12,7 @@ PID = .pid
 HUB_ADDR = hub.kpaas.nsini.com
 DOCKER_USER =
 DOCKER_PWD =
-TAG = v0.2.2
+TAG = v0.2.3
 NAMESPACE = kpaas
 PWD = $(shell pwd)
 
