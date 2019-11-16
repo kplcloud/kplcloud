@@ -4,6 +4,11 @@ services:
     image: mysql:5.7.14
     environment:
       MYSQL_ROOT_PASSWORD: "admin"
+      MYSQL_DATABASE: "kplcloud"
+    command: [
+      '--character-set-server=utf8mb4',
+      '--collation-server=utf8mb4_unicode_ci',
+    ]
     expose:
       - "3306"
     ports:
