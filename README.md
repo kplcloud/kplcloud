@@ -78,7 +78,7 @@ $ make run
 
 ### 视频教程
 
-- [本地启动]
+- [本地启动](https://www.bilibili.com/video/av75847198/)
 - [创建一个应用]
 
 ## 成员
