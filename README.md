@@ -78,8 +78,9 @@ $ make run
 
 ### 视频教程
 
-- [本地启动]
-- [创建一个应用]
+- [本地启动](https://www.bilibili.com/video/av75847198/)
+- [本地连接K8S](https://www.bilibili.com/video/av75890739/)
+- [创建一个应用](https://www.bilibili.com/video/av75898315/)
 
 ## 成员
 
