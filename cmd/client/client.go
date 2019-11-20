@@ -68,7 +68,7 @@ client sync configmap -c app.cfg -k k8s-config.yaml -n app
 			if k8sClient, err = kubernetes.NewClient(cf); err != nil {
 				return err
 			}
-			if db, err = mysql.NewDb(logger, cf); err != nil {
+			if db, err = mysql.NewDb(cf); err != nil {
 				return err
 			}
 

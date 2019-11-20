@@ -21,7 +21,7 @@ type Build struct {
 	ID        int64       `gorm:"column:id;primary_key" json:"id"`
 	Name      string      `gorm:"column:name" json:"name"`
 	Namespace string      `gorm:"column:namespace" json:"namespace"`
-	Output    null.String `gorm:"column:output" json:"output"`
+	Output    null.String `gorm:"column:output;type:text" json:"output"`
 	Path      null.String `gorm:"column:path" json:"path"`
 	Status    null.String `gorm:"column:status" json:"status"`
 	UpdatedAt null.Time   `gorm:"column:updated_at" json:"updated_at"`

@@ -13,7 +13,7 @@ type ProjectJenkins struct {
 	ID         int       `gorm:"column:id;primary_key" json:"id"`
 	Name       string    `gorm:"column:name" json:"name"`
 	Namespace  string    `gorm:"column:namespace" json:"namespace"`
-	Command    string    `gorm:"column:command" json:"command"`
+	Command    string    `gorm:"column:command;type:text" json:"command"`
 	GitAddr    string    `gorm:"column:git_addr" json:"git_addr"`
 	GitType    string    `gorm:"column:git_type" json:"git_type"`
 	GitVersion string    `gorm:"column:git_version" json:"git_version"`

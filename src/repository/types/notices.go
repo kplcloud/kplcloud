@@ -4,7 +4,7 @@ import "gopkg.in/guregu/null.v3"
 
 type Notices struct {
 	Action          string    `gorm:"column:action" json:"action"`
-	Content         string    `gorm:"column:content" json:"content"`
+	Content         string    `gorm:"column:content;type:text" json:"content"`
 	CreatedAt       null.Time `gorm:"column:created_at" json:"created_at"`
 	ID              int64     `gorm:"column:id;primary_key" json:"id"`
 	MemberID        int       `gorm:"column:member_id" json:"member_id"`

@@ -13,8 +13,8 @@ type Dockerfile struct {
 	AuthorID   int64       `gorm:"column:author_id" json:"author_id"`
 	CreatedAt  null.Time   `gorm:"column:created_at" json:"created_at"`
 	Desc       null.String `gorm:"column:desc" json:"desc"`
-	Detail     string      `gorm:"column:detail" json:"detail"`
-	Dockerfile string      `gorm:"column:dockerfile" json:"dockerfile"`
+	Detail     string      `gorm:"column:detail;type:text" json:"detail"`
+	Dockerfile string      `gorm:"column:dockerfile;type:text" json:"dockerfile"`
 	Download   null.Int    `gorm:"column:download" json:"download"`
 	FullPath   string      `gorm:"column:full_path" json:"full_path"`
 	ID         int64       `gorm:"column:id;primary_key" json:"id"`
