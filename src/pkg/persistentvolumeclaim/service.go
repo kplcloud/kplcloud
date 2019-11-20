@@ -173,7 +173,7 @@ func (c *service) Sync(ctx context.Context, ns string) (err error) {
 			*pvc.Spec.StorageClassName,
 			string(b),
 			pvc.Spec.Selector.String(), pvc.Labels); err != nil {
-			_ = level.Warn(c.logger).Log("pvcRepository", "FirstOrCreate", "err", err.Error())
+			_ = level.Warn(c.logger).Log("pvcRepository", "FirstOrCreate", "err", err)
 		}
 	}
 

@@ -15,7 +15,7 @@ type ConfigData struct {
 	ID          int64     `gorm:"column:id;primary_key" json:"id"`
 	Key         string    `gorm:"column:key" json:"key"`
 	UpdatedAt   null.Time `gorm:"column:updated_at" json:"updated_at"`
-	Value       string    `gorm:"column:value" json:"value"`
+	Value       string    `gorm:"column:value;type:text" json:"value"`
 	Path        string    `gorm:"column:path" json:"path"`
 
 	ConfigMap ConfigMap `gorm:"ForeignKey:id;AssociationForeignKey:ConfigMapID"`
