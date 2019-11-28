@@ -59,7 +59,7 @@ type Paths struct {
 
 type ProjectTemplate struct {
 	CreatedAt          null.Time     `gorm:"column:created_at" json:"created_at"`
-	Fields             string        `gorm:"column:fields;size(1000)" json:"fields"`
+	Fields             string        `gorm:"column:fields;size(10000)" json:"fields"`
 	FinalTemplate      string        `gorm:"column:final_template;type:text;(10000)" json:"final_template"`
 	ID                 int64         `gorm:"column:id;primary_key" json:"id"`
 	Kind               string        `gorm:"column:kind;size(255)" json:"kind"`
