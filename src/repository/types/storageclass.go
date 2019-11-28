@@ -12,7 +12,7 @@ import "gopkg.in/guregu/null.v3"
 type StorageClass struct {
 	CreatedAt         null.Time   `gorm:"column:created_at" json:"created_at"`
 	Desc              null.String `gorm:"column:desc" json:"desc"`
-	Detail            string      `gorm:"column:detail" json:"detail"`
+	Detail            string      `gorm:"column:detail;size(10000)" json:"detail"`
 	ID                int64       `gorm:"column:id;primary_key" json:"id"`
 	Name              string      `gorm:"column:name" json:"name"`
 	Provisioner       string      `gorm:"column:provisioner" json:"provisioner"`

@@ -12,7 +12,7 @@ import "gopkg.in/guregu/null.v3"
 type EventHistory struct {
 	AppName   string    `gorm:"column:app_name"`
 	CreatedAt null.Time `gorm:"column:created_at"`
-	Date      string    `gorm:"column:date"`
+	Date      string    `gorm:"column:date;size(10000)"`
 	Event     string    `gorm:"column:event"`
 	ID        int       `gorm:"column:id;primary_key"`
 	Namespace string    `gorm:"column:namespace"`
