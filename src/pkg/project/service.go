@@ -445,6 +445,9 @@ func (c *service) BasicPost(ctx context.Context, name string, req basicRequest) 
 	resourceInfo := pods.CreateCpuData(req.Resources)
 	deployment["memory"] = resourceInfo.Memory
 	deployment["maxMemory"] = resourceInfo.MaxMemory
+
+	// 镜像仓库
+	deployment["docker_repo"] = c.config.GetString("server", "docker_repo")
 	//@todo 记得修改模板中的Args，Command为[]string格式
 
 	if err = c.rewriteTemplate(project.ID, repository.DeploymentKind, deployment); err != nil {
@@ -1040,6 +1043,7 @@ func (c *service) saveJenkins(project *types.Project, req basicRequest) error {
 		"git_name":  name[1],
 		"git_path":  helper.GitUrl(req.GitAddr),
 		"namespace": project.Namespace,
+		"docker_repo": c.config.GetString("server", "docker_repo"),
 	}
 
 	switch project.Language {
