@@ -150,7 +150,7 @@ func (c *service) BranchesByGitPath(ctx context.Context, gitPath string) (res []
 func parseGitAddr(gitAddr string) (string, string) {
 	gitAddr = strings.Replace(gitAddr, ".git", "", -1)
 	addr := strings.Split(gitAddr, ":")
-	names := strings.Split(addr[1], "/")
+	names := strings.Split(addr[len(addr)-1], "/")
 	owner := names[len(names)-2]
 	repo := names[len(names)-1]
 
