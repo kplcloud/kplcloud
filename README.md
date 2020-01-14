@@ -16,8 +16,7 @@ kplcloud已服务于宜人财富部分业务，稳定管理了上百个应用，
 
 演示地址: [https://kplcloud.nsini.com/about.html](https://kplcloud.nsini.com/about.html)
 
-- 感谢 [@icowan](https://github.com/icowan) 赞助三台服务器
-- 感谢 [@xzghua](https://github.com/xzghua) 赞助一台服务器
+- 感谢 [@icowan](https://github.com/icowan) 赞助四台服务器
 
 所用到的相关服务，组件分别部署在阿里云，腾讯云服务器上。资源非常有限，仅供大家体验，希望不用过度使用。
 
@@ -90,6 +89,8 @@ $ make run
 - **[@xzghua](https://github.com/xzghua)**
 
 ### 支持我们
+
+![](http://source.qiniu.cnd.nsini.com//static/pay/wechat-pay.JPG?imageView2/2/w/360/interlace/0/q/70) ![](http://source.qiniu.cnd.nsini.com//static/pay/alipay.JPG?imageView2/2/w/360/interlace/0/q/70)
 
 ### 技术交流
 

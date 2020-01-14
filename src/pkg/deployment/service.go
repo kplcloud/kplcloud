@@ -1090,7 +1090,7 @@ func (c *service) VolumeConfig(ctx context.Context, mountPath, subPath string) e
 		if err := c.hookQueueSvc.SendHookQueue(ctx,
 			repository.VolumeConfig,
 			name, ns,
-			fmt.Sprintf("增加挂载配轩文件\n 应用: %s.%s --> 文件名: %s \n 路径: %s\n", name, ns, subPath, mountPath)); err != nil {
+			fmt.Sprintf("增加挂载配置文件\n 应用: %s.%s --> 文件名: %s \n 路径: %s\n", name, ns, subPath, mountPath)); err != nil {
 			_ = level.Warn(c.logger).Log("hookQueueSvc", "SendHookQueue", "err", err.Error())
 		}
 	}()
