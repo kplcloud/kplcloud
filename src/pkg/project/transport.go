@@ -301,6 +301,17 @@ func decodeBasicPostRequest(_ context.Context, r *http.Request) (interface{}, er
 		return nil, encode.ErrBadRoute
 	}
 	req.Name = name
+	var commands, args []string
+	for _, v := range req.Command {
+		commands = append(commands, strings.Trim(v, "\""))
+	}
+
+	for _, v := range req.Args {
+		args = append(args, strings.Trim(v, "\""))
+	}
+
+	req.Command = commands
+	req.Args = args
 
 	//校验项目地址
 	gitAddr := strings.Trim(req.GitAddr, ":")
@@ -309,6 +320,7 @@ func decodeBasicPostRequest(_ context.Context, r *http.Request) (interface{}, er
 		gitAddr += ".git"
 	}
 	req.GitAddr = gitAddr
+
 	return req, nil
 }
 
