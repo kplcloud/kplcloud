@@ -36,8 +36,8 @@ func MakeHandler(svc Service, logger log.Logger, repository repository.Repositor
 	opts := []kithttp.ServerOption{
 		kithttp.ServerErrorLogger(logger),
 		kithttp.ServerErrorEncoder(encode.EncodeError),
-		kithttp.ServerBefore(kithttp.PopulateRequestContext),
 		kithttp.ServerBefore(middleware.CookieToContext()),
+		kithttp.ServerBefore(kithttp.PopulateRequestContext),
 		kithttp.ServerBefore(kitjwt.HTTPToContext()),
 		kithttp.ServerBefore(middleware.NamespaceToContext()),
 		kithttp.ServerBefore(middleware.CasbinToContext()),
