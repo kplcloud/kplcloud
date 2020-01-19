@@ -10,12 +10,14 @@ package middleware
 import (
 	"context"
 	"github.com/go-kit/kit/auth/casbin"
+	"github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 	kplcasbin "github.com/kplcloud/kplcloud/src/casbin"
 	"github.com/kplcloud/kplcloud/src/util/uid"
 	stdhttp "net/http"
 	"strconv"
+	"strings"
 )
 
 func NamespaceToContext() http.RequestFunc {
@@ -59,6 +61,7 @@ func CookieToContext() http.RequestFunc {
 	return func(ctx context.Context, r *stdhttp.Request) context.Context {
 		if c, err := r.Cookie("Authorization"); err == nil {
 			ctx = context.WithValue(ctx, http.ContextKeyRequestAuthorization, c.Value)
+			ctx = context.WithValue(ctx, jwt.JWTTokenContextKey, strings.Split(c.Value, "Bearer ")[1])
 			r.Header.Set(string(http.ContextKeyRequestAuthorization), c.Value)
 		}
 		return ctx
