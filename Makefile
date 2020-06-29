@@ -9,11 +9,11 @@ GOGET = $(GOCMD) get
 GORUN = $(GOCMD) run
 BINARY_UNIX = $(BIN)_unix
 PID = .pid
-HUB_ADDR = hub.kpaas.nsini.com
-DOCKER_USER =
+HUB_ADDR =
+DOCKER_USER = hub.docker.com
 DOCKER_PWD =
-TAG = v0.2.5
-NAMESPACE = kpaas
+TAG = v0.2.8
+NAMESPACE = kplcloud
 PWD = $(shell pwd)
 
 start:
