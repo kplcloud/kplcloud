@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	kitjwt "github.com/go-kit/kit/auth/jwt"
@@ -139,7 +140,7 @@ func init() {
 	startCmd.PersistentFlags().StringVar(&adminPassword, "admin.password", DefaultAdminPassword, "初始化管理员密码")
 	startCmd.PersistentFlags().StringVar(&sqlPath, "init.sqlpath", DefaultInitDBSQL, "初始化sql文件")
 
-	cmd.AddFlags(rootCmd)
+	addFlags(rootCmd)
 	rootCmd.AddCommand(startCmd)
 }
 
@@ -522,5 +523,11 @@ func accessControl(h http.Handler, logger log.Logger, headers map[string]string)
 		//requestId := r.Header.Get("X-Request-Id")
 		_ = level.Info(logger).Log("remote-addr", r.RemoteAddr, "uri", r.RequestURI, "method", r.Method, "length", r.ContentLength)
 		h.ServeHTTP(w, r)
+	})
+}
+
+func addFlags(rootCmd *cobra.Command) {
+	flag.CommandLine.VisitAll(func(gf *flag.Flag) {
+		rootCmd.PersistentFlags().AddGoFlag(gf)
 	})
 }
