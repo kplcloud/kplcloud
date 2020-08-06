@@ -5,12 +5,19 @@
  * @Software: GoLand
  */
 
-package crd
+package v1beta1
 
 import (
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
+
+type VirtualServiceList struct {
+	meta_v1.TypeMeta `json:",inline"`
+	meta_v1.ListMeta `json:"metadata,omitempty"`
+
+	Items []VirtualService `json:"items"`
+}
 
 // VirtualService is the generic Kubernetes API object wrapper
 type VirtualService struct {
@@ -64,4 +71,19 @@ func (in *VirtualService) DeepCopyObject() runtime.Object {
 	}
 
 	return nil
+}
+
+func (in *VirtualServiceList) DeepCopyObject() runtime.Object {
+	out := VirtualServiceList{}
+	out.TypeMeta = in.TypeMeta
+	out.ListMeta = in.ListMeta
+
+	if in.Items != nil {
+		out.Items = make([]VirtualService, len(in.Items))
+		for i := range in.Items {
+			in.Items[i].DeepCopyInto(&out.Items[i])
+		}
+	}
+
+	return &out
 }

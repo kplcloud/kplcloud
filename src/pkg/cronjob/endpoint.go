@@ -15,6 +15,17 @@ import (
 	"time"
 )
 
+type Endpoints struct {
+	AddCronJobEndPoint       endpoint.Endpoint
+	CronJobListEndPoint      endpoint.Endpoint
+	CronJobDelEndPoint       endpoint.Endpoint
+	CronJobAllDelEndPoint    endpoint.Endpoint
+	CronJobUpdateEndPoint    endpoint.Endpoint
+	CronJobDetailEndPoint    endpoint.Endpoint
+	CronJobLogUpdateEndPoint endpoint.Endpoint
+	TriggerEndpoint          endpoint.Endpoint
+}
+
 type DetailReturnData struct {
 	Name          string                   `json:"name"`
 	Namespace     string                   `json:"namespace"`
@@ -86,6 +97,54 @@ type cronJobLogUpdate struct {
 }
 
 var code int
+
+func NewEndpoint(svc Service, mw map[string][]endpoint.Middleware) Endpoints {
+	eps := Endpoints{
+		AddCronJobEndPoint:       makeAddCronJobEndPoint(svc),
+		CronJobListEndPoint:      makeCronJobListEndPoint(svc),
+		CronJobDelEndPoint:       makeCronJobDelEndPoint(svc),
+		CronJobAllDelEndPoint:    makeCronJobAllDelEndPoint(svc),
+		CronJobUpdateEndPoint:    makeCronJobUpdateEndPoint(svc),
+		CronJobDetailEndPoint:    makeCronJobDetailEndPoint(svc),
+		CronJobLogUpdateEndPoint: makeCronJobUpdateLogEndPoint(svc),
+		TriggerEndpoint:          makeTriggerEndpoint(svc),
+	}
+
+	for _, m := range mw["addCronJob"] {
+		eps.AddCronJobEndPoint = m(eps.AddCronJobEndPoint)
+	}
+	for _, m := range mw["cronJobList"] {
+		eps.CronJobListEndPoint = m(eps.CronJobListEndPoint)
+	}
+	for _, m := range mw["cronJobDetail"] {
+		eps.CronJobDetailEndPoint = m(eps.CronJobDetailEndPoint)
+	}
+	for _, m := range mw["cronJobDel"] {
+		eps.CronJobDelEndPoint = m(eps.CronJobDelEndPoint)
+	}
+	for _, m := range mw["cronJobAllDel"] {
+		eps.CronJobAllDelEndPoint = m(eps.CronJobAllDelEndPoint)
+	}
+	for _, m := range mw["cronJobUpdate"] {
+		eps.CronJobUpdateEndPoint = m(eps.CronJobUpdateEndPoint)
+	}
+	for _, m := range mw["cronJobLogUpdate"] {
+		eps.CronJobLogUpdateEndPoint = m(eps.CronJobLogUpdateEndPoint)
+	}
+	for _, m := range mw["Trigger"] {
+		eps.TriggerEndpoint = m(eps.TriggerEndpoint)
+	}
+
+	return eps
+}
+
+func makeTriggerEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(cronJobDetail)
+		err = s.Trigger(ctx, req.Name, req.Namespace)
+		return encode.Response{Err: err}, err
+	}
+}
 
 func makeCronJobUpdateLogEndPoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {

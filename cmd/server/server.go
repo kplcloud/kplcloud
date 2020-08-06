@@ -2,11 +2,16 @@ package server
 
 import (
 	"context"
+	"flag"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
+	kitjwt "github.com/go-kit/kit/auth/jwt"
+	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/go-kit/kit/transport/amqp"
+	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/jinzhu/gorm"
 	kplamqp "github.com/kplcloud/kplcloud/src/amqp"
 	"github.com/kplcloud/kplcloud/src/casbin"
@@ -14,9 +19,12 @@ import (
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/email"
 	"github.com/kplcloud/kplcloud/src/git-repo"
+	"github.com/kplcloud/kplcloud/src/istio"
 	"github.com/kplcloud/kplcloud/src/jenkins"
+	kpljwt "github.com/kplcloud/kplcloud/src/jwt"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/logging"
+	"github.com/kplcloud/kplcloud/src/middleware"
 	"github.com/kplcloud/kplcloud/src/mysql"
 	"github.com/kplcloud/kplcloud/src/pkg/account"
 	"github.com/kplcloud/kplcloud/src/pkg/audit"
@@ -51,10 +59,12 @@ import (
 	"github.com/kplcloud/kplcloud/src/pkg/template"
 	"github.com/kplcloud/kplcloud/src/pkg/terminal"
 	"github.com/kplcloud/kplcloud/src/pkg/tools"
+	"github.com/kplcloud/kplcloud/src/pkg/virtualservice"
 	"github.com/kplcloud/kplcloud/src/pkg/wechat"
 	"github.com/kplcloud/kplcloud/src/pkg/workspace"
 	"github.com/kplcloud/kplcloud/src/redis"
 	"github.com/kplcloud/kplcloud/src/repository"
+	"github.com/kplcloud/kplcloud/src/util/encode"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
@@ -130,7 +140,7 @@ func init() {
 	startCmd.PersistentFlags().StringVar(&adminPassword, "admin.password", DefaultAdminPassword, "初始化管理员密码")
 	startCmd.PersistentFlags().StringVar(&sqlPath, "init.sqlpath", DefaultInitDBSQL, "初始化sql文件")
 
-	cmd.AddFlags(rootCmd)
+	addFlags(rootCmd)
 	rootCmd.AddCommand(startCmd)
 }
 
@@ -191,11 +201,11 @@ func run() {
 	}
 
 	// istio client
-	//istioClient, err := istio.NewClient(cf)
-	//if err != nil {
-	//	_ = logger.Log("istio", "NewClient", "err", err)
-	//	panic(err)
-	//}
+	istioClient, err := istio.NewClient(k8sClient.Config())
+	if err != nil {
+		_ = logger.Log("istio", "NewClient", "err", err)
+		panic(err)
+	}
 
 	// jenkins client
 	var jenkinsClient jenkins.Jenkins
@@ -252,30 +262,31 @@ func run() {
 		toolsSvc      = tools.NewService(logger, cf, jenkinsClient, k8sClient, store)
 		cronjobSvc    = cronjob.NewService(logger, cf, jenkinsClient, k8sClient, amqpClient, store)
 		// end k8s rds
-		templateSvc    = template.NewService(logger, store)
-		groupSvc       = group.NewService(logger, cf, store)
-		proclaimSvc    = proclaim.NewService(logger, cf, amqpClient, store)
-		accountSvc     = account.NewService(logger, cf, store)
-		hookSvc        = hooks.NewService(logger, store, hookQueueSvc)
-		projectSvc     = project.NewService(logger, cf, rds, k8sClient, amqpClient, jenkinsClient, store, hookQueueSvc)
-		publicSvc      = public.NewService(logger, cf, amqpClient, k8sClient, jenkinsClient, store)
-		buildSvc       = build.NewService(logger, jenkinsClient, amqpClient, k8sClient, cf, store, hookQueueSvc)
-		gitSvc         = git.NewService(logger, cf, gitClient, store)
-		weixinSvc      = wechat.NewService(logger, cf, wxClient, store)
-		permissionSvc  = permission.NewService(logger, casbinClient, store)
-		msgAlarmSvc    = msgs.NewServiceAlarm(logger, cf, mailClient, amqpClient, store)
-		msgNoticeSvc   = msgs.NewServiceNotice(logger, cf, mailClient, amqpClient, store)
-		msgProclaimSvc = msgs.NewServiceProclaim(logger, cf, mailClient, amqpClient, store)
-		msgWechatSvc   = msgs.NewServiceWechatQueue(logger, cf, amqpClient, wxClient, store)
-		roleSvc        = role.NewService(logger, casbinClient, store)
-		memberSvc      = member.NewService(logger, cf, casbinClient, store)
-		consulSvc      = consul.NewService(logger, cf, store)
-		eventSvc       = event.NewService(logger, store)
-		workspaceSvc   = workspace.NewService(logger, cf, store.Build())
-		marketSvc      = market.NewService(logger, store)
-		monitorSvc     = monitor.NewService(logger, cf, k8sClient, store)
-		auditSvc       = audit.NewService(logger, cf, jenkinsClient, k8sClient, amqpClient, store, hookQueueSvc, buildSvc)
-		statisticsSvc  = statistics.NewService(logger, cf, store)
+		templateSvc       = template.NewService(logger, store)
+		groupSvc          = group.NewService(logger, cf, store)
+		proclaimSvc       = proclaim.NewService(logger, cf, amqpClient, store)
+		accountSvc        = account.NewService(logger, cf, store)
+		hookSvc           = hooks.NewService(logger, store, hookQueueSvc)
+		projectSvc        = project.NewService(logger, cf, rds, k8sClient, amqpClient, jenkinsClient, store, hookQueueSvc)
+		publicSvc         = public.NewService(logger, cf, amqpClient, k8sClient, jenkinsClient, store)
+		buildSvc          = build.NewService(logger, jenkinsClient, amqpClient, k8sClient, cf, store, hookQueueSvc)
+		gitSvc            = git.NewService(logger, cf, gitClient, store)
+		weixinSvc         = wechat.NewService(logger, cf, wxClient, store)
+		permissionSvc     = permission.NewService(logger, casbinClient, store)
+		msgAlarmSvc       = msgs.NewServiceAlarm(logger, cf, mailClient, amqpClient, store)
+		msgNoticeSvc      = msgs.NewServiceNotice(logger, cf, mailClient, amqpClient, store)
+		msgProclaimSvc    = msgs.NewServiceProclaim(logger, cf, mailClient, amqpClient, store)
+		msgWechatSvc      = msgs.NewServiceWechatQueue(logger, cf, amqpClient, wxClient, store)
+		roleSvc           = role.NewService(logger, casbinClient, store)
+		memberSvc         = member.NewService(logger, cf, casbinClient, store)
+		consulSvc         = consul.NewService(logger, cf, store)
+		eventSvc          = event.NewService(logger, store)
+		workspaceSvc      = workspace.NewService(logger, cf, store.Build())
+		marketSvc         = market.NewService(logger, store)
+		monitorSvc        = monitor.NewService(logger, cf, k8sClient, store)
+		auditSvc          = audit.NewService(logger, cf, jenkinsClient, k8sClient, amqpClient, store, hookQueueSvc, buildSvc)
+		statisticsSvc     = statistics.NewService(logger, cf, store)
+		virtualServiceSvc = virtualservice.NewService(logger, istioClient)
 	)
 	// namespace service
 
@@ -346,6 +357,22 @@ func run() {
 
 	httpLogger := log.With(logger, "component", "http")
 	{
+
+		opts := []kithttp.ServerOption{
+			kithttp.ServerErrorLogger(logger),
+			kithttp.ServerErrorEncoder(encode.EncodeError),
+			kithttp.ServerBefore(kithttp.PopulateRequestContext),
+			kithttp.ServerBefore(kitjwt.HTTPToContext()),
+			kithttp.ServerBefore(middleware.NamespaceToContext()),
+			kithttp.ServerBefore(middleware.CasbinToContext()),
+		}
+
+		ems := []endpoint.Middleware{
+			middleware.NamespaceMiddleware(logger), // 3
+			middleware.CheckAuthMiddleware(logger),
+			kitjwt.NewParser(kpljwt.JwtKeyFunc, jwt.SigningMethodHS256, kitjwt.StandardClaimsFactory),
+		}
+
 		mux := http.NewServeMux()
 
 		mux.Handle("/auth/", auth.MakeHandler(authSvc, httpLogger))
@@ -368,7 +395,9 @@ func run() {
 		mux.Handle("/configmap/", configmap.MakeHandler(configMapSvc, logger, store))
 		mux.Handle("/discovery/", discovery.MakeHandler(discoverySvc, logger))
 		mux.Handle("/tools/", tools.MakeHandler(toolsSvc, logger, store))
-		mux.Handle("/cronjob/", cronjob.MakeHandler(cronjobSvc, httpLogger, store))
+		mux.Handle("/cronjob/", cronjob.MakeHandler(cronjobSvc, httpLogger, store, opts, ems))
+
+		mux.Handle("/virtualservice/", virtualservice.MakeHTTPHandler(virtualServiceSvc, logger, opts, ems))
 
 		// project
 		mux.Handle("/project/", project.MakeHandler(projectSvc, httpLogger, store))
@@ -494,5 +523,11 @@ func accessControl(h http.Handler, logger log.Logger, headers map[string]string)
 		//requestId := r.Header.Get("X-Request-Id")
 		_ = level.Info(logger).Log("remote-addr", r.RemoteAddr, "uri", r.RequestURI, "method", r.Method, "length", r.ContentLength)
 		h.ServeHTTP(w, r)
+	})
+}
+
+func addFlags(rootCmd *cobra.Command) {
+	flag.CommandLine.VisitAll(func(gf *flag.Flag) {
+		rootCmd.PersistentFlags().AddGoFlag(gf)
 	})
 }

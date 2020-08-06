@@ -10,13 +10,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/dgrijalva/jwt-go"
-	kitjwt "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
-	kpljwt "github.com/kplcloud/kplcloud/src/jwt"
 	"github.com/kplcloud/kplcloud/src/middleware"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/util/encode"
@@ -30,121 +27,69 @@ var (
 	errBadStrconv = errors.New("strconv error")
 )
 
-type endpoints struct {
-	AddCronJobEndPoint       endpoint.Endpoint
-	CronJobListEndPoint      endpoint.Endpoint
-	CronJobDelEndPoint       endpoint.Endpoint
-	CronJobAllDelEndPoint    endpoint.Endpoint
-	CronJobUpdateEndPoint    endpoint.Endpoint
-	CronJobDetailEndPoint    endpoint.Endpoint
-	CronJobLogUpdateEndPoint endpoint.Endpoint
-}
-
-func MakeHandler(svc Service, logger log.Logger, repository repository.Repository) http.Handler {
-	opts := []kithttp.ServerOption{
-		kithttp.ServerErrorLogger(logger),
-		kithttp.ServerErrorEncoder(encode.EncodeError),
-		kithttp.ServerBefore(kithttp.PopulateRequestContext),
-		kithttp.ServerBefore(kitjwt.HTTPToContext()),
-		kithttp.ServerBefore(middleware.NamespaceToContext()),
-		kithttp.ServerBefore(middleware.CasbinToContext()),
-	}
-
-	epsMap := endpoints{
-		AddCronJobEndPoint:       makeAddCronJobEndPoint(svc),
-		CronJobListEndPoint:      makeCronJobListEndPoint(svc),
-		CronJobDelEndPoint:       makeCronJobDelEndPoint(svc),
-		CronJobAllDelEndPoint:    makeCronJobAllDelEndPoint(svc),
-		CronJobUpdateEndPoint:    makeCronJobUpdateEndPoint(svc),
-		CronJobDetailEndPoint:    makeCronJobDetailEndPoint(svc),
-		CronJobLogUpdateEndPoint: makeCronJobUpdateLogEndPoint(svc),
-	}
+func MakeHandler(svc Service, logger log.Logger, repository repository.Repository, opts []kithttp.ServerOption, dmw []endpoint.Middleware) http.Handler {
 
 	ems := []endpoint.Middleware{
-		middleware.NamespaceMiddleware(logger), // 3
-		middleware.CheckAuthMiddleware(logger),
-		kitjwt.NewParser(kpljwt.JwtKeyFunc, jwt.SigningMethodHS256, kitjwt.StandardClaimsFactory),
-	}
-
-	emsc := []endpoint.Middleware{
 		middleware.CronJobMiddleware(logger, repository.CronJob(), repository.Groups()),
-		middleware.NamespaceMiddleware(logger), // 3
-		middleware.CheckAuthMiddleware(logger),
-		kitjwt.NewParser(kpljwt.JwtKeyFunc, jwt.SigningMethodHS256, kitjwt.StandardClaimsFactory),
 	}
 
-	mw := map[string][]endpoint.Middleware{
+	eps := NewEndpoint(svc, map[string][]endpoint.Middleware{
 		"addCronJob":  ems,
 		"cronJobList": ems,
 
-		"cronJobDetail":    emsc,
-		"cronJobDel":       emsc,
-		"cronJobAllDel":    emsc,
-		"cronJobUpdate":    emsc,
-		"cronJobLogUpdate": emsc,
-	}
-
-	for _, m := range mw["addCronJob"] {
-		epsMap.AddCronJobEndPoint = m(epsMap.AddCronJobEndPoint)
-	}
-	for _, m := range mw["cronJobList"] {
-		epsMap.CronJobListEndPoint = m(epsMap.CronJobListEndPoint)
-	}
-	for _, m := range mw["cronJobDetail"] {
-		epsMap.CronJobDetailEndPoint = m(epsMap.CronJobDetailEndPoint)
-	}
-	for _, m := range mw["cronJobDel"] {
-		epsMap.CronJobDelEndPoint = m(epsMap.CronJobDelEndPoint)
-	}
-	for _, m := range mw["cronJobAllDel"] {
-		epsMap.CronJobAllDelEndPoint = m(epsMap.CronJobAllDelEndPoint)
-	}
-	for _, m := range mw["cronJobUpdate"] {
-		epsMap.CronJobUpdateEndPoint = m(epsMap.CronJobUpdateEndPoint)
-	}
-	for _, m := range mw["cronJobLogUpdate"] {
-		epsMap.CronJobLogUpdateEndPoint = m(epsMap.CronJobLogUpdateEndPoint)
-	}
+		"cronJobDetail":    append(ems, dmw...),
+		"cronJobDel":       append(ems, dmw...),
+		"cronJobAllDel":    append(ems, dmw...),
+		"cronJobUpdate":    append(ems, dmw...),
+		"cronJobLogUpdate": append(ems, dmw...),
+		"Trigger":          append(ems, dmw...),
+	})
 
 	r := mux.NewRouter()
 
 	r.Handle("/cronjob/{namespace}", kithttp.NewServer(
-		epsMap.AddCronJobEndPoint,
+		eps.AddCronJobEndPoint,
 		decodeAddCronJob,
 		encode.EncodeResponse,
-		opts...)).Methods("POST")
+		opts...)).Methods(http.MethodPost)
 
 	r.Handle("/cronjob/{namespace}", kithttp.NewServer(
-		epsMap.CronJobListEndPoint,
+		eps.CronJobListEndPoint,
 		decodeCronJobList,
 		encode.EncodeResponse,
-		opts...)).Methods("GET")
+		opts...)).Methods(http.MethodGet)
 	r.Handle("/cronjob/{namespace}/{name}", kithttp.NewServer(
-		epsMap.CronJobDelEndPoint,
+		eps.CronJobDelEndPoint,
 		decodeCronJobDel,
 		encode.EncodeResponse,
-		opts...)).Methods("DELETE")
+		opts...)).Methods(http.MethodDelete)
 	r.Handle("/cronjob/job/{namespace}/del", kithttp.NewServer(
-		epsMap.CronJobAllDelEndPoint,
+		eps.CronJobAllDelEndPoint,
 		decodeCronJobAllDel,
 		encode.EncodeResponse,
-		opts...)).Methods("DELETE")
+		opts...)).Methods(http.MethodDelete)
 	r.Handle("/cronjob/{namespace}/{name}", kithttp.NewServer(
-		epsMap.CronJobUpdateEndPoint,
+		eps.CronJobUpdateEndPoint,
 		decodeCronJobUpdate,
 		encode.EncodeResponse,
-		opts...)).Methods("PUT")
+		opts...)).Methods(http.MethodPut)
 	r.Handle("/cronjob/{namespace}/{name}", kithttp.NewServer(
-		epsMap.CronJobDetailEndPoint,
+		eps.CronJobDetailEndPoint,
 		decodeCronJobDetail,
 		encode.EncodeResponse,
-		opts...)).Methods("GET")
+		opts...)).Methods(http.MethodGet)
 
 	r.Handle("/cronjob/log/{namespace}/{name}", kithttp.NewServer(
-		epsMap.CronJobLogUpdateEndPoint,
+		eps.CronJobLogUpdateEndPoint,
 		decodeCronJobLogUpdate,
 		encode.EncodeResponse,
-		opts...)).Methods("POST")
+		opts...)).Methods(http.MethodPost)
+
+	r.Handle("/cronjob/log/{namespace}/{name}/trigger", kithttp.NewServer(
+		eps.TriggerEndpoint,
+		decodeCronJobDetail,
+		encode.EncodeResponse,
+		opts...)).Methods(http.MethodPut)
 	return r
 }
 

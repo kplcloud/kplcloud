@@ -5,8 +5,25 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
+	"reflect"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"gopkg.in/guregu/null.v3"
+	"gopkg.in/yaml.v2"
+	v13 "k8s.io/api/batch/v1"
+	"k8s.io/api/batch/v1beta1"
+	"k8s.io/api/core/v1"
+	resource2 "k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sTypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/rand"
+
 	amqpClient "github.com/kplcloud/kplcloud/src/amqp"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/jenkins"
@@ -18,19 +35,6 @@ import (
 	"github.com/kplcloud/kplcloud/src/util/encode"
 	"github.com/kplcloud/kplcloud/src/util/helper"
 	"github.com/kplcloud/kplcloud/src/util/paginator"
-	"gopkg.in/guregu/null.v3"
-	"gopkg.in/yaml.v2"
-	"k8s.io/api/batch/v1beta1"
-	"k8s.io/api/core/v1"
-	resource2 "k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v12 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sTypes "k8s.io/apimachinery/pkg/types"
-	"net/url"
-	"reflect"
-	"strconv"
-	"strings"
-	"time"
 )
 
 const (
@@ -94,6 +98,9 @@ type Service interface {
 
 	// 更新日志
 	UpdateLog(ctx context.Context, req cronJobLogUpdate) error
+
+	// 手动触发
+	Trigger(ctx context.Context, name, ns string) (err error)
 }
 
 type service struct {
@@ -103,6 +110,49 @@ type service struct {
 	k8sClient  kubernetes.K8sClient
 	amqpClient amqpClient.AmqpClient
 	repository repository.Repository
+}
+
+// /api/v1/cronjob/operations/invite-jon-p2p/trigger
+func (c *service) Trigger(ctx context.Context, name, ns string) (err error) {
+	logger := log.With(c.logger, "request-id", ctx.Value("request-id"), "namespace", ns, "name", name)
+	cronJob, err := c.k8sClient.Do().BatchV1beta1().CronJobs(ns).Get(name, metav1.GetOptions{})
+	if err != nil {
+		_ = level.Error(logger).Log("k8sClient.Do", "BatchV1beta1", "CronJobs", "Get", "err", err.Error())
+		return
+	}
+
+	annotations := make(map[string]string)
+	annotations["cronjob.kubernetes.io/instantiate"] = "manual"
+
+	labels := make(map[string]string)
+	for k, v := range cronJob.Spec.JobTemplate.Labels {
+		labels[k] = v
+	}
+
+	var newJobName string
+	if len(cronJob.Name) < 42 {
+		newJobName = cronJob.Name + "-manual-" + rand.String(3)
+	} else {
+		newJobName = cronJob.Name[0:41] + "-manual-" + rand.String(3)
+	}
+
+	jobToCreate := &v13.Job{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        newJobName,
+			Namespace:   ns,
+			Annotations: annotations,
+			Labels:      labels,
+		},
+		Spec: cronJob.Spec.JobTemplate.Spec,
+	}
+
+	_, err = c.k8sClient.Do().BatchV1().Jobs(ns).Create(jobToCreate)
+	if err != nil {
+		_ = level.Error(logger).Log("k8sClient.Do", "BatchV1beta1", "Jobs", "Create", "err", err.Error())
+		return err
+	}
+
+	return nil
 }
 
 type Param struct {

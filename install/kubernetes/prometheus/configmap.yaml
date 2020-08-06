@@ -359,6 +359,18 @@ data:
         - static_configs:
           - targets: ["alertmanager:9093"]
     scrape_configs:
+    - job_name: "kubernetes-etcd"
+      scrape_interval: 10s
+      scrape_timeout: 10s
+      static_configs:
+        - targets: ["10.143.228.79:2379", "10.143.228.60:2379", "10.143.228.78:2379"]
+          labels:
+            group: "kubernetes-etcd"
+      scheme: https
+      tls_config:
+        ca_file: /etc/etcd-certs/ca.crt
+        cert_file: /etc/etcd-certs/server.crt
+        key_file: /etc/etcd-certs/server.key
 
     # scrape config for API servers
     - job_name: 'kubernetes-apiservers'

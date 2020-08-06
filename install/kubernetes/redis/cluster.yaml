@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: redis
+    appCluster: redis-cluster
+  name: redis-app
+spec:
+  replicas: 6
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: redis
+      appCluster: redis-cluster
+  serviceName: redis-service
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: redis
+        appCluster: redis-cluster
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - redis
+                topologyKey: kubernetes.io/hostname
+              weight: 100
+      containers:
+        - args:
+            - /etc/redis/redis.conf
+            - --protected-mode
+            - "no"
+          command:
+            - redis-server
+          image: docker-test-virtual.repo.yrd.creditease.corp/kubernetes/redis:5.0.7
+          imagePullPolicy: IfNotPresent
+          name: redis
+          ports:
+            - containerPort: 6379
+              name: redis
+              protocol: TCP
+            - containerPort: 16379
+              name: cluster
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /etc/redis
+              name: redis-conf
+            - mountPath: /var/lib/redis
+              name: redis-data
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 20
+      volumes:
+        - configMap:
+            defaultMode: 420
+            items:
+              - key: redis.conf
+                path: redis.conf
+            name: redis-conf
+          name: redis-conf
+  volumeClaimTemplates:
+    - metadata:
+        name: redis-data
+        creationTimestamp:
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 512Mi
+        storageClassName: database.storage
