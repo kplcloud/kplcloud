@@ -15,7 +15,6 @@ import (
 	"github.com/jinzhu/gorm"
 	kplamqp "github.com/kplcloud/kplcloud/src/amqp"
 	"github.com/kplcloud/kplcloud/src/casbin"
-	"github.com/kplcloud/kplcloud/src/cmd"
 	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/email"
 	"github.com/kplcloud/kplcloud/src/git-repo"
