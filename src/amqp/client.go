@@ -13,7 +13,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	kitamqp "github.com/go-kit/kit/transport/amqp"
-	"github.com/kplcloud/kplcloud/src/config"
+	"github.com/icowan/config"
 	"github.com/streadway/amqp"
 	"time"
 )

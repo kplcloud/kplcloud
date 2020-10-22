@@ -8,14 +8,14 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/icowan/config"
+	redis "github.com/icowan/redis-client"
 	"github.com/kplcloud/kplcloud/src/amqp"
-	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/jenkins"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/middleware"
 	"github.com/kplcloud/kplcloud/src/pkg/discovery"
 	"github.com/kplcloud/kplcloud/src/pkg/hooks"
-	"github.com/kplcloud/kplcloud/src/redis"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	"github.com/kplcloud/kplcloud/src/util/convert"
@@ -101,7 +101,7 @@ type Service interface {
 type service struct {
 	logger         log.Logger
 	config         *config.Config
-	redisInterface redis.RedisInterface
+	RedisInterface redis.RedisClient
 	k8sClient      kubernetes.K8sClient
 	amqp           amqp.AmqpClient
 	jenkins        jenkins.Jenkins
@@ -111,7 +111,7 @@ type service struct {
 }
 
 func NewService(logger log.Logger, config *config.Config,
-	redisInterface redis.RedisInterface,
+	redisInterface redis.RedisClient,
 	k8sClient kubernetes.K8sClient,
 	amqp amqp.AmqpClient,
 	jenkins jenkins.Jenkins,
@@ -1039,10 +1039,10 @@ func (c *service) saveJenkins(project *types.Project, req basicRequest) error {
 	var kind repository.TplKind
 	name := strings.Split(helper.GitName(req.GitAddr), "/")
 	dat := map[string]string{
-		"app_name":  project.Name,
-		"git_name":  name[1],
-		"git_path":  helper.GitUrl(req.GitAddr),
-		"namespace": project.Namespace,
+		"app_name":    project.Name,
+		"git_name":    name[1],
+		"git_path":    helper.GitUrl(req.GitAddr),
+		"namespace":   project.Namespace,
 		"docker_repo": c.config.GetString("server", "docker_repo"),
 	}
 

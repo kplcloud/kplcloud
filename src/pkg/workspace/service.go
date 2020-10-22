@@ -11,7 +11,7 @@ import (
 	"context"
 	"errors"
 	"github.com/go-kit/kit/log"
-	"github.com/kplcloud/kplcloud/src/config"
+	"github.com/icowan/config"
 	"github.com/kplcloud/kplcloud/src/middleware"
 	"github.com/kplcloud/kplcloud/src/repository"
 	utilpods "github.com/kplcloud/kplcloud/src/util/pods"

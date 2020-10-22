@@ -9,7 +9,7 @@ package jenkins
 
 import (
 	"fmt"
-	"github.com/kplcloud/kplcloud/src/config"
+	"github.com/icowan/config"
 	"strings"
 )
 

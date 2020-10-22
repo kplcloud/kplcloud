@@ -8,7 +8,7 @@
 package kubernetes
 
 import (
-	"github.com/kplcloud/kplcloud/src/config"
+	"github.com/icowan/config"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"

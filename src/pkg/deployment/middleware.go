@@ -10,7 +10,7 @@ package deployment
 import (
 	"context"
 	"github.com/go-kit/kit/endpoint"
-	"github.com/kplcloud/kplcloud/src/config"
+	"github.com/icowan/config"
 	"github.com/kplcloud/kplcloud/src/repository"
 )
 

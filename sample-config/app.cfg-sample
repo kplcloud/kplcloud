@@ -68,32 +68,32 @@ headers = Origin,Content-Type,Authorization,x-requested-with,Access-Control-Allo
 
 ; ;[mysql]
 ; ;mysql相关的配置, 如下所示, 就不需要过多解释了
-; ;mysql_host: mysql
-; ;mysql_port: 3306
-; ;mysql_user: root
-; ;mysql_password: admin
-; ;mysql_database: kplcloud
+; ;host: mysql
+; ;port: 3306
+; ;user: root
+; ;password: admin
+; ;database: kplcloud
 [mysql]
-mysql_host = mysql
-mysql_port = 3306
-mysql_user = root
-mysql_password = admin
-mysql_database = kplcloud
+host = mysql
+port = 3306
+user = root
+password = admin
+database = kplcloud
 
 
 ; ;[redis]
 ; ;redis可配集群访问和单点访问
-; ;redis_drive:
+; ;drive:
 ; ;  1. cluster: 若为该值, 则访问redis集群
 ; ;  2. single: 若为该值, 则访问单点redis服务
-; ;redis_hosts: redis IP 地址(redis:6379), 若redis_drive为cluster,则redis_hosts需要多个IP用";"隔开
-; ;redis_password: redis auth 密码
-; ;redis_db: 在redis_drive为cluster的情况下 redis_db 不需要设置
+; ;hosts: redis IP 地址(redis:6379), 若drive为cluster,则hosts需要多个IP用";"隔开
+; ;password: redis auth 密码
+; ;db: 在drive为cluster的情况下 db 不需要设置
 [redis]
-redis_drive = single
-redis_hosts = redis:6379
-;redis_password =
-redis_db = 0
+drive = single
+hosts = redis:6379
+;password =
+db = 0
 
 ; ;[kubernetes]
 ; ;kubernetes的一些配置

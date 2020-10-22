@@ -10,14 +10,14 @@ package redis
 import (
 	"github.com/casbin/casbin/model"
 	"github.com/casbin/casbin/persist"
-	kplredis "github.com/kplcloud/kplcloud/src/redis"
+	kplredis "github.com/icowan/redis-client"
 )
 
 type adapter struct {
-	rds kplredis.RedisInterface
+	rds kplredis.RedisClient
 }
 
-func NewAdapter(rds kplredis.RedisInterface) persist.Adapter {
+func NewAdapter(rds kplredis.RedisClient) persist.Adapter {
 	return &adapter{rds: rds}
 }
 

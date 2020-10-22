@@ -12,7 +12,7 @@ import (
 	"errors"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
-	"github.com/kplcloud/kplcloud/src/config"
+	"github.com/icowan/config"
 )
 
 var (

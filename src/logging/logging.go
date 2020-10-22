@@ -8,31 +8,38 @@
 package logging
 
 import (
-	"github.com/go-kit/kit/log"
+	"fmt"
+	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	kitlogrus "github.com/go-kit/kit/log/logrus"
-	"github.com/kplcloud/kplcloud/src/config"
+	"github.com/go-kit/kit/log/term"
 	"github.com/lestrrat-go/file-rotatelogs"
-	"github.com/sirupsen/logrus"
+	"log"
+	"os"
 	"path/filepath"
 	"time"
 )
 
-func SetLogging(logger log.Logger, cf *config.Config) log.Logger {
-	if cf.GetString("server", "logs_path") != "" {
-		logrusLogger, err := LogrusLogger(cf.GetString("server", "logs_path"))
-		if err != nil {
-			panic(err)
-		}
-		logLevel, _ := logrus.ParseLevel(cf.GetString("server", "log_level"))
-		logrusLogger.SetLevel(logLevel)
-		logger = kitlogrus.NewLogrusLogger(logrusLogger)
+const (
+	LoggerRequestId = "trace-id"
+	TraceId         = "trace-id"
+)
+
+func SetLogging(logger kitlog.Logger, logPath, levelOut string) kitlog.Logger {
+	if logPath != "" {
+		// default log
+		logger = defaultLogger(logPath)
+		logger = kitlog.WithPrefix(logger, "ts", kitlog.TimestampFormat(func() time.Time {
+			return time.Now()
+		}, "2006-01-02 15:04:05"))
 	} else {
-		logger = log.NewLogfmtLogger(log.StdlibWriter{})
-		logger = level.NewFilter(logger, logLevel(cf.GetString("server", "log_level")))
+		//logger = kitlog.NewLogfmtLogger(kitlog.StdlibWriter{})
+		logger = term.NewLogger(os.Stdout, kitlog.NewLogfmtLogger, colorFunc())
+		logger = kitlog.WithPrefix(logger, "ts", kitlog.TimestampFormat(func() time.Time {
+			return time.Now()
+		}, "2006-01-02 15:04:05"))
 	}
-	logger = log.With(logger, "caller", log.DefaultCaller)
-	logger = log.WithPrefix(logger, "app", cf.GetString("server", "app_name"))
+	logger = level.NewFilter(logger, logLevel(levelOut))
+	logger = kitlog.With(logger, "caller", kitlog.DefaultCaller)
 
 	return logger
 }
@@ -56,31 +63,50 @@ func logLevel(logLevel string) (opt level.Option) {
 	return
 }
 
-func LogrusLogger(filePath string) (*logrus.Logger, error) {
-	//path, fileName := filepath.Split(filePath)
+func defaultLogger(filePath string) kitlog.Logger {
 	linkFile, err := filepath.Abs(filePath)
 	if err != nil {
-		return nil, err
+		log.Fatal(err)
+		return nil
 	}
 
-	logrusLogger := logrus.New()
 	writer, err := rotatelogs.New(
 		linkFile+"-%Y-%m-%d",
 		rotatelogs.WithLinkName(linkFile),         // 生成软链，指向最新日志文件
 		rotatelogs.WithMaxAge(time.Hour*24*365),   // 文件最大保存时间
 		rotatelogs.WithRotationTime(time.Hour*24), // 日志切割时间间隔
 	)
+
 	if err != nil {
-		logrusLogger.Error("Init log failed, err:", err)
-		return nil, err
+		log.Fatal(err)
+		return nil
 	}
 
-	logrusLogger.SetOutput(writer)
-	logrusLogger.SetFormatter(&logrus.TextFormatter{
-		DisableColors:   true,
-		TimestampFormat: "2006-01-02 15:04:05",
-		FullTimestamp:   true,
-	})
+	return kitlog.NewLogfmtLogger(writer)
+}
 
-	return logrusLogger, nil
+func colorFunc() func(keyvals ...interface{}) term.FgBgColor {
+	return func(keyvals ...interface{}) term.FgBgColor {
+		for i := 0; i < len(keyvals)-1; i += 2 {
+			if keyvals[i] != "level" {
+				continue
+			}
+			val := fmt.Sprintf("%v", keyvals[i+1])
+			switch val {
+			case "debug":
+				return term.FgBgColor{Fg: term.DarkGray}
+			case "info":
+				return term.FgBgColor{Fg: term.Blue}
+			case "warn":
+				return term.FgBgColor{Fg: term.Yellow}
+			case "error":
+				return term.FgBgColor{Fg: term.Red}
+			case "crit":
+				return term.FgBgColor{Fg: term.Gray, Bg: term.DarkRed}
+			default:
+				return term.FgBgColor{}
+			}
+		}
+		return term.FgBgColor{}
+	}
 }
