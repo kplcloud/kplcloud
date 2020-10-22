@@ -15,10 +15,10 @@ import (
 	"github.com/casbin/casbin/util"
 	"github.com/casbin/gorm-adapter"
 	kitcasbin "github.com/go-kit/kit/auth/casbin"
+	"github.com/icowan/config"
+	redis "github.com/icowan/redis-client"
 	"github.com/jinzhu/gorm"
 	wrds "github.com/kplcloud/kplcloud/src/casbin/watcher/redis"
-	"github.com/kplcloud/kplcloud/src/config"
-	"github.com/kplcloud/kplcloud/src/redis"
 	"regexp"
 	"strings"
 )
@@ -40,7 +40,7 @@ func GetCasbin() *service {
 	return getCasbin
 }
 
-func NewCasbin(cf *config.Config, db *gorm.DB, rds redis.RedisInterface) (Casbin, error) {
+func NewCasbin(cf *config.Config, db *gorm.DB, rds redis.RedisClient) (Casbin, error) {
 	m := casbin.NewModel()
 	m.AddDef("r", "r", "sub, obj, act")
 	m.AddDef("p", "p", "sub, obj, act")

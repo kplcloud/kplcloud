@@ -15,7 +15,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/kplcloud/kplcloud/src/config"
+	"github.com/icowan/config"
 	crd "github.com/kplcloud/kplcloud/src/istio/types/v1beta1"
 	"github.com/kplcloud/kplcloud/src/jenkins"
 	"github.com/kplcloud/kplcloud/src/kubernetes"

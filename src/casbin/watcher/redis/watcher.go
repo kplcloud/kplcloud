@@ -12,19 +12,19 @@ import (
 	"fmt"
 	"github.com/casbin/casbin/persist"
 	"github.com/go-redis/redis"
-	kplrds "github.com/kplcloud/kplcloud/src/redis"
+	kplrds "github.com/icowan/redis-client"
 	"sync"
 )
 
 type Watcher struct {
-	rds      kplrds.RedisInterface
+	rds      kplrds.RedisClient
 	callback func(string)
 	closed   chan struct{}
 	once     sync.Once
 	channel  string
 }
 
-func NewWatcher(rds kplrds.RedisInterface) (persist.Watcher, error) {
+func NewWatcher(rds kplrds.RedisClient) (persist.Watcher, error) {
 	watcher := &Watcher{
 		closed:  make(chan struct{}),
 		channel: "/casbin",

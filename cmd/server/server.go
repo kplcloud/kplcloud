@@ -12,10 +12,12 @@ import (
 	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/go-kit/kit/transport/amqp"
 	kithttp "github.com/go-kit/kit/transport/http"
+	"github.com/icowan/config"
+	mysqlclient "github.com/icowan/mysql-client"
+	redisclient "github.com/icowan/redis-client"
 	"github.com/jinzhu/gorm"
 	kplamqp "github.com/kplcloud/kplcloud/src/amqp"
 	"github.com/kplcloud/kplcloud/src/casbin"
-	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/email"
 	"github.com/kplcloud/kplcloud/src/git-repo"
 	"github.com/kplcloud/kplcloud/src/istio"
@@ -24,7 +26,6 @@ import (
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/logging"
 	"github.com/kplcloud/kplcloud/src/middleware"
-	"github.com/kplcloud/kplcloud/src/mysql"
 	"github.com/kplcloud/kplcloud/src/pkg/account"
 	"github.com/kplcloud/kplcloud/src/pkg/audit"
 	"github.com/kplcloud/kplcloud/src/pkg/auth"
@@ -61,7 +62,6 @@ import (
 	"github.com/kplcloud/kplcloud/src/pkg/virtualservice"
 	"github.com/kplcloud/kplcloud/src/pkg/wechat"
 	"github.com/kplcloud/kplcloud/src/pkg/workspace"
-	"github.com/kplcloud/kplcloud/src/redis"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/util/encode"
 	stdprometheus "github.com/prometheus/client_golang/prometheus"
@@ -97,6 +97,7 @@ var (
 	db     *gorm.DB
 	cf     *config.Config
 	err    error
+	rds    redisclient.RedisClient
 )
 
 var (
@@ -157,10 +158,17 @@ func run() {
 	}
 	_ = cf.SetValue("server", "kube_config", kubeConfig)
 
-	logger = logging.SetLogging(logger, cf)
+	logger = logging.SetLogging(logger, cf.GetString("server", "log_path"), cf.GetString("server", "log_level"))
 
-	// mysql client
-	db, err = mysql.NewDb(cf)
+	dbUrl := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local&timeout=20m&collation=utf8mb4_unicode_ci",
+		cf.GetString(config.SectionMysql, "user"),
+		cf.GetString(config.SectionMysql, "password"),
+		cf.GetString(config.SectionMysql, "host"),
+		cf.GetString(config.SectionMysql, "port"),
+		cf.GetString(config.SectionMysql, "database"))
+
+	// 连接数据库
+	db, err = mysqlclient.NewMysql(dbUrl, cf.GetBool(config.SectionServer, "debug"))
 	if err != nil {
 		_ = level.Error(logger).Log("db", "connect", "err", err)
 		panic(err)
@@ -172,13 +180,18 @@ func run() {
 		panic(err)
 	}
 
-	// redis client
-	rds, err := redis.NewRedisClient(cf)
+	// 连接redis
+	rds, err = redisclient.NewRedisClient(cf.GetString(config.SectionRedis, "hosts"),
+		cf.GetString(config.SectionRedis, "password"),
+		cf.GetString(config.SectionRedis, "prefix"),
+		cf.GetInt(config.SectionRedis, "db"))
+
 	if err != nil {
 		_ = level.Error(logger).Log("redis", "connect", "err", err)
 		panic(err)
 	}
 
+	_ = level.Info(logger).Log("rds", "connect", "success", true)
 	// amqp client
 	amqpClient, err := kplamqp.NewAmqp(cf)
 	if err != nil {

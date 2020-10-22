@@ -7,7 +7,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/hashicorp/consul/api"
-	"github.com/kplcloud/kplcloud/src/config"
+	"github.com/icowan/config"
 	"github.com/kplcloud/kplcloud/src/consul"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/util/paginator"

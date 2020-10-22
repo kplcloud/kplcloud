@@ -24,8 +24,8 @@ import (
 	k8sTypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/rand"
 
+	"github.com/icowan/config"
 	amqpClient "github.com/kplcloud/kplcloud/src/amqp"
-	"github.com/kplcloud/kplcloud/src/config"
 	"github.com/kplcloud/kplcloud/src/jenkins"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/middleware"

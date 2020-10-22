@@ -3,13 +3,15 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
+	"fmt"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
+	"github.com/icowan/config"
+	mysqlclient "github.com/icowan/mysql-client"
 	"github.com/jinzhu/gorm"
-	"github.com/kplcloud/kplcloud/src/cmd"
-	"github.com/kplcloud/kplcloud/src/config"
 	jenkins2 "github.com/kplcloud/kplcloud/src/jenkins"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
-	"github.com/kplcloud/kplcloud/src/mysql"
 	"github.com/kplcloud/kplcloud/src/pkg/configmap"
 	"github.com/kplcloud/kplcloud/src/pkg/consul"
 	"github.com/kplcloud/kplcloud/src/pkg/namespace"
@@ -68,8 +70,18 @@ client sync configmap -c app.cfg -k k8s-config.yaml -n app
 			if k8sClient, err = kubernetes.NewClient(cf); err != nil {
 				return err
 			}
-			if db, err = mysql.NewDb(cf); err != nil {
-				return err
+			dbUrl := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local&timeout=20m&collation=utf8mb4_unicode_ci",
+				cf.GetString(config.SectionMysql, "user"),
+				cf.GetString(config.SectionMysql, "password"),
+				cf.GetString(config.SectionMysql, "host"),
+				cf.GetString(config.SectionMysql, "port"),
+				cf.GetString(config.SectionMysql, "database"))
+
+			// 连接数据库
+			db, err = mysqlclient.NewMysql(dbUrl, cf.GetBool(config.SectionServer, "debug"))
+			if err != nil {
+				_ = level.Error(logger).Log("db", "connect", "err", err)
+				panic(err)
 			}
 
 			defer func() {
@@ -103,8 +115,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&kubeConfig, "kube.config", "k", "~/.kube/config", "kubeconfig文件路径: ~/.kube/config")
 
 	syncCmd.PersistentFlags().StringVarP(&ns, "namespace", "n", "default", "操作的空间")
-
-	cmd.AddFlags(rootCmd)
+	addFlags(rootCmd)
 	rootCmd.AddCommand(syncCmd)
 }
 
@@ -154,4 +165,10 @@ func syncConsul() error {
 
 func syncConfigMap() error {
 	return configmap.NewService(logger, cf, jenkins, k8sClient, store).Sync(context.Background(), ns)
+}
+
+func addFlags(rootCmd *cobra.Command) {
+	flag.CommandLine.VisitAll(func(gf *flag.Flag) {
+		rootCmd.PersistentFlags().AddGoFlag(gf)
+	})
 }

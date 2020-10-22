@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hashicorp/consul/api"
-	"github.com/kplcloud/kplcloud/src/config"
+	"github.com/icowan/config"
 )
 
 type Consul interface {

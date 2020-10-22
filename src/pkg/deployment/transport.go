@@ -16,7 +16,7 @@ import (
 	"github.com/go-kit/kit/log"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
-	"github.com/kplcloud/kplcloud/src/config"
+	"github.com/icowan/config"
 	kpljwt "github.com/kplcloud/kplcloud/src/jwt"
 	"github.com/kplcloud/kplcloud/src/middleware"
 	"github.com/kplcloud/kplcloud/src/repository"

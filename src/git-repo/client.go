@@ -10,7 +10,7 @@ package git_repo
 import (
 	"context"
 	"github.com/google/go-github/v26/github"
-	"github.com/kplcloud/kplcloud/src/config"
+	"github.com/icowan/config"
 	"github.com/xanzy/go-gitlab"
 	"golang.org/x/crypto/openpgp"
 	"golang.org/x/oauth2"
