@@ -10,4 +10,4 @@ spec:
         paths:
           - backend:
               serviceName: kibana
-              servicePort: 8080
+              servicePort: 5601
