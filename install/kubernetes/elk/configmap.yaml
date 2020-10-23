@@ -21,7 +21,7 @@ data:
   logstash.conf: |
     input {
         tcp {
-            port => 5054
+            port => 5045
         }
     }
     filter {
@@ -41,7 +41,7 @@ data:
     output{
       elasticsearch {
         hosts => ["elasticsearch:9200"]
-        index => "kpl-%{[fields][app_name]}-%{+YYYY.MM.dd}"\
+        index => "kpl-%{[fields][app_name]}-%{+YYYY.MM.dd}"
         manage_template => false
       }
       stdout { codec => rubydebug }

@@ -33,7 +33,6 @@ require (
 	github.com/kplcloud/request v0.2.1
 	github.com/lestrrat-go/file-rotatelogs v2.2.0+incompatible
 	github.com/lestrrat-go/strftime v0.0.0-20190725011945-5c849dd2c51d // indirect
-	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.3.0
 	github.com/spf13/cobra v0.0.5
