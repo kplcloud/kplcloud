@@ -28,17 +28,17 @@ data:
         grok {
             match => {
                 "message" => "(%{TIMESTAMP_ISO8601:timestamp}|%{DATESTAMP:timestamp}) %{GREEDYDATA:log}"
-                }
             }
-        date{
+        }
+        date {
             match => [ "timestamp", "YYYY-MM-dd HH:mm:ss","ISO8601","YY/MM/dd HH:mm:ss" ]
             remove_field => [ "timestamp" ]
-            }
+        }
         mutate {
             remove_field => [ "timestamp", "beat" ]
         }
     }
-    output{
+    output {
       elasticsearch {
         hosts => ["elasticsearch:9200"]
         index => "kpl-%{[fields][app_name]}-%{+YYYY.MM.dd}"
