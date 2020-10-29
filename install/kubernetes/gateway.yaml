@@ -12,3 +12,10 @@ spec:
         name: http
         number: 80
         protocol: HTTP
+    - port:
+        number: 50051
+        name: grpc
+        protocol: GRPC
+        hosts:
+          - '*.kpaas.nsini.com'
+          - '*.kpaas.nsini.com'

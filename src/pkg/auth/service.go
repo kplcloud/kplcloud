@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -282,7 +281,6 @@ func (c *service) Login(ctx context.Context, email, password string) (rs string,
 		user map[string]string
 		info *types.Member
 	)
-	fmt.Println(email, password)
 	if c.config.GetString("server", "login_type") == LoginTypeLDAP {
 		// LDAP登陆
 		ok, user, err = c.ldapLogin(email, password)

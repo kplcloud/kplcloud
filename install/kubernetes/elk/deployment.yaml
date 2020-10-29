@@ -65,7 +65,9 @@ spec:
               value: elasticsearch:9200
           volumeMounts:
             - name: logstash-conf
-              mountPath: "/usr/share/logstash/pipeline"
+              mountPath: "/usr/share/logstash/pipeline/logstash.conf"
+              subPath: "logstash.conf"
+              readOnly: true
             - name: tz-config
               mountPath: "/etc/localtime"
           securityContext:
