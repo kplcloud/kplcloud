@@ -162,7 +162,7 @@ smtp_host = smtp.qq.com:587
 ldap_host = ldap
 ldap_port = 389
 ldap_base = DC=nsini,DC=corp
-ldap_sseSSL = false
+ldap_useSSL = false
 ldap_bindDN = hlw-moniti
 ldap_bind_password = 2019Paasd-@4!2
 ldap_user_filter = (userPrincipalName=%s)
