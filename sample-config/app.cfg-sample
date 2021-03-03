@@ -44,8 +44,8 @@ heapster_url = http://heapster.kube-system
 docker_repo = hub.kpaas.nsini.com
 service_mesh = false
 domain_suffix = %s.%s.nsini.com
-client_id = 20emfs
-client_secret = 9jfapsmdg8i
+client_id = 20emfs1122
+client_secret = 9jfapsmdg8i3322
 ;auth_login = github
 default_namespace = default
 default_role_id = 4
@@ -93,7 +93,7 @@ database = kplcloud
 drive = single
 hosts = redis:6379
 ;password =
-db = 0
+db = 1
 
 ; ;[kubernetes]
 ; ;kubernetes的一些配置
@@ -108,7 +108,7 @@ image_pull_secrets = regcred
 ; ;credentials_id: 访问jenkins的凭据, 可以在jenkins的 credentials/store/system/domain/_/credential进行配置或创建
 [jenkins]
 host = http://jenkins:8080/
-token = 1c8da3c07ccab3c121f1f04d1ca05bac2c
+token = 1c8da3c07ccab3c121f1f04d1ca05bac2f
 user = admin
 credentials_id =
 
