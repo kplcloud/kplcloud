@@ -135,12 +135,12 @@ routing_key = kplcloud
 ; ;  1. gitlab: 使用内部自建的gitlab gitlab的版本需要支持v3 api,如果不支持 您可以自己行加载应用的package
 ; ;  2. github: 使用公共的github
 ; ;git_addr: git API地址, 例如: http://gitlab.domain.idc/api/v4/  v3 的API暂时不支持
-; ;token: 访问相关git的token 需要所有基础的clone权限 0d6f6bc3ecaf97fc87aa2b8bf3e7e7d27667920b
+; ;token: 访问相关git的token 需要所有基础的clone权限 0d6f6bc3ecaf901d9ca385b8bf3e7e7d27667920b
 ; ;client_id:  如果使用的是github 由需要用这个在https://github.com/settings/developers上查找
 [git]
 ;git_type = gitlab
 ;git_addr = https://gitlab.com
-;token = fpeYxskBEP29qzzyFu2T
+;token = fecpeYxskBEP29qzzyFu2T11
 git_type = github
 token =
 client_id = github-api
