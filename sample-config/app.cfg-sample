@@ -44,8 +44,8 @@ heapster_url = http://heapster.kube-system
 docker_repo = hub.kpaas.nsini.com
 service_mesh = false
 domain_suffix = %s.%s.nsini.com
-client_id = 20emfs
-client_secret = 9jfapsmdg8i
+client_id = 20emfs1122
+client_secret = 9jfapsmdg8i3322
 ;auth_login = github
 default_namespace = default
 default_role_id = 4
@@ -93,7 +93,7 @@ database = kplcloud
 drive = single
 hosts = redis:6379
 ;password =
-db = 0
+db = 1
 
 ; ;[kubernetes]
 ; ;kubernetes的一些配置
@@ -108,7 +108,7 @@ image_pull_secrets = regcred
 ; ;credentials_id: 访问jenkins的凭据, 可以在jenkins的 credentials/store/system/domain/_/credential进行配置或创建
 [jenkins]
 host = http://jenkins:8080/
-token = 1c8da3c07ccab3c121f1f04d1ca05bac2c
+token = 1c8da3c07ccab3c121f1f04d1ca05bac2f
 user = admin
 credentials_id =
 
@@ -135,12 +135,12 @@ routing_key = kplcloud
 ; ;  1. gitlab: 使用内部自建的gitlab gitlab的版本需要支持v3 api,如果不支持 您可以自己行加载应用的package
 ; ;  2. github: 使用公共的github
 ; ;git_addr: git API地址, 例如: http://gitlab.domain.idc/api/v4/  v3 的API暂时不支持
-; ;token: 访问相关git的token 需要所有基础的clone权限 0d6f6bc3ecaf97fc87aa2b8bf3e7e7d27667920b
+; ;token: 访问相关git的token 需要所有基础的clone权限 0d6f6bc3ecaf901d9ca385b8bf3e7e7d27667920b
 ; ;client_id:  如果使用的是github 由需要用这个在https://github.com/settings/developers上查找
 [git]
 ;git_type = gitlab
 ;git_addr = https://gitlab.com
-;token = fpeYxskBEP29qzzyFu2T
+;token = fecpeYxskBEP29qzzyFu2T11
 git_type = github
 token =
 client_id = github-api
@@ -162,7 +162,7 @@ smtp_host = smtp.qq.com:587
 ldap_host = ldap
 ldap_port = 389
 ldap_base = DC=nsini,DC=corp
-ldap_sseSSL = false
+ldap_useSSL = false
 ldap_bindDN = hlw-moniti
 ldap_bind_password = 2019Paasd-@4!2
 ldap_user_filter = (userPrincipalName=%s)
