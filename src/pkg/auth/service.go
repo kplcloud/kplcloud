@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"github.com/dgrijalva/jwt-go"
@@ -20,6 +21,7 @@ import (
 	oauthgithub "golang.org/x/oauth2/github"
 	"gopkg.in/guregu/null.v3"
 	"math/rand"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -106,6 +108,24 @@ func (c *service) AuthLoginGithubCallback(w http.ResponseWriter, r *http.Request
 
 	ctx := context.Background()
 	// state := r.URL.Query().Get("state") // todo 它需要验证一下可以考虑使用jwt生成  先用cookie 简单处理一下吧...
+	if httpProxy := c.config.GetString(config.SectionServer, "http_proxy"); httpProxy != "" {
+		_ = level.Debug(c.logger).Log("use-proxy", httpProxy)
+		dialer := &net.Dialer{
+			Timeout:   time.Duration(5 * int64(time.Second)),
+			KeepAlive: time.Duration(5 * int64(time.Second)),
+		}
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, &http.Client{
+			Transport: &http.Transport{
+				Proxy: func(_ *http.Request) (*url.URL, error) {
+					return url.Parse(httpProxy)
+				},
+				DialContext: dialer.DialContext,
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: false,
+				},
+			},
+		})
+	}
 
 	githubOauthConfig := c.auth2Config()
 

@@ -12,7 +12,7 @@ PID = .pid
 HUB_ADDR =
 DOCKER_USER = hub.docker.com
 DOCKER_PWD =
-TAG = v0.2.8
+TAG = v0.2.9
 NAMESPACE = kplcloud
 PWD = $(shell pwd)
 
