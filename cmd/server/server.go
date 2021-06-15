@@ -12,6 +12,7 @@ import (
 	"github.com/go-kit/kit/metrics/prometheus"
 	"github.com/go-kit/kit/transport/amqp"
 	kithttp "github.com/go-kit/kit/transport/http"
+	"github.com/gorilla/mux"
 	"github.com/icowan/config"
 	mysqlclient "github.com/icowan/mysql-client"
 	redisclient "github.com/icowan/redis-client"
@@ -45,6 +46,7 @@ import (
 	"github.com/kplcloud/kplcloud/src/pkg/monitor"
 	"github.com/kplcloud/kplcloud/src/pkg/msgs"
 	"github.com/kplcloud/kplcloud/src/pkg/namespace"
+	"github.com/kplcloud/kplcloud/src/pkg/nodes"
 	"github.com/kplcloud/kplcloud/src/pkg/notice"
 	"github.com/kplcloud/kplcloud/src/pkg/permission"
 	"github.com/kplcloud/kplcloud/src/pkg/persistentvolume"
@@ -299,6 +301,7 @@ func run() {
 		auditSvc          = audit.NewService(logger, cf, jenkinsClient, k8sClient, amqpClient, store, hookQueueSvc, buildSvc)
 		statisticsSvc     = statistics.NewService(logger, cf, store)
 		virtualServiceSvc = virtualservice.NewService(logger, istioClient)
+		nodesSvc          = nodes.New(logger, "traceId", store, k8sClient)
 	)
 	// namespace service
 
@@ -385,67 +388,67 @@ func run() {
 			kitjwt.NewParser(kpljwt.JwtKeyFunc, jwt.SigningMethodHS256, kitjwt.StandardClaimsFactory),
 		}
 
-		mux := http.NewServeMux()
+		//mux := http.NewServeMux()
 
-		mux.Handle("/auth/", auth.MakeHandler(authSvc, httpLogger))
+		r := mux.NewRouter()
+
+		r.Handle("/auth/", auth.MakeHandler(authSvc, httpLogger))
 
 		// k8s rds
-		mux.Handle("/namespace", namespace.MakeHandler(namespaceSvc, httpLogger))
-		mux.Handle("/namespace/", namespace.MakeHandler(namespaceSvc, httpLogger))
-		mux.Handle("/storageclass", storage.MakeHandler(storageSvc, httpLogger))
-		mux.Handle("/storageclass/", storage.MakeHandler(storageSvc, httpLogger))
-		mux.Handle("/persistentvolumeclaim/", persistentvolumeclaim.MakeHandler(pvcSvc, httpLogger))
-		mux.Handle("/persistentvolume/", persistentvolume.MakeHandler(pvSvc, httpLogger))
-		mux.Handle("/ws/pods/console/exec/", sockjs.NewHandler("/ws/pods/console/exec", sockjs.DefaultOptions, func(session sockjs.Session) {
+		r.Handle("/namespace", namespace.MakeHandler(namespaceSvc, httpLogger))
+		r.Handle("/namespace/", namespace.MakeHandler(namespaceSvc, httpLogger))
+		r.Handle("/storageclass", storage.MakeHandler(storageSvc, httpLogger))
+		r.Handle("/storageclass/", storage.MakeHandler(storageSvc, httpLogger))
+		r.Handle("/persistentvolumeclaim/", persistentvolumeclaim.MakeHandler(pvcSvc, httpLogger))
+		r.Handle("/persistentvolume/", persistentvolume.MakeHandler(pvSvc, httpLogger))
+		r.Handle("/ws/pods/console/exec/", sockjs.NewHandler("/ws/pods/console/exec", sockjs.DefaultOptions, func(session sockjs.Session) {
 			termilanSvc.HandleTerminalSession(session)
 		}))
-		mux.Handle("/terminal/", terminal.MakeHandler(termilanSvc, httpLogger, store))
-		mux.Handle("/deployment/", deployment.MakeHandler(deploymentSvc, httpLogger, cf, store))
-		mux.Handle("/pods/", pod.MakeHandler(podsSvc, httpLogger, store))
-		mux.Handle("/ingress/", ingress.MakeHandler(ingressSvc, httpLogger, store))
-		mux.Handle("/config/", configmap.MakeHandler(configMapSvc, logger, store))
-		mux.Handle("/configmap/", configmap.MakeHandler(configMapSvc, logger, store))
-		mux.Handle("/discovery/", discovery.MakeHandler(discoverySvc, logger))
-		mux.Handle("/tools/", tools.MakeHandler(toolsSvc, logger, store))
-		mux.Handle("/cronjob/", cronjob.MakeHandler(cronjobSvc, httpLogger, store, opts, ems))
+		r.Handle("/terminal/", terminal.MakeHandler(termilanSvc, httpLogger, store))
+		r.Handle("/deployment/", deployment.MakeHandler(deploymentSvc, httpLogger, cf, store))
+		r.Handle("/pods/", pod.MakeHandler(podsSvc, httpLogger, store))
+		r.Handle("/ingress/", ingress.MakeHandler(ingressSvc, httpLogger, store))
+		r.Handle("/config/", configmap.MakeHandler(configMapSvc, logger, store))
+		r.Handle("/configmap/", configmap.MakeHandler(configMapSvc, logger, store))
+		r.Handle("/discovery/", discovery.MakeHandler(discoverySvc, logger))
+		r.Handle("/tools/", tools.MakeHandler(toolsSvc, logger, store))
+		r.Handle("/cronjob/", cronjob.MakeHandler(cronjobSvc, httpLogger, store, opts, ems))
 
-		mux.Handle("/virtualservice/", virtualservice.MakeHTTPHandler(virtualServiceSvc, logger, opts, ems))
+		r.Handle("/virtualservice/", virtualservice.MakeHTTPHandler(virtualServiceSvc, logger, opts, ems))
 
 		// project
-		mux.Handle("/project/", project.MakeHandler(projectSvc, httpLogger, store))
-		mux.Handle("/template/", template.MakeHandler(templateSvc, httpLogger))
-		mux.Handle("/template", template.MakeHandler(templateSvc, httpLogger))
-		mux.Handle("/group/", group.MakeHandler(groupSvc, httpLogger, store.Groups()))
-		mux.Handle("/group", group.MakeHandler(groupSvc, httpLogger, store.Groups()))
-		mux.Handle("/proclaim/", proclaim.MakeHandler(proclaimSvc, httpLogger))
-		mux.Handle("/proclaim", proclaim.MakeHandler(proclaimSvc, httpLogger))
-		mux.Handle("/notice/", notice.MakeHandler(noticeSvc, httpLogger))
-		mux.Handle("/notice", notice.MakeHandler(noticeSvc, httpLogger))
-		mux.Handle("/hooks/", hooks.MakeHandler(hookSvc, httpLogger, store))
-		mux.Handle("/git/", git.MakeHandler(gitSvc, httpLogger, store))
-		mux.Handle("/build/", build.MakeHandler(buildSvc, httpLogger, store))
-		mux.Handle("/permission/", permission.MakeHandler(permissionSvc, httpLogger))
-		mux.Handle("/role", role.MakeHandler(roleSvc, httpLogger))
-		mux.Handle("/role/", role.MakeHandler(roleSvc, httpLogger))
-		mux.Handle("/member", member.MakeHandler(memberSvc, httpLogger))
-		mux.Handle("/member/", member.MakeHandler(memberSvc, httpLogger))
-		mux.Handle("/event/", event.MakeHandler(eventSvc, httpLogger))
-		mux.Handle("/workspace/", workspace.MakeHandler(workspaceSvc, httpLogger))
-		mux.Handle("/account/", account.MakeHandler(accountSvc, httpLogger))
-		mux.Handle("/account", account.MakeHandler(accountSvc, httpLogger))
-		mux.Handle("/market/", market.MakeHandler(marketSvc, httpLogger))
-		mux.Handle("/monitor/", monitor.MakeHandler(monitorSvc, httpLogger))
-		mux.Handle("/audit/", audit.MakeHandler(auditSvc, httpLogger, store))
-		mux.Handle("/statistics/", statistics.MakeHandler(statisticsSvc, httpLogger))
+		r.PathPrefix("/project").Handler(http.StripPrefix("/project", project.MakeHandler(projectSvc, httpLogger, store)))
+		r.PathPrefix("/template").Handler(http.StripPrefix("/template", template.MakeHandler(templateSvc, httpLogger)))
+		r.PathPrefix("/group").Handler(http.StripPrefix("/group", group.MakeHandler(groupSvc, httpLogger, store.Groups())))
+		r.PathPrefix("/group/").Handler(http.StripPrefix("/group/", group.MakeHandler(groupSvc, httpLogger, store.Groups())))
+		r.PathPrefix("/proclaim").Handler(http.StripPrefix("/proclaim", proclaim.MakeHandler(proclaimSvc, httpLogger)))
+		r.PathPrefix("/proclaim/").Handler(http.StripPrefix("/proclaim/", proclaim.MakeHandler(proclaimSvc, httpLogger)))
+		r.PathPrefix("/notice").Handler(http.StripPrefix("/notice", notice.MakeHandler(noticeSvc, httpLogger)))
+		r.PathPrefix("/hooks").Handler(http.StripPrefix("/hooks", hooks.MakeHandler(hookSvc, httpLogger, store)))
+		r.PathPrefix("/git").Handler(http.StripPrefix("/git", git.MakeHandler(gitSvc, httpLogger, store)))
+		r.PathPrefix("/build").Handler(http.StripPrefix("/build", build.MakeHandler(buildSvc, httpLogger, store)))
+		r.PathPrefix("/permission").Handler(http.StripPrefix("/permission", permission.MakeHandler(permissionSvc, httpLogger)))
+		r.PathPrefix("/role/").Handler(http.StripPrefix("/role/", role.MakeHandler(roleSvc, httpLogger)))
+		r.PathPrefix("/role").Handler(http.StripPrefix("/role", role.MakeHandler(roleSvc, httpLogger)))
+		r.PathPrefix("/member").Handler(http.StripPrefix("/member", member.MakeHandler(memberSvc, httpLogger)))
+		r.PathPrefix("/member/").Handler(http.StripPrefix("/member/", member.MakeHandler(memberSvc, httpLogger)))
+		r.PathPrefix("/event").Handler(http.StripPrefix("/event", event.MakeHandler(eventSvc, httpLogger)))
+		r.PathPrefix("/workspace").Handler(http.StripPrefix("/workspace", workspace.MakeHandler(workspaceSvc, httpLogger)))
+		r.PathPrefix("/account").Handler(http.StripPrefix("/account", account.MakeHandler(accountSvc, httpLogger)))
+		r.PathPrefix("/market").Handler(http.StripPrefix("/market", market.MakeHandler(marketSvc, httpLogger)))
+		r.PathPrefix("/monitor").Handler(http.StripPrefix("/monitor", monitor.MakeHandler(monitorSvc, httpLogger)))
+		r.PathPrefix("/audit").Handler(http.StripPrefix("/audit", audit.MakeHandler(auditSvc, httpLogger, store)))
+		r.PathPrefix("/statistics").Handler(http.StripPrefix("/statistics", statistics.MakeHandler(statisticsSvc, httpLogger)))
+		r.PathPrefix("/nodes").Handler(http.StripPrefix("/nodes", nodes.MakeHTTPHandler(nodesSvc, ems, opts)))
 
 		// wechat receive
-		mux.Handle("/wechat/", wechat.MakeHandler(weixinSvc, httpLogger))
+		r.PathPrefix("/wechat").Handler(http.StripPrefix("/wechat", wechat.MakeHandler(weixinSvc, httpLogger)))
 
 		// public api
-		mux.Handle("/public/", public.MakeHandler(publicSvc, httpLogger))
-		mux.Handle("/consul/", consul.MakeHandler(consulSvc, httpLogger, cf))
+		r.PathPrefix("/public").Handler(http.StripPrefix("/public", public.MakeHandler(publicSvc, httpLogger)))
+		r.PathPrefix("/consul").Handler(http.StripPrefix("/consul", consul.MakeHandler(consulSvc, httpLogger, cf)))
 
-		mux.Handle("/", http.FileServer(http.Dir(cf.GetString("server", "http_static"))))
+		r.PathPrefix("/").Handler(http.FileServer(http.Dir(cf.GetString("server", "http_static"))))
 
 		http.Handle("/metrics", promhttp.Handler())
 		http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(cf.GetString("server", "http_static")))))
@@ -456,7 +459,7 @@ func run() {
 			handlers["Access-Control-Allow-Methods"] = cf.GetString("cors", "methods")
 			handlers["Access-Control-Allow-Headers"] = cf.GetString("cors", "headers")
 		}
-		http.Handle("/", accessControl(mux, logger, handlers))
+		http.Handle("/", accessControl(r, logger, handlers))
 	}
 	subscribeToQueue(logger, amqpClient, buildSvc, cronjobSvc, msgAlarmSvc, msgNoticeSvc, msgProclaimSvc, msgWechatSvc, hookQueueSvc)
 

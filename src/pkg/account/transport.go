@@ -80,42 +80,42 @@ func MakeHandler(svc Service, logger kitlog.Logger) http.Handler {
 
 	r := mux.NewRouter()
 
-	r.Handle("/account/current", kithttp.NewServer(
+	r.Handle("/current", kithttp.NewServer(
 		eps.DetailEndpoint,
 		decodeCountReadRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/account/notice/receive", kithttp.NewServer(
+	r.Handle("/notice/receive", kithttp.NewServer(
 		eps.GetReceiveEndpoint,
 		decodeGetReceiveRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/account/notice/update", kithttp.NewServer(
+	r.Handle("/notice/update", kithttp.NewServer(
 		eps.UpdateReceiveEndpoint,
 		decodeUpdateReceiveRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("POST")
 
-	r.Handle("/account/base/update", kithttp.NewServer(
+	r.Handle("/base/update", kithttp.NewServer(
 		eps.UpdateBaseEndpoint,
 		decodeUpdateBaseRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("POST")
 
-	r.Handle("/account/unBindWechat", kithttp.NewServer(
+	r.Handle("/unBindWechat", kithttp.NewServer(
 		eps.UnWechatBindEndpoint,
 		decodeUnWechatBindRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/account/project", kithttp.NewServer(
+	r.Handle("/project", kithttp.NewServer(
 		eps.GetProjectEndpoint,
 		decodeGetProjectRequest,
 		encode.EncodeResponse,

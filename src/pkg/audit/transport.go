@@ -64,21 +64,21 @@ func MakeHandler(svc Service, logger log.Logger, repository repository.Repositor
 
 	r := mux.NewRouter()
 
-	r.Handle("/audit/{namespace}/name/{name}", kithttp.NewServer(
+	r.Handle("/{namespace}/name/{name}", kithttp.NewServer(
 		eps.AccessAuditEndpoint,
 		decodeDetailRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("POST")
 
-	r.Handle("/audit/{namespace}/refused/{name}", kithttp.NewServer(
+	r.Handle("/{namespace}/refused/{name}", kithttp.NewServer(
 		eps.RefusedEndpoint,
 		decodeDetailRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("POST")
 
-	r.Handle("/audit/{namespace}/step/{name}/kind/{kind}", kithttp.NewServer(
+	r.Handle("/{namespace}/step/{name}/kind/{kind}", kithttp.NewServer(
 		eps.AuditStepEndpoint,
 		decodeStepRequest,
 		encode.EncodeResponse,
