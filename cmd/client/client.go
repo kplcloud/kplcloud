@@ -12,6 +12,7 @@ import (
 	"github.com/jinzhu/gorm"
 	jenkins2 "github.com/kplcloud/kplcloud/src/jenkins"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
+	"github.com/kplcloud/kplcloud/src/logging"
 	"github.com/kplcloud/kplcloud/src/pkg/configmap"
 	"github.com/kplcloud/kplcloud/src/pkg/consul"
 	"github.com/kplcloud/kplcloud/src/pkg/namespace"
@@ -88,7 +89,7 @@ client sync configmap -c app.cfg -k k8s-config.yaml -n app
 				_ = db.Close()
 			}()
 
-			store = repository.NewRepository(db)
+			store = repository.NewRepository(db, logger, logging.TraceId)
 
 			if len(args) == 1 && args[0] == "namespace" {
 				return syncNamespace()

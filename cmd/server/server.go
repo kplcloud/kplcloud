@@ -176,7 +176,7 @@ func run() {
 		panic(err)
 	}
 
-	store = repository.NewRepository(db)
+	store = repository.NewRepository(db, logger, logging.TraceId)
 	if err = importToDb(cf.GetString("server", "app_key")); err != nil {
 		_ = level.Error(logger).Log("import", "database", "err", err)
 		panic(err)
