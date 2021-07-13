@@ -45,7 +45,6 @@ import (
 	"github.com/kplcloud/kplcloud/src/pkg/member"
 	"github.com/kplcloud/kplcloud/src/pkg/monitor"
 	"github.com/kplcloud/kplcloud/src/pkg/msgs"
-	"github.com/kplcloud/kplcloud/src/pkg/namespace"
 	"github.com/kplcloud/kplcloud/src/pkg/nodes"
 	"github.com/kplcloud/kplcloud/src/pkg/notice"
 	"github.com/kplcloud/kplcloud/src/pkg/permission"
@@ -94,12 +93,13 @@ var (
 	adminPassword = envString("ADMIN_PASSWORD", DefaultAdminPassword)
 	sqlPath       = envString("INIT_SQL", DefaultInitDBSQL)
 
-	logger log.Logger
-	store  repository.Repository
-	db     *gorm.DB
-	cf     *config.Config
-	err    error
-	rds    redisclient.RedisClient
+	logger             log.Logger
+	store              repository.Repository
+	db                 *gorm.DB
+	cf                 *config.Config
+	err                error
+	rds                redisclient.RedisClient
+	appName, namespace string
 )
 
 var (
@@ -141,6 +141,8 @@ func init() {
 	startCmd.PersistentFlags().StringVar(&adminEmail, "admin.email", DefaultAdminEmail, "初始化管理员邮箱")
 	startCmd.PersistentFlags().StringVar(&adminPassword, "admin.password", DefaultAdminPassword, "初始化管理员密码")
 	startCmd.PersistentFlags().StringVar(&sqlPath, "init.sqlpath", DefaultInitDBSQL, "初始化sql文件")
+	rootCmd.PersistentFlags().StringVarP(&namespace, "namespace", "n", "app", "命名空间")
+	rootCmd.PersistentFlags().StringVarP(&appName, "app.name", "a", "", "应用名称")
 
 	addFlags(rootCmd)
 	rootCmd.AddCommand(startCmd)
@@ -263,7 +265,7 @@ func run() {
 		hookQueueSvc = hooks.NewServiceHookQueue(logger, amqpClient, cf, store, noticeSvc)
 
 		// start k8s rds
-		namespaceSvc  = namespace.NewService(logger, cf, k8sClient, store)
+		//namespaceSvc  = namespace.NewService(logger, cf, k8sClient, store)
 		storageSvc    = storage.NewService(logger, k8sClient, store)
 		pvcSvc        = persistentvolumeclaim.NewService(logger, k8sClient, store)
 		pvSvc         = persistentvolume.NewService(logger, k8sClient)
@@ -321,7 +323,7 @@ func run() {
 		}, fieldKeys), authSvc)
 
 	// k8s rds
-	namespaceSvc = namespace.NewLoggingService(logger, namespaceSvc) // 日志
+	//namespaceSvc = namespace.NewLoggingService(logger, namespaceSvc) // 日志
 	storageSvc = storage.NewLoggingService(logger, storageSvc)
 	pvcSvc = persistentvolumeclaim.NewLoggingService(logger, pvcSvc)
 	pvSvc = persistentvolume.NewLoggingService(logger, pvSvc)
@@ -395,8 +397,8 @@ func run() {
 		r.Handle("/auth/", auth.MakeHandler(authSvc, httpLogger))
 
 		// k8s rds
-		r.Handle("/namespace", namespace.MakeHandler(namespaceSvc, httpLogger))
-		r.Handle("/namespace/", namespace.MakeHandler(namespaceSvc, httpLogger))
+		//r.Handle("/namespace", namespace.MakeHandler(namespaceSvc, httpLogger))
+		//r.Handle("/namespace/", namespace.MakeHandler(namespaceSvc, httpLogger))
 		r.Handle("/storageclass", storage.MakeHandler(storageSvc, httpLogger))
 		r.Handle("/storageclass/", storage.MakeHandler(storageSvc, httpLogger))
 		r.Handle("/persistentvolumeclaim/", persistentvolumeclaim.MakeHandler(pvcSvc, httpLogger))
