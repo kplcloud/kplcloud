@@ -66,21 +66,21 @@ func MakeHandler(svc Service, logger kitlog.Logger) http.Handler {
 
 	r := mux.NewRouter()
 
-	r.Handle("/{id:[0-9]+}", kithttp.NewServer(
+	r.Handle("/proclaim/{id:[0-9]+}", kithttp.NewServer(
 		eps.GetEndpoint,
 		decodeGetRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/", kithttp.NewServer(
+	r.Handle("/proclaim", kithttp.NewServer(
 		eps.PostEndpoint,
 		decodePostRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("POST")
 
-	r.Handle("/", kithttp.NewServer(
+	r.Handle("/proclaim", kithttp.NewServer(
 		eps.ListEndpoint,
 		decodeListRequest,
 		encode.EncodeResponse,

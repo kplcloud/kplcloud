@@ -1,9 +1,8 @@
 module github.com/kplcloud/kplcloud
 
-go 1.14
+go 1.13
 
 require (
-	github.com/HdrHistogram/hdrhistogram-go v1.1.0 // indirect
 	github.com/PuerkitoBio/goquery v1.5.1
 	github.com/casbin/casbin v1.9.1
 	github.com/casbin/gorm-adapter v0.0.0-20190623160500-9d922cc6a7c5
@@ -34,14 +33,11 @@ require (
 	github.com/kplcloud/request v0.2.1
 	github.com/lestrrat-go/file-rotatelogs v2.2.0+incompatible
 	github.com/lestrrat-go/strftime v0.0.0-20190725011945-5c849dd2c51d // indirect
-	github.com/opentracing/opentracing-go v1.1.0
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.3.0
 	github.com/spf13/cobra v0.0.5
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	github.com/tebeka/strftime v0.1.3 // indirect
-	github.com/uber/jaeger-client-go v2.29.1+incompatible
-	github.com/uber/jaeger-lib v2.4.1+incompatible
 	github.com/xanzy/go-gitlab v0.18.0
 	github.com/yijizhichang/wechat-sdk v0.1.3
 	golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd

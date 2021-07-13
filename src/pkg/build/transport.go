@@ -110,56 +110,56 @@ func MakeHandler(svc Service, logger log.Logger, repository repository.Repositor
 
 	r := mux.NewRouter()
 
-	r.Handle("/jenkins/{namespace}/project/{name}/building", kithttp.NewServer(
+	r.Handle("/build/jenkins/{namespace}/project/{name}/building", kithttp.NewServer(
 		eps.BuildEndpoint,
 		decodeBuildRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("POST")
 
-	r.Handle("/jenkins/{namespace}/project/{name}/rollback/{id:[0-9]+}", kithttp.NewServer(
+	r.Handle("/build/jenkins/{namespace}/project/{name}/rollback/{id:[0-9]+}", kithttp.NewServer(
 		eps.RollBackEndpoint,
 		decodeRollbackRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("PUT")
 
-	r.Handle("/jenkins/{namespace}/project/{name}/history", kithttp.NewServer(
+	r.Handle("/build/jenkins/{namespace}/project/{name}/history", kithttp.NewServer(
 		eps.HistoryEndpoint,
 		decodeListRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/jenkins/{namespace}/project/{name}/console/{number}", kithttp.NewServer(
+	r.Handle("/build/jenkins/{namespace}/project/{name}/console/{number}", kithttp.NewServer(
 		eps.BuildConsoleEndpoint,
 		decodeBuildConsoleRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/jenkins/{namespace}/project/{name}/abort/{number}", kithttp.NewServer(
+	r.Handle("/build/jenkins/{namespace}/project/{name}/abort/{number}", kithttp.NewServer(
 		eps.AbortBuildEndpoint,
 		decodeAbortBuildRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("PUT")
 
-	r.Handle("/jenkins/{namespace}/project/{name}/conf", kithttp.NewServer(
+	r.Handle("/build/jenkins/{namespace}/project/{name}/conf", kithttp.NewServer(
 		eps.BuildConfEndpoint,
 		decodeBuildConfRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/jenkins/{namespace}/cronjob/{name}/history", kithttp.NewServer(
+	r.Handle("/build/jenkins/{namespace}/cronjob/{name}/history", kithttp.NewServer(
 		eps.CronHistoryEndpoint,
 		decodeListRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/jenkins/{namespace}/cronjob/{name}/console/{number}", kithttp.NewServer(
+	r.Handle("/build/jenkins/{namespace}/cronjob/{name}/console/{number}", kithttp.NewServer(
 		eps.CronBuildConsoleEndpoint,
 		decodeBuildConsoleRequest,
 		encode.EncodeResponse,

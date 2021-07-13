@@ -64,7 +64,7 @@ func MakeHandler(svc Service, logger log.Logger) http.Handler {
 	}
 
 	r := mux.NewRouter()
-	r.Handle("/prometheus/query/network", kithttp.NewServer(
+	r.Handle("/monitor/prometheus/query/network", kithttp.NewServer(
 		eps.QueryNetworkEndpoint,
 		func(ctx context.Context, r *http.Request) (request interface{}, err error) {
 			return nil, nil
@@ -73,7 +73,7 @@ func MakeHandler(svc Service, logger log.Logger) http.Handler {
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/prometheus/query/ops", kithttp.NewServer(
+	r.Handle("/monitor/prometheus/query/ops", kithttp.NewServer(
 		eps.OpsEndpoint,
 		func(ctx context.Context, r *http.Request) (request interface{}, err error) {
 			return nil, nil
@@ -82,7 +82,7 @@ func MakeHandler(svc Service, logger log.Logger) http.Handler {
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/metrics", kithttp.NewServer(
+	r.Handle("/monitor/metrics", kithttp.NewServer(
 		eps.MetricsEndpoint,
 		func(ctx context.Context, r *http.Request) (request interface{}, err error) {
 			return nil, nil
