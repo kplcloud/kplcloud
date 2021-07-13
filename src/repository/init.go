@@ -7,11 +7,7 @@
 
 package repository
 
-import (
-	"github.com/go-kit/kit/log"
-	"github.com/jinzhu/gorm"
-	"github.com/kplcloud/kplcloud/src/repository/node"
-)
+import "github.com/jinzhu/gorm"
 
 type Repository interface {
 	Build() BuildRepository
@@ -40,7 +36,6 @@ type Repository interface {
 	Dockerfile() DockerfileRepository
 	NoticeMember() NoticeMemberRepository
 	ConfigEnv() ConfigEnvRepository
-	Node() node.Service
 }
 
 type store struct {
@@ -72,17 +67,9 @@ type store struct {
 	dockerfile      DockerfileRepository
 	noticeMember    NoticeMemberRepository
 	configEnv       ConfigEnvRepository
-	node            node.Service
 }
 
-func (c *store) Node() node.Service {
-	return c.node
-}
-
-func NewRepository(db *gorm.DB, logger log.Logger, traceId string) Repository {
-	nodeSvc := node.New(db)
-	nodeSvc = node.NewLogging(logger, traceId)(nodeSvc)
-
+func NewRepository(db *gorm.DB) Repository {
 	return &store{
 		db:              db,
 		build:           NewBuildRepository(db),
@@ -111,7 +98,6 @@ func NewRepository(db *gorm.DB, logger log.Logger, traceId string) Repository {
 		dockerfile:      NewDockerfileRepository(db),
 		noticeMember:    NewNoticeMemberRepository(db),
 		configEnv:       NewConfigEnvRepository(db),
-		node:            nodeSvc,
 	}
 }
 

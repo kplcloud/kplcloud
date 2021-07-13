@@ -47,11 +47,11 @@ func MakeHandler(svc Service, logger kitlog.Logger) http.Handler {
 	list := kithttp.NewServer(epsMap["list"], decodeListRequest, encode.EncodeResponse, opts...)
 
 	r := mux.NewRouter()
-	r.Handle("/{id:[0-9]+}", get).Methods("GET")
-	r.Handle("/{id:[0-9]+}", update).Methods("PUT")
-	r.Handle("/{id:[0-9]+}", deleteTemp).Methods("DELETE")
-	r.Handle("/", post).Methods("POST")
-	r.Handle("/", list).Methods("GET")
+	r.Handle("/template/{id:[0-9]+}", get).Methods("GET")
+	r.Handle("/template/{id:[0-9]+}", update).Methods("PUT")
+	r.Handle("/template/{id:[0-9]+}", deleteTemp).Methods("DELETE")
+	r.Handle("/template", post).Methods("POST")
+	r.Handle("/template", list).Methods("GET")
 
 	return r
 }

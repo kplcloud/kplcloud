@@ -1,28 +1,49 @@
 APPNAME = kplcloud
 BIN = $(GOPATH)/bin
-GOCMD = go
+GOCMD = /usr/local/go/bin/go
 GOBUILD = $(GOCMD) build
+GOINSTALL = $(GOCMD) install
+GOCLEAN = $(GOCMD) clean
+GOTEST = $(GOCMD) test
+GOGET = $(GOCMD) get
 GORUN = $(GOCMD) run
-BINARY_UNIX = $(BIN)/$(APPNAME)
-GOPROXY = https://goproxy.cn
+BINARY_UNIX = $(BIN)_unix
 PID = .pid
+HUB_ADDR =
+DOCKER_USER = hub.docker.com
+DOCKER_PWD =
+TAG = v0.2.9
+NAMESPACE = kplcloud
+PWD = $(shell pwd)
 
 start:
-	./$(APPNAME) & echo $$! > $(PID) 2>1 &
+	$(GOINSTALL) -v
+	$(BIN)/$(APPNAME) start -p :8080 -c ./app.cfg -k config.yaml & echo $$! > $(PID)
 
 restart:
 	@echo restart the app...
 	@kill `cat $(PID)` || true
-	./$(APPNAME) ./app.cfg & echo $$! > $(PID) 2>1 &
-
-install:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOINSTALL) -v
+	$(BIN)/$(APPNAME) start -p :8080 -c ./app.cfg -k config.yaml & echo $$! > $(PID)
 
 stop:
 	@kill `cat $(PID)` || true
 
 build-linux:
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) ./main.go -o $(BINARY_UNIX) -v
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(BINARY_UNIX) -v
+
+login:
+	docker login -u $(DOCKER_USER) -p $(DOCKER_PWD) $(HUB_ADDR)
+
+build:
+#	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -o kplcloud -v ./main.go
+	docker build --rm -t $(APPNAME):$(TAG) .
+
+docker-run:
+	docker run -it --rm -p 8080:8080 -v $(PWD)/app.cfg:/etc/kplcloud/app.cfg -v $(PWD)/config.yaml:/etc/kplcloud/config.yaml $(APPNAME):$(TAG)
+
+push:
+	docker image tag $(APPNAME):$(TAG) $(HUB_ADDR)/$(NAMESPACE)/$(APPNAME):$(TAG)
+	docker push $(HUB_ADDR)/$(NAMESPACE)/$(APPNAME):$(TAG)
 
 run:
-	GOPROXY=$(GOPROXY) GO111MODULE=on $(GORUN) ./cmd/main.go start -p :8080 -c app.dev.cfg -a dev.$(APPNAME)
+	GO111MODULE=on $(GORUN) ./main.go start -p :8080 -c ./app.cfg -k config.yaml

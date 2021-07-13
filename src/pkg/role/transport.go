@@ -91,28 +91,28 @@ func MakeHandler(svc Service, logger log.Logger) http.Handler {
 	}
 
 	r := mux.NewRouter()
-	r.Handle("/{id:[0-9]+}/permission", kithttp.NewServer(
+	r.Handle("/role/{id:[0-9]+}/permission", kithttp.NewServer(
 		eps.PermissionSelectedEndpoint,
 		decodeGetRolePermissionRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/{id:[0-9]+}", kithttp.NewServer(
+	r.Handle("/role/{id:[0-9]+}", kithttp.NewServer(
 		eps.DeleteEndpoint,
 		decodeGetRolePermissionRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("DELETE")
 
-	r.Handle("/{id:[0-9]+}", kithttp.NewServer(
+	r.Handle("/role/{id:[0-9]+}", kithttp.NewServer(
 		eps.DetailEndpoint,
 		decodeGetRolePermissionRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/", kithttp.NewServer(
+	r.Handle("/role", kithttp.NewServer(
 		eps.AllEndpoint,
 		func(ctx context.Context, r *http.Request) (request interface{}, err error) {
 			return nil, nil
@@ -121,21 +121,21 @@ func MakeHandler(svc Service, logger log.Logger) http.Handler {
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/", kithttp.NewServer(
+	r.Handle("/role", kithttp.NewServer(
 		eps.PostEndpoint,
 		decodeRoleRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("POST")
 
-	r.Handle("/{id:[0-9]+}", kithttp.NewServer(
+	r.Handle("/role/{id:[0-9]+}", kithttp.NewServer(
 		eps.UpdateEndpoint,
 		decodeRoleRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("PUT")
 
-	r.Handle("/{id:[0-9]+}/permission", kithttp.NewServer(
+	r.Handle("/role/{id:[0-9]+}/permission", kithttp.NewServer(
 		eps.RolePermissionEndpoint,
 		decodeRolePermissionRequest,
 		encode.EncodeResponse,

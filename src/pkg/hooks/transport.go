@@ -115,16 +115,16 @@ func MakeHandler(svc Service, logger kitlog.Logger, repository repository.Reposi
 	updateNoApp := kithttp.NewServer(epsMap["updateNoApp"], decodeUpdateRequest, encode.EncodeResponse, opts...)
 
 	r := mux.NewRouter()
-	r.Handle("/webhooks/{namespace}/project/{name}/{id:[0-9]+}", get).Methods("GET")
-	r.Handle("/webhooks/{namespace}/project/{name}", list).Methods("GET")
-	r.Handle("/webhooks/{namespace}/project/{name}/{id:[0-9]+}", deleteHook).Methods("DELETE")
-	r.Handle("/webhooks/{namespace}/project/{name}/{id:[0-9]+}", update).Methods("PUT")
-	r.Handle("/webhooks/{namespace}/project/{name}", post).Methods("POST")
-	r.Handle("/webhooks/{namespace}/project/{name}/test-send/{id:[0-9]+}", testSendHook).Methods("POST")
-	r.Handle("/webhooks", listNoApp).Methods("GET")
-	r.Handle("/webhooks", postNoApp).Methods("POST")
-	r.Handle("/webhooks/{id:[0-9]+}", getNoApp).Methods("GET")
-	r.Handle("/webhooks/{id:[0-9]+}", updateNoApp).Methods("PUT")
+	r.Handle("/hooks/webhooks/{namespace}/project/{name}/{id:[0-9]+}", get).Methods("GET")
+	r.Handle("/hooks/webhooks/{namespace}/project/{name}", list).Methods("GET")
+	r.Handle("/hooks/webhooks/{namespace}/project/{name}/{id:[0-9]+}", deleteHook).Methods("DELETE")
+	r.Handle("/hooks/webhooks/{namespace}/project/{name}/{id:[0-9]+}", update).Methods("PUT")
+	r.Handle("/hooks/webhooks/{namespace}/project/{name}", post).Methods("POST")
+	r.Handle("/hooks/webhooks/{namespace}/project/{name}/test-send/{id:[0-9]+}", testSendHook).Methods("POST")
+	r.Handle("/hooks/webhooks", listNoApp).Methods("GET")
+	r.Handle("/hooks/webhooks", postNoApp).Methods("POST")
+	r.Handle("/hooks/webhooks/{id:[0-9]+}", getNoApp).Methods("GET")
+	r.Handle("/hooks/webhooks/{id:[0-9]+}", updateNoApp).Methods("PUT")
 
 	return r
 }
