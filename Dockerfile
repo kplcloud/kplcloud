@@ -1,25 +1,59 @@
-FROM golang:1.13.0-alpine3.10 as build-env
+# Golang 打包基础镜像
+FROM golang:1.14.9-alpine3.11 AS build-env
+
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+RUN apk add --no-cache \
+		ca-certificates \
+		tzdata \
+		git \
+		openssh \
+		vim \
+		make \
+		mercurial \
+		subversion \
+		bzr \
+		fossil \
+		&& cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+		&& echo "Asia/Shanghai" > /etc/timezone \
+		&& apk del tzdata \
+		&& rm -rf /var/cache/apk/*
 
 ENV GO111MODULE=on
-ENV BUILDPATH=github.com/kplcloud/kplcloud
-ENV GOPROXY=https://goproxy.io
-ENV GOPATH=/go
+ENV GOPROXY=https://goproxy.cn
+ENV BUILDPATH=github.com/icowan/kit-admin
 RUN mkdir -p /go/src/${BUILDPATH}
 COPY ./ /go/src/${BUILDPATH}
-RUN cd /go/src/${BUILDPATH} && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install -v
+WORKDIR /go/src/${BUILDPATH}/cmd
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install -v
 
-FROM alpine:latest
+# 前端打包基础镜像
+FROM node:12.13.0-alpine AS node-build-env
 
-RUN apk update \
-        && apk upgrade \
-        && apk add --no-cache \
-        ca-certificates \
-        curl \
-        && update-ca-certificates 2>/dev/null || true
+RUN mkdir /opt/build
+COPY ./web/admin/ /opt/build
+WORKDIR /opt/build
 
-COPY --from=build-env /go/bin/kplcloud /go/bin/kplcloud
-COPY ./static /go/bin/static
-COPY ./database /go/bin/database
+RUN yarn config set registry https://registry.npm.taobao.org
+RUN yarn build --registry https://registry.npm.taobao.org
 
-WORKDIR /go/bin/
-CMD ["/go/bin/kplcloud", "start", "-p", ":8080", "-c", "/etc/kplcloud/app.cfg", "-k", "/etc/kplcloud/config.yaml"]
+# 运行镜像
+FROM alpine:3.11
+RUN apk add --no-cache \
+		ca-certificates \
+		curl \
+		tzdata \
+		&& cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+		&& echo "Asia/Shanghai" > /etc/timezone \
+		&& apk del tzdata \
+		&& rm -rf /var/cache/apk/*
+
+COPY --from=build-env /go/bin/cmd /usr/local/kit-admin/bin/kit-admin
+COPY --from=node-build-env /opt/build/dist/ /usr/local/kit-admin/web/admin
+
+WORKDIR /usr/local/kit-admin/
+ENV PATH=$PATH:/usr/local/kit-admin/bin/
+
+COPY ./app.test.cfg /usr/local/kit-admin/etc/app.test.cfg
+COPY ./app.dev.cfg /usr/local/kit-admin/etc/app.dev.cfg
+COPY ./app.prod.cfg /usr/local/kit-admin/etc/app.cfg
+CMD ["kit-admin", "start", "-c", "/usr/local/kit-admin/etc/app.cfg"]

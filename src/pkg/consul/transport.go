@@ -117,70 +117,70 @@ func MakeHandler(svc Service, logger log.Logger, cf *config.Config) http.Handler
 
 	r := mux.NewRouter()
 
-	r.Handle("/consul/sync", kithttp.NewServer(
+	r.Handle("/sync", kithttp.NewServer(
 		eps.SyncEndpoint,
 		decodeRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/consul/{namespace}/one/{name}", kithttp.NewServer(
+	r.Handle("/{namespace}/one/{name}", kithttp.NewServer(
 		eps.DetailEndpoint,
 		decodeDetailRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/consul/{namespace}/list", kithttp.NewServer(
+	r.Handle("/{namespace}/list", kithttp.NewServer(
 		eps.ListEndpoint,
 		decodeListRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/consul/{namespace}", kithttp.NewServer(
+	r.Handle("/{namespace}", kithttp.NewServer(
 		eps.PostEndpoint,
 		decodePostRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("POST")
 
-	r.Handle("/consul/{namespace}/one/{name}", kithttp.NewServer(
+	r.Handle("/{namespace}/one/{name}", kithttp.NewServer(
 		eps.UpdateEndpoint,
 		decodeUpdateRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("PUT")
 
-	r.Handle("/consul/{namespace}/one/{name}", kithttp.NewServer(
+	r.Handle("/{namespace}/one/{name}", kithttp.NewServer(
 		eps.DeleteEndpoint,
 		decodeDetailRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("DELETE")
 
-	r.Handle("/consul/kv/{namespace}/one/{name}", kithttp.NewServer(
+	r.Handle("/kv/{namespace}/one/{name}", kithttp.NewServer(
 		eps.KVDetailEndpoint,
 		decodeKVDetailRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/consul/kv/{namespace}/list/{name}", kithttp.NewServer(
+	r.Handle("/kv/{namespace}/list/{name}", kithttp.NewServer(
 		eps.KVListEndpoint,
 		decodeKVDetailRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/consul/kv/{namespace}/one/{name}", kithttp.NewServer(
+	r.Handle("/kv/{namespace}/one/{name}", kithttp.NewServer(
 		eps.KVPostEndpoint,
 		decodeKVPostRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("POST")
 
-	r.Handle("/consul/kv/{namespace}/one/{name}", kithttp.NewServer(
+	r.Handle("/kv/{namespace}/one/{name}", kithttp.NewServer(
 		eps.KVDeleteEndpoint,
 		decodeKVDeleteRequest,
 		encode.EncodeResponse,

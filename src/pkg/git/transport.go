@@ -85,7 +85,7 @@ func MakeHandler(svc Service, logger log.Logger, repository repository.Repositor
 	}
 
 	r := mux.NewRouter()
-	r.Handle("/git/tags/{namespace}/project/{name}", kithttp.NewServer(
+	r.Handle("/tags/{namespace}/project/{name}", kithttp.NewServer(
 		eps.TagsEndpoint,
 		func(ctx context.Context, req *http.Request) (request interface{}, err error) {
 			return nil, nil
@@ -94,7 +94,7 @@ func MakeHandler(svc Service, logger log.Logger, repository repository.Repositor
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/git/branches/{namespace}/project/{name}", kithttp.NewServer(
+	r.Handle("/branches/{namespace}/project/{name}", kithttp.NewServer(
 		eps.BranchesEndpoint,
 		func(ctx context.Context, req *http.Request) (request interface{}, err error) {
 			return nil, nil
@@ -102,20 +102,20 @@ func MakeHandler(svc Service, logger log.Logger, repository repository.Repositor
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
-	r.Handle("/git/tags", kithttp.NewServer(
+	r.Handle("/tags", kithttp.NewServer(
 		eps.TagsByGitPathEndpoint,
 		decodeGitRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
-	r.Handle("/git/branches", kithttp.NewServer(
+	r.Handle("/branches", kithttp.NewServer(
 		eps.BranchesByGitPathEndpoint,
 		decodeGitRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/git/dockerfile/{namespace}/project/{name}", kithttp.NewServer(
+	r.Handle("/dockerfile/{namespace}/project/{name}", kithttp.NewServer(
 		eps.GetDockerfileEndpoint,
 		decodeGetDockerfileRequest,
 		encode.EncodeResponse,

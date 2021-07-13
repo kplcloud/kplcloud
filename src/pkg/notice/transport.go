@@ -82,35 +82,35 @@ func MakeHandler(svc Service, logger kitlog.Logger) http.Handler {
 
 	r := mux.NewRouter()
 
-	r.Handle("/notice/message", kithttp.NewServer(
+	r.Handle("/message", kithttp.NewServer(
 		eps.ListEndpoint,
 		decodeListRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/notice/tips", kithttp.NewServer(
+	r.Handle("/tips", kithttp.NewServer(
 		eps.TipsEndpoint,
 		decodeTipsRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/notice/message/readcount", kithttp.NewServer(
+	r.Handle("/message/readcount", kithttp.NewServer(
 		eps.CountReadEndpoint,
 		decodeCountReadRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/notice/clear/all", kithttp.NewServer(
+	r.Handle("/clear/all", kithttp.NewServer(
 		eps.ClearAllEndpoint,
 		decodeClearAllRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("POST")
 
-	r.Handle("/notice/detail/{id:[0-9]+}", kithttp.NewServer(
+	r.Handle("/detail/{id:[0-9]+}", kithttp.NewServer(
 		eps.DetailEndpoint,
 		decodeDetailRequest,
 		encode.EncodeResponse,

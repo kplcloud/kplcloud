@@ -91,7 +91,7 @@ func MakeHandler(svc Service, logger log.Logger) http.Handler {
 	}
 
 	r := mux.NewRouter()
-	r.Handle("/member/namespaces", kithttp.NewServer(
+	r.Handle("/namespaces", kithttp.NewServer(
 		eps.NamespacesEndpoint,
 		func(ctx context.Context, r *http.Request) (request interface{}, err error) {
 			return nil, nil
@@ -100,14 +100,14 @@ func MakeHandler(svc Service, logger log.Logger) http.Handler {
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/member", kithttp.NewServer(
+	r.Handle("/", kithttp.NewServer(
 		eps.ListEndpoint,
 		decodeListMemberRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/member/me", kithttp.NewServer(
+	r.Handle("/me", kithttp.NewServer(
 		eps.MeEndpoint,
 		func(ctx context.Context, r *http.Request) (request interface{}, err error) {
 			return nil, nil
@@ -116,28 +116,28 @@ func MakeHandler(svc Service, logger log.Logger) http.Handler {
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/member/{id:[0-9]+}", kithttp.NewServer(
+	r.Handle("/{id:[0-9]+}", kithttp.NewServer(
 		eps.DetailEndpoint,
 		decodeGetMemberRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/member", kithttp.NewServer(
+	r.Handle("/", kithttp.NewServer(
 		eps.PostEndpoint,
 		decodePostMemberRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("POST")
 
-	r.Handle("/member/{id:[0-9]+}", kithttp.NewServer(
+	r.Handle("/{id:[0-9]+}", kithttp.NewServer(
 		eps.UpdateEndpoint,
 		decodeUpdateMemberRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("PUT")
 
-	r.Handle("/member/all", kithttp.NewServer(
+	r.Handle("/all", kithttp.NewServer(
 		eps.AllEndpoint,
 		decodeAllRequest,
 		encode.EncodeResponse,

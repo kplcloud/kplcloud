@@ -59,7 +59,7 @@ func MakeHandler(svc Service, logger kitlog.Logger) http.Handler {
 
 	r := mux.NewRouter()
 
-	r.Handle("/statistics/{namespace}/build", kithttp.NewServer(
+	r.Handle("/{namespace}/build", kithttp.NewServer(
 		eps.BuildEndpoint,
 		decodeBuildRequest,
 		encode.EncodeResponse,

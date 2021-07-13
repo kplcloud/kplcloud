@@ -17,6 +17,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -123,6 +124,9 @@ func NewClient(cf *config.Config) Repo {
 		_ = client.SetBaseURL(gitAddr)
 
 		return NewGitlab(client)
+	} else if strings.EqualFold(gitType, "coding") {
+		// ID: 7664386
+		return NewCoding()
 	}
 	return nil
 }

@@ -120,139 +120,139 @@ func MakeHandler(svc Service, logger log.Logger, groupRepository repository.Grou
 
 	r := mux.NewRouter()
 
-	r.Handle("/group", kithttp.NewServer(
+	r.Handle("/", kithttp.NewServer(
 		adminEpsMap["post"],
 		decodePostRequest,
 		encode.EncodeResponse,
 		opts...)).Methods("POST")
-	r.Handle("/group", kithttp.NewServer(
+	r.Handle("/", kithttp.NewServer(
 		commonEpsMap["getAll"],
 		decodeGetAllRequest,
 		encode.EncodeResponse,
 		opts...)).Methods("GET")
 
-	r.Handle("/group/admin-add", kithttp.NewServer(
+	r.Handle("/admin-add", kithttp.NewServer(
 		adminEpsMap["adminAdd"],
 		decodePostRequest,
 		encode.EncodeResponse,
 		opts...)).Methods("POST")
-	r.Handle("/group/{groupId:[0-9]+}/admin-update", kithttp.NewServer(
+	r.Handle("/{groupId:[0-9]+}/admin-update", kithttp.NewServer(
 		adminEpsMap["adminUpdate"],
 		decodeAdminUpdateGroupRequest,
 		encode.EncodeResponse,
 		opts...)).Methods("PUT")
-	r.Handle("/group/member-like", kithttp.NewServer(
+	r.Handle("/member-like", kithttp.NewServer(
 		commonEpsMap["memberByEmailLike"],
 		decodeMemberEmailLikeRequest,
 		encode.EncodeResponse,
 		opts...)).Methods("GET")
-	r.Handle("/group/{groupId:[0-9]+}/admin-delete", kithttp.NewServer(
+	r.Handle("/{groupId:[0-9]+}/admin-delete", kithttp.NewServer(
 		adminEpsMap["adminDestroy"],
 		decodeAdminDestroy,
 		encode.EncodeResponse,
 		opts...)).Methods("DELETE")
-	r.Handle("/group/namespace/{ns}/project", kithttp.NewServer(
+	r.Handle("/namespace/{ns}/project", kithttp.NewServer(
 		commonEpsMap["nsProjectList"],
 		decodeNsProjectList,
 		encode.EncodeResponse,
 		opts...)).Methods("GET")
-	r.Handle("/group/namespace/{ns}/cronjob", kithttp.NewServer(
+	r.Handle("/namespace/{ns}/cronjob", kithttp.NewServer(
 		commonEpsMap["nsCronjobList"],
 		decodeNsCronjobList,
 		encode.EncodeResponse,
 		opts...)).Methods("GET")
-	r.Handle("/group/{groupId:[0-9]+}/admin-add-project/{projectId:[0-9]+}", kithttp.NewServer(
+	r.Handle("/{groupId:[0-9]+}/admin-add-project/{projectId:[0-9]+}", kithttp.NewServer(
 		adminEpsMap["adminAddProject"],
 		decodeAdminDoProject,
 		encode.EncodeResponse,
 		opts...)).Methods("POST")
-	r.Handle("/group/{groupId:[0-9]+}/admin-add-cronjob/{cronjobId:[0-9]+}", kithttp.NewServer(
+	r.Handle("/{groupId:[0-9]+}/admin-add-cronjob/{cronjobId:[0-9]+}", kithttp.NewServer(
 		adminEpsMap["adminAddCronjob"],
 		decodeAdminDoCronjob,
 		encode.EncodeResponse,
 		opts...)).Methods("POST")
-	r.Handle("/group/{groupId:[0-9]+}/admin-add-member/{memberId:[0-9]+}", kithttp.NewServer(
+	r.Handle("/{groupId:[0-9]+}/admin-add-member/{memberId:[0-9]+}", kithttp.NewServer(
 		adminEpsMap["adminAddMember"],
 		decodeAdminDoMember,
 		encode.EncodeResponse,
 		opts...)).Methods("POST")
-	r.Handle("/group/{groupId:[0-9]+}/admin-del-member/{memberId:[0-9]+}", kithttp.NewServer(
+	r.Handle("/{groupId:[0-9]+}/admin-del-member/{memberId:[0-9]+}", kithttp.NewServer(
 		adminEpsMap["adminDelMember"],
 		decodeAdminDoMember,
 		encode.EncodeResponse,
 		opts...)).Methods("DELETE")
-	r.Handle("/group/{groupId:[0-9]+}/admin-del-project/{projectId:[0-9]+}", kithttp.NewServer(
+	r.Handle("/{groupId:[0-9]+}/admin-del-project/{projectId:[0-9]+}", kithttp.NewServer(
 		adminEpsMap["adminDelProject"],
 		decodeAdminDoProject,
 		encode.EncodeResponse,
 		opts...)).Methods("DELETE")
-	r.Handle("/group/{groupId:[0-9]+}/admin-del-cronjob/{cronjobId:[0-9]+}", kithttp.NewServer(
+	r.Handle("/{groupId:[0-9]+}/admin-del-cronjob/{cronjobId:[0-9]+}", kithttp.NewServer(
 		adminEpsMap["adminDelCronjob"],
 		decodeAdminDoCronjob,
 		encode.EncodeResponse,
 		opts...)).Methods("DELETE")
 
-	r.Handle("/group/owner-add-group", kithttp.NewServer(
+	r.Handle("/owner-add-group", kithttp.NewServer(
 		commonEpsMap["ownerAddGroup"],
 		decodeOwnerAddGroup,
 		encode.EncodeResponse,
 		opts...)).Methods("POST")
 
-	r.Handle("/group/{groupId:[0-9]+}/owner-update-group", kithttp.NewServer(
+	r.Handle("/{groupId:[0-9]+}/owner-update-group", kithttp.NewServer(
 		ownerEpsMap["ownerUpdateGroup"],
 		decodeOwnerUpdateGroup,
 		encode.EncodeResponse,
 		ownerOpts...)).Methods("PUT")
 
-	r.Handle("/group/{groupId:[0-9]+}/owner-add-member/{memberId:[0-9]+}", kithttp.NewServer(
+	r.Handle("/{groupId:[0-9]+}/owner-add-member/{memberId:[0-9]+}", kithttp.NewServer(
 		ownerEpsMap["ownerAddMember"],
 		decodeOwnerDoMember,
 		encode.EncodeResponse,
 		ownerOpts...)).Methods("POST")
 
-	r.Handle("/group/{groupId:[0-9]+}/owner-del-member/{memberId:[0-9]+}", kithttp.NewServer(
+	r.Handle("/{groupId:[0-9]+}/owner-del-member/{memberId:[0-9]+}", kithttp.NewServer(
 		ownerEpsMap["ownerDelMember"],
 		decodeOwnerDoMember,
 		encode.EncodeResponse,
 		ownerOpts...)).Methods("DELETE")
 
-	r.Handle("/group/{groupId:[0-9]+}/owner-add-project/{projectId:[0-9]+}", kithttp.NewServer(
+	r.Handle("/{groupId:[0-9]+}/owner-add-project/{projectId:[0-9]+}", kithttp.NewServer(
 		ownerEpsMap["ownerAddProject"],
 		decodeOwnerDoProject,
 		encode.EncodeResponse,
 		ownerOpts...)).Methods("POST")
 
-	r.Handle("/group/{groupId:[0-9]+}/owner-del-project/{projectId:[0-9]+}", kithttp.NewServer(
+	r.Handle("/{groupId:[0-9]+}/owner-del-project/{projectId:[0-9]+}", kithttp.NewServer(
 		ownerEpsMap["ownerDelProject"],
 		decodeOwnerDoProject,
 		encode.EncodeResponse,
 		ownerOpts...)).Methods("DELETE")
 
-	r.Handle("/group/{groupId:[0-9]+}/owner-add-cronjob/{cronjobId:[0-9]+}", kithttp.NewServer(
+	r.Handle("/{groupId:[0-9]+}/owner-add-cronjob/{cronjobId:[0-9]+}", kithttp.NewServer(
 		ownerEpsMap["ownerAddCronjob"],
 		decodeOwnerDoCronjob,
 		encode.EncodeResponse,
 		ownerOpts...)).Methods("POST")
 
-	r.Handle("/group/{groupId:[0-9]+}/owner-del-cronjob/{cronjobId:[0-9]+}", kithttp.NewServer(
+	r.Handle("/{groupId:[0-9]+}/owner-del-cronjob/{cronjobId:[0-9]+}", kithttp.NewServer(
 		ownerEpsMap["ownerDelCronjob"],
 		decodeOwnerDoCronjob,
 		encode.EncodeResponse,
 		ownerOpts...)).Methods("DELETE")
 
-	r.Handle("/group/{groupId:[0-9]+}/owner-del-group", kithttp.NewServer(
+	r.Handle("/{groupId:[0-9]+}/owner-del-group", kithttp.NewServer(
 		ownerEpsMap["ownerDelGroup"],
 		decodeOwnerDelGroup,
 		encode.EncodeResponse,
 		ownerOpts...)).Methods("DELETE")
 
-	r.Handle("/group/user-my-list", kithttp.NewServer(
+	r.Handle("/user-my-list", kithttp.NewServer(
 		commonEpsMap["userMyList"],
 		decodeUserMyList,
 		encode.EncodeResponse,
 		opts...)).Methods("GET")
 
-	r.Handle("/group/user-ns-list", kithttp.NewServer(
+	r.Handle("/user-ns-list", kithttp.NewServer(
 		commonEpsMap["userNsList"],
 		func(i context.Context, request2 *http.Request) (request interface{}, err error) {
 			return nil, nil
@@ -260,19 +260,19 @@ func MakeHandler(svc Service, logger log.Logger, groupRepository repository.Grou
 		encode.EncodeResponse,
 		opts...)).Methods("GET")
 
-	r.Handle("/group/{groupId:[0-9]+}/rel", kithttp.NewServer(
+	r.Handle("/{groupId:[0-9]+}/rel", kithttp.NewServer(
 		commonEpsMap["relDetail"],
 		decodeRelDetail,
 		encode.EncodeResponse,
 		opts...)).Methods("GET")
 
-	r.Handle("/group/name/exists", kithttp.NewServer(
+	r.Handle("/name/exists", kithttp.NewServer(
 		commonEpsMap["nameExists"],
 		decodeGroupNameIsExists,
 		encode.EncodeResponse,
 		opts...)).Methods("GET")
 
-	r.Handle("/group/display_name/exists", kithttp.NewServer(
+	r.Handle("/display_name/exists", kithttp.NewServer(
 		commonEpsMap["displayNameExists"],
 		decodeGroupDisplayNameIsExists,
 		encode.EncodeResponse,
