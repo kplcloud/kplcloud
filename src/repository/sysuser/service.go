@@ -13,7 +13,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 
-	"github.com/icowan/kit-admin/src/repository/types"
+	"github.com/kplcloud/kplcloud/src/repository/types"
 )
 
 type Service interface {
@@ -63,11 +63,11 @@ func (s *service) Delete(ctx context.Context, userId int64, unscoped bool) (err 
 			Unscoped().Delete(nil).Error; err != nil {
 			return err
 		}
-		return tx.Model(&types.SysUser{Id:userId}).Where("id = ?", userId).
-				Unscoped().Delete(&types.SysUser{}).Error
+		return tx.Model(&types.SysUser{Id: userId}).Where("id = ?", userId).
+			Unscoped().Delete(&types.SysUser{}).Error
 	}
 
-	err = tx.Model(&types.SysUser{Id:userId}).Where("id = ?", userId).Delete(&types.SysUser{}).Error
+	err = tx.Model(&types.SysUser{Id: userId}).Where("id = ?", userId).Delete(&types.SysUser{}).Error
 
 	return
 }

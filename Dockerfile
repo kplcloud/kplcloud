@@ -20,7 +20,7 @@ RUN apk add --no-cache \
 
 ENV GO111MODULE=on
 ENV GOPROXY=https://goproxy.cn
-ENV BUILDPATH=github.com/icowan/kit-admin
+ENV BUILDPATH=github.com/kplcloud/kplcloud
 RUN mkdir -p /go/src/${BUILDPATH}
 COPY ./ /go/src/${BUILDPATH}
 WORKDIR /go/src/${BUILDPATH}/cmd

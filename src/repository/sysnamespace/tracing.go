@@ -13,7 +13,7 @@ import (
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 
-	"github.com/icowan/kit-admin/src/repository/types"
+	"github.com/kplcloud/kplcloud/src/repository/types"
 )
 
 type tracing struct {

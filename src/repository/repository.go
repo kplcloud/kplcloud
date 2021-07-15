@@ -13,11 +13,11 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/opentracing/opentracing-go"
 
-	"github.com/icowan/kit-admin/src/repository/sysnamespace"
-	"github.com/icowan/kit-admin/src/repository/syspermission"
-	"github.com/icowan/kit-admin/src/repository/sysrole"
-	"github.com/icowan/kit-admin/src/repository/syssetting"
-	"github.com/icowan/kit-admin/src/repository/sysuser"
+	"github.com/kplcloud/kplcloud/src/repository/sysnamespace"
+	"github.com/kplcloud/kplcloud/src/repository/syspermission"
+	"github.com/kplcloud/kplcloud/src/repository/sysrole"
+	"github.com/kplcloud/kplcloud/src/repository/syssetting"
+	"github.com/kplcloud/kplcloud/src/repository/sysuser"
 )
 
 type Repository interface {

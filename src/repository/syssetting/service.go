@@ -12,7 +12,7 @@ import (
 
 	"github.com/jinzhu/gorm"
 
-	"github.com/icowan/kit-admin/src/repository/types"
+	"github.com/kplcloud/kplcloud/src/repository/types"
 )
 
 type Service interface {

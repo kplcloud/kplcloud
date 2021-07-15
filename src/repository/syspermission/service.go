@@ -9,8 +9,8 @@ package syspermission
 
 import (
 	"context"
-	"github.com/icowan/kit-admin/src/repository/types"
 	"github.com/jinzhu/gorm"
+	"github.com/kplcloud/kplcloud/src/repository/types"
 )
 
 type Middleware func(next Service) Service

@@ -14,7 +14,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 
-	"github.com/icowan/kit-admin/src/repository/types"
+	"github.com/kplcloud/kplcloud/src/repository/types"
 )
 
 type loggingServer struct {
