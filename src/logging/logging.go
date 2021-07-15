@@ -12,6 +12,10 @@ import (
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/go-kit/kit/log/term"
+	"github.com/go-kit/kit/transport"
+	"github.com/hashicorp/consul/api"
+	"github.com/icowan/config"
+	"github.com/jinzhu/gorm"
 	"github.com/lestrrat-go/file-rotatelogs"
 	"log"
 	"os"
@@ -20,14 +24,59 @@ import (
 )
 
 const (
-	LoggerRequestId = "trace-id"
-	TraceId         = "trace-id"
+	TraceId = "traceId"
 )
 
-func SetLogging(logger kitlog.Logger, logPath, levelOut string) kitlog.Logger {
-	if logPath != "" {
+// LogErrorHandler is a transport error handler implementation which logs an error.
+type LogErrorHandler struct {
+	logger kitlog.Logger
+	apiSvc api.Service
+	appId  int
+}
+
+func (l *LogErrorHandler) Handle(ctx context.Context, err error) {
+	var errDefined bool
+	for k := range encode.ResponseMessage {
+		if strings.Contains(err.Error(), k.Error().Error()) {
+			errDefined = true
+			break
+		}
+	}
+
+	defer func() {
+		_ = l.logger.Log("traceId", ctx.Value(TraceId), "err", err.Error())
+	}()
+
+	if !errDefined {
+		go func(err error) {
+			hostname, _ := os.Hostname()
+			//res, err := l.apiSvc.Alarm().Warn(ctx, l.appId,
+			//	fmt.Sprintf("\nMessage: 未定义错误! \nError: %s \nHostname: %s",
+			//		err.Error(),
+			//		hostname,
+			//	))
+			//if err != nil {
+			//	log.Println(err)
+			//	return
+			//}
+			//b, _ := json.Marshal(res)
+			log.Println(fmt.Sprintf("host: %s, err: %s", hostname, err.Error()))
+		}(err)
+	}
+}
+
+func NewLogErrorHandler(logger kitlog.Logger, apiSvc api.Service, appId int) transport.ErrorHandler {
+	return &LogErrorHandler{
+		logger: logger,
+		apiSvc: apiSvc,
+		appId:  appId,
+	}
+}
+
+func SetLogging(logger kitlog.Logger, cf *config.Config) kitlog.Logger {
+	if cf.GetString(config.SectionServer, "log.path") != "" {
 		// default log
-		logger = defaultLogger(logPath)
+		logger = defaultLogger(cf.GetString(config.SectionServer, "log.path"))
 		logger = kitlog.WithPrefix(logger, "ts", kitlog.TimestampFormat(func() time.Time {
 			return time.Now()
 		}, "2006-01-02 15:04:05"))
@@ -38,7 +87,7 @@ func SetLogging(logger kitlog.Logger, logPath, levelOut string) kitlog.Logger {
 			return time.Now()
 		}, "2006-01-02 15:04:05"))
 	}
-	logger = level.NewFilter(logger, logLevel(levelOut))
+	logger = level.NewFilter(logger, logLevel(cf.GetString(config.SectionServer, "log.level")))
 	logger = kitlog.With(logger, "caller", kitlog.DefaultCaller)
 
 	return logger
@@ -109,4 +158,19 @@ func colorFunc() func(keyvals ...interface{}) term.FgBgColor {
 		}
 		return term.FgBgColor{}
 	}
+}
+
+type gormLogger struct {
+	gorm.LogWriter
+	logger kitlog.Logger
+}
+
+func (g gormLogger) Println(v ...interface{}) {
+	for _, dd := range v {
+		_ = level.Debug(g.logger).Log("sql", dd)
+	}
+}
+
+func NewGormLogger(logger kitlog.Logger) gorm.LogWriter {
+	return &gormLogger{logger: logger}
 }
