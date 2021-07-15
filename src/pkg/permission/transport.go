@@ -87,7 +87,7 @@ func MakeHandler(svc Service, logger log.Logger) http.Handler {
 
 	r := mux.NewRouter()
 
-	r.Handle("/menu", kithttp.NewServer(
+	r.Handle("/permission/menu", kithttp.NewServer(
 		eps.MenuEndpoint,
 		func(ctx context.Context, req *http.Request) (request interface{}, err error) {
 			return
@@ -96,7 +96,7 @@ func MakeHandler(svc Service, logger log.Logger) http.Handler {
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/list", kithttp.NewServer(
+	r.Handle("/permission/list", kithttp.NewServer(
 		eps.ListEndpoint,
 		func(ctx context.Context, req *http.Request) (request interface{}, err error) {
 			return
@@ -105,28 +105,28 @@ func MakeHandler(svc Service, logger log.Logger) http.Handler {
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/{id:[0-9]+}", kithttp.NewServer(
+	r.Handle("/permission/{id:[0-9]+}", kithttp.NewServer(
 		eps.DeleteEndpoint,
 		decodeDeletePermissionRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("DELETE")
 
-	r.Handle("/{id:[0-9]+}", kithttp.NewServer(
+	r.Handle("/permission/{id:[0-9]+}", kithttp.NewServer(
 		eps.UpdateEndpoint,
 		decodePermissionRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("PUT")
 
-	r.Handle("/create", kithttp.NewServer(
+	r.Handle("/permission/create", kithttp.NewServer(
 		eps.PostEndpoint,
 		decodePermissionRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("POST")
 
-	r.Handle("/drag", kithttp.NewServer(
+	r.Handle("/permission/drag", kithttp.NewServer(
 		eps.DragEndpoint,
 		decodeDragRequest,
 		encode.EncodeResponse,

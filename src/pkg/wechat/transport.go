@@ -77,28 +77,28 @@ func MakeHandler(svc Service, logger kitlog.Logger) http.Handler {
 
 	r := mux.NewRouter()
 
-	r.Handle("/server", kithttp.NewServer(
+	r.Handle("/wechat/server", kithttp.NewServer(
 		eps.ReceiveEndpoint,
 		decodeReceiveRequest,
 		encodeResponse,
 		opts2...,
 	)).Methods("GET", "POST")
 
-	r.Handle("/qr", kithttp.NewServer(
+	r.Handle("/wechat/qr", kithttp.NewServer(
 		eps.GetQrEndpoint,
 		decodeGetQrRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("POST")
 
-	r.Handle("/testSend", kithttp.NewServer(
+	r.Handle("/wechat/testSend", kithttp.NewServer(
 		eps.TestSendEndpoint,
 		decodeTestSendRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("GET")
 
-	r.Handle("/menu", kithttp.NewServer(
+	r.Handle("/wechat/menu", kithttp.NewServer(
 		eps.MenuEndpoint,
 		decodeMenuRequest,
 		encode.EncodeResponse,

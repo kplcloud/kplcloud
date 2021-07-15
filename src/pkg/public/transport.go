@@ -59,21 +59,21 @@ func MakeHandler(svc Service, logger log.Logger) http.Handler {
 	}
 
 	r := mux.NewRouter()
-	r.Handle("/build/{namespace}/app/{name}", kithttp.NewServer(
+	r.Handle("/public/build/{namespace}/app/{name}", kithttp.NewServer(
 		eps.GitHooksEndpoint,
 		decodeRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("POST")
 
-	r.Handle("/prometheus/alerts", kithttp.NewServer(
+	r.Handle("/public/prometheus/alerts", kithttp.NewServer(
 		eps.PrometheusAlertEndpoint,
 		decodePromAlertRequest,
 		encode.EncodeResponse,
 		opts...,
 	)).Methods("POST")
 
-	r.Handle("/config", kithttp.NewServer(
+	r.Handle("/public/config", kithttp.NewServer(
 		eps.ConfigEndpoint,
 		decodeConfigRequest,
 		encode.EncodeResponse,
