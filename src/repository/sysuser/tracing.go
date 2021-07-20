@@ -23,6 +23,22 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) Delete(ctx context.Context, userId int64, unscoped bool) (err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Delete", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "repository.SysUser",
+	})
+	defer func() {
+		span.LogKV(
+			"userId", userId,
+			"unscoped", unscoped,
+			"error", err,
+		)
+		span.Finish()
+	}()
+	return s.next.Delete(ctx, userId, unscoped)
+}
+
 func (s *tracing) FindByRoleId(ctx context.Context, roleId int64, page, pageSize int) (res []types.SysUser, total int, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "FindByRoleId", opentracing.Tag{
 		Key:   string(ext.Component),

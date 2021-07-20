@@ -1,11 +1,14 @@
 module github.com/kplcloud/kplcloud
 
-go 1.13
+go 1.14
 
 require (
+	github.com/HdrHistogram/hdrhistogram-go v1.1.0 // indirect
 	github.com/PuerkitoBio/goquery v1.5.1
+	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/casbin/casbin v1.9.1
 	github.com/casbin/gorm-adapter v0.0.0-20190623160500-9d922cc6a7c5
+	github.com/dchest/captcha v0.0.0-20200903113550-03f5f0333e1f
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/spdystream v0.0.0-20181023171402-6480d4af844c // indirect
 	github.com/elazarl/goproxy v0.0.0-20190703090003-6125c262ffb0 // indirect
@@ -14,7 +17,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-kit/kit v0.10.0
 	github.com/go-redis/redis v6.15.9+incompatible
-	github.com/go-sql-driver/mysql v1.5.0
+	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/google/go-github/v26 v26.1.3
 	github.com/google/uuid v1.1.1
 	github.com/googleapis/gnostic v0.3.0 // indirect
@@ -23,8 +26,9 @@ require (
 	github.com/hashicorp/consul/api v1.3.0
 	github.com/howeyc/gopass v0.0.0-20170109162249-bf9dde6d0d2c // indirect
 	github.com/icowan/config v0.0.0-20200926110528-b95deb7acc31
+	github.com/icowan/kit-cache v0.4.0
 	github.com/icowan/mysql-client v0.1.0
-	github.com/icowan/redis-client v0.1.3
+	github.com/icowan/redis-client v0.2.0
 	github.com/igm/sockjs-go v2.0.1+incompatible // indirect
 	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 // indirect
@@ -33,11 +37,17 @@ require (
 	github.com/kplcloud/request v0.2.1
 	github.com/lestrrat-go/file-rotatelogs v2.2.0+incompatible
 	github.com/lestrrat-go/strftime v0.0.0-20190725011945-5c849dd2c51d // indirect
+	github.com/oklog/oklog v0.3.2
+	github.com/opentracing/opentracing-go v1.1.0
 	github.com/pkg/errors v0.8.1
 	github.com/prometheus/client_golang v1.3.0
+	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v0.0.5
 	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	github.com/tebeka/strftime v0.1.3 // indirect
+	github.com/teris-io/shortid v0.0.0-20201117134242-e59966efd125
+	github.com/uber/jaeger-client-go v2.29.1+incompatible
+	github.com/uber/jaeger-lib v2.4.1+incompatible
 	github.com/xanzy/go-gitlab v0.18.0
 	github.com/yijizhichang/wechat-sdk v0.1.3
 	golang.org/x/crypto v0.0.0-20191205180655-e7c4368fe9dd

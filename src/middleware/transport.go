@@ -9,11 +9,9 @@ package middleware
 
 import (
 	"context"
-	"github.com/go-kit/kit/auth/casbin"
 	"github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
-	kplcasbin "github.com/kplcloud/kplcloud/src/casbin"
 	"github.com/kplcloud/kplcloud/src/util/uid"
 	stdhttp "net/http"
 	"strconv"
@@ -49,10 +47,10 @@ func GroupIdToContext() http.RequestFunc {
 
 func CasbinToContext() http.RequestFunc {
 	return func(ctx context.Context, request *stdhttp.Request) context.Context {
-		casbinCtx := kplcasbin.GetCasbin().GetContext()
-		ctx = context.WithValue(ctx, casbin.CasbinModelContextKey, casbinCtx.Value(casbin.CasbinModelContextKey))
-		ctx = context.WithValue(ctx, casbin.CasbinPolicyContextKey, casbinCtx.Value(casbin.CasbinPolicyContextKey))
-		ctx = context.WithValue(ctx, casbin.CasbinEnforcerContextKey, casbinCtx.Value(casbin.CasbinEnforcerContextKey))
+		//casbinCtx := kplcasbin.GetCasbin().GetContext()
+		//ctx = context.WithValue(ctx, casbin.CasbinModelContextKey, casbinCtx.Value(casbin.CasbinModelContextKey))
+		//ctx = context.WithValue(ctx, casbin.CasbinPolicyContextKey, casbinCtx.Value(casbin.CasbinPolicyContextKey))
+		//ctx = context.WithValue(ctx, casbin.CasbinEnforcerContextKey, casbinCtx.Value(casbin.CasbinEnforcerContextKey))
 		return ctx
 	}
 }

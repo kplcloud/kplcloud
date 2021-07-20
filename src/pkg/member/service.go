@@ -13,14 +13,12 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/icowan/config"
-	"github.com/kplcloud/kplcloud/src/casbin"
 	"github.com/kplcloud/kplcloud/src/middleware"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	"github.com/kplcloud/kplcloud/src/util/encode"
 	"github.com/kplcloud/kplcloud/src/util/paginator"
 	"gopkg.in/guregu/null.v3"
-	"strconv"
 )
 
 var (
@@ -50,18 +48,15 @@ type Service interface {
 type service struct {
 	logger     log.Logger
 	config     *config.Config
-	casbin     casbin.Casbin
 	repository repository.Repository
 }
 
 func NewService(logger log.Logger,
 	config *config.Config,
-	casbin casbin.Casbin,
 	store repository.Repository) Service {
 
 	return &service{logger,
 		config,
-		casbin,
 		store,
 	}
 }
@@ -229,13 +224,13 @@ func (c *service) Update(ctx context.Context, id int64, username, email, passwor
 	member.Namespaces = namespaceList
 	member.Roles = roleList
 
-	c.casbin.GetEnforcer().DeleteRolesForUser(strconv.Itoa(int(member.ID)))
-	for _, role := range roleList {
-		if _, err = c.casbin.GetEnforcer().AddGroupingPolicySafe(strconv.Itoa(int(member.ID)), strconv.Itoa(int(role.ID))); err != nil {
-			_ = level.Error(c.logger).Log("GetEnforcer", "AddGroupingPolicySafe", "err", err.Error())
-		}
-	}
-	_ = c.casbin.GetEnforcer().LoadPolicy()
+	//c.casbin.GetEnforcer().DeleteRolesForUser(strconv.Itoa(int(member.ID)))
+	//for _, role := range roleList {
+	//	if _, err = c.casbin.GetEnforcer().AddGroupingPolicySafe(strconv.Itoa(int(member.ID)), strconv.Itoa(int(role.ID))); err != nil {
+	//		_ = level.Error(c.logger).Log("GetEnforcer", "AddGroupingPolicySafe", "err", err.Error())
+	//	}
+	//}
+	//_ = c.casbin.GetEnforcer().LoadPolicy()
 
 	return c.repository.Member().UpdateMember(member)
 }

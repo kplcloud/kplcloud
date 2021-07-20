@@ -12,12 +12,9 @@ import (
 	"errors"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/kplcloud/kplcloud/src/casbin"
-	"github.com/kplcloud/kplcloud/src/middleware"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	"gopkg.in/guregu/null.v3"
-	"strconv"
 )
 
 var (
@@ -54,14 +51,12 @@ type Service interface {
 
 type service struct {
 	logger     log.Logger
-	casbin     casbin.Casbin
 	repository repository.Repository
 }
 
 func NewService(logger log.Logger,
-	casbin casbin.Casbin, repository repository.Repository) Service {
+	repository repository.Repository) Service {
 	return &service{logger,
-		casbin,
 		repository}
 }
 
@@ -120,9 +115,9 @@ func (c *service) Update(ctx context.Context, id int64, icon, keyType string, me
 	}
 
 	go func() {
-		if _, err := c.casbin.GetEnforcer().AddPolicySafe("1", permission.Path, permission.Method.String); err != nil {
-			_ = level.Error(c.logger).Log("enforcer", "AddPolicySafe", "err", err.Error())
-		}
+		//if _, err := c.casbin.GetEnforcer().AddPolicySafe("1", permission.Path, permission.Method.String); err != nil {
+		//	_ = level.Error(c.logger).Log("enforcer", "AddPolicySafe", "err", err.Error())
+		//}
 		if err := c.repository.Role().AddRolePermission(&types.Role{ID: 1}, permission); err != nil {
 			_ = level.Error(c.logger).Log("roleRepository", "AddRolePermission", "err", err.Error())
 		}
@@ -149,9 +144,9 @@ func (c *service) Post(ctx context.Context, name, path, method, icon string, isM
 		return ErrPermissionCreate
 	}
 
-	if !c.casbin.GetEnforcer().AddPolicy("1", path, method) {
-		_ = level.Error(c.logger).Log("GetEnforcer", "AddPolicy", "bool", false)
-	}
+	//if !c.casbin.GetEnforcer().AddPolicy("1", path, method) {
+	//	_ = level.Error(c.logger).Log("GetEnforcer", "AddPolicy", "bool", false)
+	//}
 
 	return nil
 }
@@ -179,30 +174,30 @@ func (c *service) Drag(ctx context.Context, dragKey, dropKey int64) (res []*type
 }
 
 func (c *service) Menu(ctx context.Context) (res []*types.Permission, err error) {
-	userId := ctx.Value(middleware.UserIdContext).(int64)
+	//userId := ctx.Value(middleware.UserIdContext).(int64)
 
 	menus, err := c.repository.Permission().FindMenus()
 	if err != nil {
 		_ = level.Error(c.logger).Log("permissionRepository", "FindMenus", "err", err.Error())
 		return nil, ErrPermissionMenusGet
 	}
-	roles, err := c.casbin.GetEnforcer().GetRolesForUser(strconv.Itoa(int(userId)))
-	if err != nil {
-		_ = level.Error(c.logger).Log("GetEnforcer", "GetRolesForUser", "err", err.Error())
-		return nil, ErrPermissionRole
-	}
+	//roles, err := c.casbin.GetEnforcer().GetRolesForUser(strconv.Itoa(int(userId)))
+	//if err != nil {
+	//	_ = level.Error(c.logger).Log("GetEnforcer", "GetRolesForUser", "err", err.Error())
+	//	return nil, ErrPermissionRole
+	//}
 
 	// 有一种空间换时间的方案可以试试
 
 	var perms []string
 	permMap := make(map[string]bool)
-	for _, role := range roles {
-		for _, val := range c.casbin.GetEnforcer().GetPermissionsForUser(role) {
-			if len(val) > 1 {
-				permMap[val[1]] = true
-			}
-		}
-	}
+	//for _, role := range roles {
+	//	for _, val := range c.casbin.GetEnforcer().GetPermissionsForUser(role) {
+	//		if len(val) > 1 {
+	//			permMap[val[1]] = true
+	//		}
+	//	}
+	//}
 
 	for key, _ := range permMap {
 		perms = append(perms, key)

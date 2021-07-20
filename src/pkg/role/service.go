@@ -12,11 +12,9 @@ import (
 	"errors"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/kplcloud/kplcloud/src/casbin"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	"gopkg.in/guregu/null.v3"
-	"strconv"
 )
 
 var (
@@ -54,12 +52,11 @@ type Service interface {
 
 type service struct {
 	logger     log.Logger
-	casbin     casbin.Casbin
 	repository repository.Repository
 }
 
-func NewService(logger log.Logger, casbin casbin.Casbin, repository repository.Repository) Service {
-	return &service{logger, casbin, repository}
+func NewService(logger log.Logger, repository repository.Repository) Service {
+	return &service{logger, repository}
 }
 
 func (c *service) PermissionSelected(ctx context.Context, id int64) (ids []int64, err error) {
@@ -147,7 +144,7 @@ func (c *service) RolePermission(ctx context.Context, id int64, permIds []int64)
 
 	menuIds := make(map[int64]int64)
 
-	c.casbin.GetEnforcer().DeletePermissionsForUser(strconv.Itoa(int(role.ID)))
+	//c.casbin.GetEnforcer().DeletePermissionsForUser(strconv.Itoa(int(role.ID)))
 
 	for _, perm := range perms {
 		if perm.ParentID != null.IntFrom(0) {
@@ -161,11 +158,11 @@ func (c *service) RolePermission(ctx context.Context, id int64, permIds []int64)
 
 	res, _ := c.repository.Permission().FindByIds(ids)
 	perms = append(perms, res...)
-	for _, perm := range perms {
-		if _, err = c.casbin.GetEnforcer().AddPolicySafe(strconv.Itoa(int(role.ID)), perm.Path, perm.Method.String); err != nil {
-			_ = level.Warn(c.logger).Log("GetEnforcer", "AddPolicySafe", "err", err.Error())
-		}
-	}
+	//for _, perm := range perms {
+	//	if _, err = c.casbin.GetEnforcer().AddPolicySafe(strconv.Itoa(int(role.ID)), perm.Path, perm.Method.String); err != nil {
+	//		_ = level.Warn(c.logger).Log("GetEnforcer", "AddPolicySafe", "err", err.Error())
+	//	}
+	//}
 
 	return nil
 }

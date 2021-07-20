@@ -20,7 +20,7 @@ import (
 	"github.com/kplcloud/kplcloud/src/repository/sysuser"
 )
 
-type Repository interface {
+type Repository2 interface {
 	SysSetting() syssetting.Service
 	SysUser() sysuser.Service
 	SysNamespace() sysnamespace.Service
@@ -56,7 +56,7 @@ func (r *repository) SysSetting() syssetting.Service {
 	return r.sysSetting
 }
 
-func NewRepository(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Tracer, redis redisclient.RedisClient) Repository {
+func NewRepository2(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Tracer, redis redisclient.RedisClient) Repository2 {
 	// 平台系统相关仓库
 	sysSetting := syssetting.New(db)
 	sysSetting = syssetting.NewLogging(logger, traceId)(sysSetting)

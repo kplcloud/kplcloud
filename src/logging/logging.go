@@ -8,19 +8,24 @@
 package logging
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
 	kitlog "github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/go-kit/kit/log/term"
 	"github.com/go-kit/kit/transport"
-	"github.com/hashicorp/consul/api"
 	"github.com/icowan/config"
 	"github.com/jinzhu/gorm"
 	"github.com/lestrrat-go/file-rotatelogs"
-	"log"
-	"os"
-	"path/filepath"
-	"time"
+
+	"github.com/kplcloud/kplcloud/src/api"
+	"github.com/kplcloud/kplcloud/src/encode"
 )
 
 const (
