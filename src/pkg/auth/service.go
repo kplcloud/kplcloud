@@ -11,7 +11,6 @@ import (
 	"github.com/google/go-github/v26/github"
 	"github.com/icowan/config"
 	"github.com/jtblin/go-ldap-client"
-	kplcasbin "github.com/kplcloud/kplcloud/src/casbin"
 	kpljwt "github.com/kplcloud/kplcloud/src/jwt"
 	"github.com/kplcloud/kplcloud/src/middleware"
 	"github.com/kplcloud/kplcloud/src/repository"
@@ -24,7 +23,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -64,7 +62,6 @@ type Service interface {
 type service struct {
 	logger     log.Logger
 	config     *config.Config
-	casbin     kplcasbin.Casbin
 	repository repository.Repository
 }
 
@@ -245,11 +242,11 @@ func (c *service) AuthLogin(email, username string) (rs string, member *types.Me
 			_ = level.Error(c.logger).Log("member", "create", "err", err.Error())
 			return "", nil, nil, err
 		}
-		for _, role := range roles {
-			if _, err = c.casbin.GetEnforcer().AddGroupingPolicySafe(strconv.Itoa(int(member.ID)), strconv.Itoa(int(role.ID))); err != nil {
-				_ = level.Warn(c.logger).Log("GetEnforcer", "AddGroupingPolicySafe", "err", err.Error())
-			}
-		}
+		//for _, role := range roles {
+		//if _, err = c.casbin.GetEnforcer().AddGroupingPolicySafe(strconv.Itoa(int(member.ID)), strconv.Itoa(int(role.ID))); err != nil {
+		//	_ = level.Warn(c.logger).Log("GetEnforcer", "AddGroupingPolicySafe", "err", err.Error())
+		//}
+		//}
 	}
 
 	if member.State == UserStateFail {
@@ -337,11 +334,11 @@ func (c *service) Login(ctx context.Context, email, password string) (rs string,
 				_ = level.Error(c.logger).Log("member", "create", "err", err.Error())
 				return "", err
 			}
-			for _, role := range roles {
-				if _, err = c.casbin.GetEnforcer().AddGroupingPolicySafe(strconv.Itoa(int(info.ID)), strconv.Itoa(int(role.ID))); err != nil {
-					_ = level.Warn(c.logger).Log("GetEnforcer", "AddGroupingPolicySafe", "err", err.Error())
-				}
-			}
+			//for _, role := range roles {
+			//	if _, err = c.casbin.GetEnforcer().AddGroupingPolicySafe(strconv.Itoa(int(info.ID)), strconv.Itoa(int(role.ID))); err != nil {
+			//		_ = level.Warn(c.logger).Log("GetEnforcer", "AddGroupingPolicySafe", "err", err.Error())
+			//	}
+			//}
 
 		}
 	} else {
@@ -446,11 +443,10 @@ func (c *service) sign(email string, uid int64, namespaces []string, groups []in
 	return token.SignedString([]byte(kpljwt.GetJwtKey()))
 }
 
-func NewService(logger log.Logger, cf *config.Config, kplcasbin kplcasbin.Casbin, store repository.Repository) Service {
+func NewService(logger log.Logger, cf *config.Config, store repository.Repository) Service {
 	return &service{
 		logger:     logger,
 		config:     cf,
-		casbin:     kplcasbin,
 		repository: store,
 	}
 }

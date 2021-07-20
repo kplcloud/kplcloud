@@ -16,7 +16,6 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/icowan/config"
-	crd "github.com/kplcloud/kplcloud/src/istio/types/v1beta1"
 	"github.com/kplcloud/kplcloud/src/jenkins"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/middleware"
@@ -259,12 +258,12 @@ func (c *service) copyOnWrite(tpl *types.ProjectTemplate, appName, sourceNamespa
 		b, _ := yaml.Marshal(configmap)
 		return string(b)
 	case repository.VirtualService:
-		var out interface{}
-		var obj crd.IstioObject
-		if err = c.k8sClient.Do().RESTClient().Post().Namespace(destinationNamespace).
-			Resource(crd.VirtualServiceProtoSchema.String()).Body(out).Do().Into(obj); err != nil {
-			_ = level.Error(c.logger).Log("ConfigMaps", "Create", "err", err.Error())
-		}
+		//var out interface{}
+		//var obj crd.IstioObject
+		//if err = c.k8sClient.Do().RESTClient().Post().Namespace(destinationNamespace).
+		//	Resource(crd.VirtualServiceProtoSchema.String()).Body(out).Do().Into(obj); err != nil {
+		//	_ = level.Error(c.logger).Log("ConfigMaps", "Create", "err", err.Error())
+		//}
 	}
 
 	return ""

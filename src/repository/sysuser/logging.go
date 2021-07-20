@@ -23,6 +23,20 @@ type loggingServer struct {
 	traceId string
 }
 
+func (l *loggingServer) Delete(ctx context.Context, userId int64, unscoped bool) (err error) {
+	defer func(begin time.Time) {
+		_ = l.logger.Log(
+			l.traceId, ctx.Value(l.traceId),
+			"method", "Delete",
+			"userId", userId,
+			"unscoped", unscoped,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return l.next.Delete(ctx, userId, unscoped)
+}
+
 func (l *loggingServer) FindByRoleId(ctx context.Context, roleId int64, page, pageSize int) (res []types.SysUser, total int, err error) {
 	defer func(begin time.Time) {
 		_ = l.logger.Log(
