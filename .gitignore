@@ -6,6 +6,7 @@
 .idea/
 *.log
 app.cfg
+app.test.cfg
 config.yaml
 kplcloud
 logs

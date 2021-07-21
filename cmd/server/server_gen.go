@@ -28,7 +28,7 @@ var (
 可用的配置类型：
 [table, init-data]
 
-kit-admin generate -h
+kplcloud generate -h
 `,
 	}
 
@@ -38,7 +38,7 @@ kit-admin generate -h
 		SilenceErrors:     false,
 		DisableAutoGenTag: false,
 		Example: `
-kit-admin generate table all
+kplcloud generate table all
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// 关闭资源连接
@@ -65,7 +65,7 @@ kit-admin generate table all
 		SilenceErrors:     false,
 		DisableAutoGenTag: false,
 		Example: `
-kit-admin generate init-data
+kplcloud generate init-data
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// 关闭资源连接

@@ -12,7 +12,7 @@ PID = .pid
 HUB_ADDR =
 DOCKER_USER = hub.docker.com
 DOCKER_PWD =
-TAG = v0.2.9
+TAG = v2.0
 NAMESPACE = kplcloud
 PWD = $(shell pwd)
 
@@ -45,5 +45,8 @@ push:
 	docker image tag $(APPNAME):$(TAG) $(HUB_ADDR)/$(NAMESPACE)/$(APPNAME):$(TAG)
 	docker push $(HUB_ADDR)/$(NAMESPACE)/$(APPNAME):$(TAG)
 
+install:
+	GO111MODULE=on $(GORUN) ./cmd/main.go install -p :8080 -c ./app.dev.cfg
+
 run:
-	GO111MODULE=on $(GORUN) ./main.go start -p :8080 -c ./app.cfg -k config.yaml
+	GO111MODULE=on $(GORUN) ./cmd/main.go start -p :8080 -c ./app.dev.cfg
