@@ -3,26 +3,27 @@ package middleware
 import (
 	"context"
 	"errors"
-	"github.com/casbin/casbin"
+	"fmt"
+	"net/http"
+	"regexp"
+	"strings"
+
 	"github.com/dgrijalva/jwt-go"
-	kitcasbin "github.com/go-kit/kit/auth/casbin"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	kithttp "github.com/go-kit/kit/transport/http"
-	kpljwt "github.com/kplcloud/kplcloud/src/jwt"
+	"github.com/icowan/config"
+	kitcache "github.com/icowan/kit-cache"
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
+
+	"github.com/kplcloud/kplcloud/src/encode"
+	asdjwt "github.com/kplcloud/kplcloud/src/jwt"
 	"github.com/kplcloud/kplcloud/src/repository"
-	"net/http"
-	"strconv"
-	"strings"
 )
 
 var ErrorASD = errors.New("权限验证失败！")
-
-type checkRequest struct {
-	Namespace string `json:"namespace"`
-	Name      string `json:"name"`
-}
 
 type ASDContext string
 
@@ -48,59 +49,145 @@ var (
 	ErrCheckPermissionFailed = errors.New("校验权限失败")
 )
 
-func CheckAuthMiddleware(logger log.Logger) endpoint.Middleware {
+func CheckAuthMiddleware(logger log.Logger, cache kitcache.Service, tracer opentracing.Tracer) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-			token := ctx.Value(kithttp.ContextKeyRequestAuthorization).(string)
-
-			if token == "" {
-				return nil, ErrorASD
+			if tracer != nil {
+				var span opentracing.Span
+				span, ctx = opentracing.StartSpanFromContextWithTracer(ctx, tracer, "CheckAuthMiddleware", opentracing.Tag{
+					Key:   string(ext.Component),
+					Value: "Middleware",
+				})
+				defer func() {
+					span.LogKV("err", err)
+					span.Finish()
+				}()
 			}
-			token = strings.Split(token, "Bearer ")[1]
 
-			var clustom kpljwt.ArithmeticCustomClaims
-			tk, err := jwt.ParseWithClaims(token, &clustom, kpljwt.JwtKeyFunc)
+			token := ctx.Value(kithttp.ContextKeyRequestAuthorization).(string)
+			if token == "" {
+				_ = level.Warn(logger).Log("ctx", "Value", "err", encode.ErrAuthNotLogin.Error())
+				return nil, encode.ErrAuthNotLogin.Error()
+			}
+
+			var clustom asdjwt.ArithmeticCustomClaims
+			tk, err := jwt.ParseWithClaims(token, &clustom, asdjwt.JwtKeyFunc)
 			if err != nil || tk == nil {
 				_ = level.Error(logger).Log("jwt", "ParseWithClaims", "err", err)
+				err = encode.ErrAuthNotLogin.Wrap(err)
 				return
 			}
 
-			claim, ok := tk.Claims.(*kpljwt.ArithmeticCustomClaims)
+			claim, ok := tk.Claims.(*asdjwt.ArithmeticCustomClaims)
 			if !ok {
 				_ = level.Error(logger).Log("tk", "Claims", "err", ok)
-				err = ErrorASD
+				err = encode.ErrAccountASD.Error()
 				return
 			}
 
-			ctx = context.WithValue(ctx, UserIdContext, claim.UserId)
-			ctx = context.WithValue(ctx, EmailContext, claim.Name)
-			ctx = context.WithValue(ctx, NamespacesContext, claim.Namespaces)
-			ctx = context.WithValue(ctx, GroupIdsContext, claim.Groups)
-			ctx = context.WithValue(ctx, IsAdmin, claim.IsAdmin)
-			ctx = context.WithValue(ctx, RoleIdsContext, claim.RoleIds)
-
-			if !claim.IsAdmin {
-				var path, method = ctx.Value(kithttp.ContextKeyRequestPath), ctx.Value(kithttp.ContextKeyRequestMethod).(string)
-				var casbinErr error
-				var ctx2 interface{}
-				for _, groupId := range claim.RoleIds {
-					// casbin
-					mw := NewEnforcer(strconv.Itoa(int(groupId)), path, method)(func(ctx context.Context, request interface{}) (response interface{}, err error) {
-						return ctx, nil
-					})
-					ctx2, casbinErr = mw(ctx, request)
-					if casbinErr == nil {
-						break
-					}
-				}
-				if casbinErr != nil || ctx2 == nil {
-					return nil, kitcasbin.ErrUnauthorized
-				}
-				return next(ctx2.(context.Context), request)
+			// 查询用户是否退出
+			if _, err = cache.Get(ctx, fmt.Sprintf("login:%d:token", claim.UserId), nil); err != nil {
+				_ = level.Error(logger).Log("cache", "Get", "err", err)
+				err = encode.ErrAuthNotLogin.Wrap(err)
+				return
 			}
+
+			// TODO 获取用户信息
+			//if sysUser.Locked {
+			//	err = encode.ErrAccountLocked.Error()
+			//	_ = level.Error(logger).Log("sysUser", "Locked", "err", err)
+			//	return
+			//}
+
+			ctx = context.WithValue(ctx, UserIdContext, claim.UserId)
+			ctx = context.WithValue(ctx, "Authorization", token)
 			return next(ctx, request)
 		}
 	}
+}
+
+func CheckPermissionMiddleware(logger log.Logger, cfg *config.Config) endpoint.Middleware {
+	return func(next endpoint.Endpoint) endpoint.Endpoint {
+		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+			//	userId, ok := ctx.Value(UserIdContext).(int64)
+			//	if !ok {
+			//		err = encode.ErrAccountNotLogin.Error()
+			//		_ = level.Error(logger).Log("userIdContext", "is null")
+			//		return
+			//	}
+			//	var sysUser types.SysUser
+			//	_, err = cacheSvc.Get(ctx, cache.AccountLoginUserInfo.String(userId), &sysUser)
+			//	if err != nil {
+			//		err = encode.ErrAccountASD.Wrap(err)
+			//		_ = level.Error(logger).Log("cacheSvc", "Get", "err", err)
+			//		return
+			//	}
+			//
+			//	var roles []types.SysRole
+			//	// 超管标识,直接通过
+			//	for _, v := range sysUser.Roles {
+			//		if strings.EqualFold(cfg.GetString(config.SectionServer, "admin.tag"), v.Tag) {
+			//			return next(ctx, request)
+			//		}
+			//		roles = append(roles, v)
+			//	}
+			//
+			//	var requestPath, requestMethod = ctx.Value(kithttp.ContextKeyRequestPath).(string),
+			//		ctx.Value(kithttp.ContextKeyRequestMethod).(string)
+			//
+			//	// cache 查询权限可操作的资源
+			//	var perms []types.SysPermission
+			//	_, err = cacheSvc.Get(ctx, cache.AccountRolePermission.String(userId), &perms)
+			//	if err != nil {
+			//		err = encode.ErrAccountASD.Wrap(err)
+			//		_ = level.Error(logger).Log("cacheSvc", "Get", "err", err)
+			//		return
+			//	}
+			//
+			//	var pass bool
+			//P:
+			//	for _, v := range perms {
+			//		if !strings.EqualFold(v.Menu.Path, requestPath) && !keyMatch3(requestPath, v.Menu.Path) {
+			//			continue
+			//		}
+			//		for _, opt := range v.Operations {
+			//			if !strings.EqualFold(opt.Operation, requestMethod) {
+			//				continue
+			//			}
+			//			pass = true
+			//			break P
+			//		}
+			//	}
+			//
+			//	if !pass {
+			//		err = encode.ErrAccountASD.Error()
+			//		_ = level.Warn(logger).Log("userId", userId, "requestPath", requestPath, "method", requestMethod, "msg", "权限校验失败")
+			//		return
+			//	}
+
+			return next(ctx, request)
+		}
+	}
+}
+
+func keyMatch3(key1 string, key2 string) bool {
+	re := regexp.MustCompile(`(.*)\{[^/]+\}(.*)`)
+	for {
+		if !strings.Contains(key2, "/{") {
+			break
+		}
+
+		key2 = re.ReplaceAllString(key2, "$1[^/]+$2")
+	}
+	return regexMatch(key1, key2)
+}
+
+func regexMatch(key1 string, key2 string) bool {
+	res, err := regexp.MatchString(key2, key1)
+	if err != nil {
+		panic(err)
+	}
+	return res
 }
 
 func NamespaceMiddleware(logger log.Logger) endpoint.Middleware {
@@ -222,22 +309,6 @@ func ProjectMiddleware(logger log.Logger, projectRepository repository.ProjectRe
 				}
 			}()
 
-			return next(ctx, request)
-		}
-	}
-}
-
-func NewEnforcer(
-	subject string, object interface{}, action string,
-) endpoint.Middleware {
-	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, request interface{}) (
-			response interface{}, err error,
-		) {
-			enforcer := ctx.Value(kitcasbin.CasbinEnforcerContextKey).(*casbin.Enforcer)
-			if !enforcer.Enforce(subject, object, action) {
-				return nil, kitcasbin.ErrUnauthorized
-			}
 			return next(ctx, request)
 		}
 	}

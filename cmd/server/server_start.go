@@ -10,11 +10,15 @@ package server
 import (
 	"context"
 	"fmt"
-	"net"
+	"github.com/icowan/config"
+	kitcache "github.com/icowan/kit-cache"
+	mysqlclient "github.com/icowan/mysql-client"
+	"github.com/kplcloud/kplcloud/src/api"
+	"github.com/kplcloud/kplcloud/src/redis"
+	"github.com/kplcloud/kplcloud/src/repository"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -22,21 +26,16 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	kithttp "github.com/go-kit/kit/transport/http"
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
-	consulapi "github.com/hashicorp/consul/api"
 	"github.com/oklog/oklog/pkg/group"
 	stdopentracing "github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/time/rate"
 
 	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/logging"
 	"github.com/kplcloud/kplcloud/src/middleware"
-	"github.com/kplcloud/kplcloud/src/pkg/account"
-	"github.com/kplcloud/kplcloud/src/pkg/auth"
 	"github.com/kplcloud/kplcloud/src/pkg/syspermission"
 	"github.com/kplcloud/kplcloud/src/pkg/sysrole"
 	"github.com/kplcloud/kplcloud/src/pkg/sysuser"
@@ -47,7 +46,7 @@ var (
 		Use:   "start",
 		Short: "启动服务",
 		Example: `## 启动命令
-kit-admin start -p :8080 -g :8082
+kplcloud start -p :8080 -g :8082
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return start()
@@ -63,11 +62,12 @@ kit-admin start -p :8080 -g :8082
 
 	tracer stdopentracing.Tracer
 
-	authSvc          auth.Service
+	//authSvc          auth.Service
+	//accountSvc       account.Service
+
 	sysUserSvc       sysuser.Service
 	sysRoleSvc       sysrole.Service
 	sysPermissionSvc syspermission.Service
-	accountSvc       account.Service
 )
 
 func start() (err error) {
@@ -97,9 +97,14 @@ func start() (err error) {
 
 	// 以下是各个服务的初始化
 	// 授权登录
-	authSvc = auth.New(logger, logging.TraceId, cf, store, cacheSvc, apiSvc, cf.GetBool("server", "debug"))
-	authSvc = auth.NewLogging(logger, logging.TraceId)(authSvc)
+	//authSvc = auth.New(logger, logging.TraceId, cf, store, cacheSvc, apiSvc, cf.GetBool("server", "debug"))
+	//authSvc = auth.NewLogging(logger, logging.TraceId)(authSvc)
+	//
+	//// 用户信息模块
+	//accountSvc = account.New(logger, logging.TraceId, store)
+	//accountSvc = account.NewLogging(logger, logging.TraceId)(accountSvc)
 
+	// 系统模块
 	// 系统用户
 	sysUserSvc = sysuser.New(logger, logging.TraceId, store)
 	sysUserSvc = sysuser.NewLogging(logger, logging.TraceId)(sysUserSvc)
@@ -107,14 +112,11 @@ func start() (err error) {
 	sysRoleSvc = sysrole.New(logger, logging.TraceId, store)
 	sysRoleSvc = sysrole.NewLogging(logger, logging.TraceId)(sysRoleSvc)
 	// 用户信息模块
-	accountSvc = account.New(logger, logging.TraceId, store)
-	accountSvc = account.NewLogging(logger, logging.TraceId)(accountSvc)
-	// 用户信息模块
 	sysPermissionSvc = syspermission.New(logger, logging.TraceId, store)
 	sysPermissionSvc = syspermission.NewLogging(logger, logging.TraceId)(sysPermissionSvc)
 
 	if tracer != nil {
-		authSvc = auth.NewTracing(tracer)(authSvc)
+		//authSvc = auth.NewTracing(tracer)(authSvc)
 		sysUserSvc = sysuser.NewTracing(tracer)(sysUserSvc)
 		sysRoleSvc = sysrole.NewTracing(tracer)(sysRoleSvc)
 	}
@@ -124,8 +126,6 @@ func start() (err error) {
 	initHttpHandler(g)
 	initGRPCHandler(g)
 	initCancelInterrupt(g)
-
-	fmt.Println("asdfasdfasdfasdfasdfasd")
 
 	_ = level.Error(logger).Log("server exit", g.Run())
 	return nil
@@ -185,15 +185,16 @@ func initHttpHandler(g *group.Group) {
 
 	r := mux.NewRouter()
 
-	// 以下为系统模块
 	// 授权登录模块
-	r.PathPrefix("/admin/auth").Handler(http.StripPrefix("/admin/auth", auth.MakeHTTPHandler(authSvc, ems, opts)))
-	r.PathPrefix("/admin/account").Handler(http.StripPrefix("/admin/account", account.MakeHTTPHandler(accountSvc, tokenEms, opts)))
+	//r.PathPrefix("/admin/auth").Handler(http.StripPrefix("/admin/auth", auth.MakeHTTPHandler(authSvc, ems, opts)))
+	//r.PathPrefix("/admin/account").Handler(http.StripPrefix("/admin/account", account.MakeHTTPHandler(accountSvc, tokenEms, opts)))
+
+	// 以下为系统模块
 	// 系统用户模块
-	r.PathPrefix("/admin/system/user").Handler(http.StripPrefix("/admin/system/user", sysuser.MakeHTTPHandler(sysUserSvc, tokenEms, opts)))
+	r.PathPrefix("/system/user").Handler(http.StripPrefix("/system/user", sysuser.MakeHTTPHandler(sysUserSvc, tokenEms, opts)))
 	// 系统角色、权限
-	r.PathPrefix("/admin/system/role").Handler(http.StripPrefix("/admin/system/role", sysrole.MakeHTTPHandler(sysRoleSvc, tokenEms, opts)))
-	r.PathPrefix("/admin/system/permission").Handler(http.StripPrefix("/admin/system/permission", syspermission.MakeHTTPHandler(sysPermissionSvc, tokenEms, opts)))
+	r.PathPrefix("/system/role").Handler(http.StripPrefix("/system/role", sysrole.MakeHTTPHandler(sysRoleSvc, tokenEms, opts)))
+	r.PathPrefix("/system/permission").Handler(http.StripPrefix("/system/permission", syspermission.MakeHTTPHandler(sysPermissionSvc, tokenEms, opts)))
 
 	// 以下为业务模块
 
@@ -269,65 +270,60 @@ func initCancelInterrupt(g *group.Group) {
 	})
 }
 
-func registerConsul() {
-	config := consulapi.DefaultConfig()
-	config.Address = cf.GetString("service", "consul.host")
-	config.Token = cf.GetString("service", "consul.token")
-	client, err := consulapi.NewClient(config)
+func prepare() error {
+	cf, err = config.NewConfig(configPath)
 	if err != nil {
-		_ = level.Error(logger).Log("consulapi", "NewClient", "err", err.Error())
-		return
+		panic(err)
 	}
 
-	registration := new(consulapi.AgentServiceRegistration)
-	registration.ID = uuid.New().String()
-	registration.Name = appName + "." + namespace
-	registration.Port = 8080
-	registration.Tags = []string{appName, namespace, "golang", "activity"}
-	registration.Address = getLocalAddr()
-
-	check := new(consulapi.AgentServiceCheck)
-	check.HTTP = fmt.Sprintf("http://%s:%d/health", registration.Address, registration.Port)
-	check.Timeout = "5s"
-	check.Interval = "5s"
-	check.DeregisterCriticalServiceAfter = "60s" // 故障检查失败30s后 consul自动将注册服务删除
-	registration.Check = check
-
-	// 注册服务到consul
-	if err = client.Agent().ServiceRegister(registration); err != nil {
-		_ = level.Error(logger).Log("client.Agent", "ServiceRegister", "err", err.Error())
+	if appName == "" {
+		appName = cf.GetString(config.SectionServer, "app.name")
 	}
-	//client.Agent().ServiceDeregister()
-	var lastIndex uint64
-	services, metainfo, err := client.Health().Service(appName, "v1000", true, &consulapi.QueryOptions{
-		WaitIndex: lastIndex, // 同步点，这个调用将一直阻塞，直到有新的更新
-	})
+
+	logger = logging.SetLogging(logger, cf)
+
+	dbUrl := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local&timeout=20m&collation=utf8mb4_unicode_ci",
+		cf.GetString(config.SectionMysql, "user"),
+		cf.GetString(config.SectionMysql, "password"),
+		cf.GetString(config.SectionMysql, "host"),
+		cf.GetString(config.SectionMysql, "port"),
+		cf.GetString(config.SectionMysql, "database"))
+
+	// 连接数据库
+	db, err = mysqlclient.NewMysql(dbUrl, cf.GetBool(config.SectionServer, "app.debug"))
 	if err != nil {
-		logrus.Warn("error retrieving instances from Consul: %v", err)
+		_ = level.Error(logger).Log("db", "connect", "err", err)
+		return err
 	}
-	lastIndex = metainfo.LastIndex
 
-	addrs := map[string]struct{}{}
-	for _, service := range services {
-		fmt.Println("service.Service.Address:", service.Service.Address, "service.Service.Port:", service.Service.Port)
-		addrs[net.JoinHostPort(service.Service.Address, strconv.Itoa(service.Service.Port))] = struct{}{}
-	}
-}
-
-func getLocalAddr() string {
-	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		_ = level.Error(logger).Log("redis", "connect", "err", err)
+		return err
 	}
-	for _, address := range addrs {
-		// 检查ip地址判断是否回环地址
-		if ipNet, ok := address.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
-			if ipNet.IP.To4() != nil {
-				return ipNet.IP.String()
-			}
-		}
-	}
+	_ = level.Info(logger).Log("rds", "connect", "success", true)
 
-	return ""
+	//hashId = hashids.New("", cf.GetString(config.SectionServer, "app.key"), 12)
+
+	// 链路追踪
+	tracer, _, err = newJaegerTracer(cf)
+	if err != nil {
+		_ = level.Error(logger).Log("jaegerTracer", "connect", "err", err.Error())
+	}
+	// 实例化redis
+	rds, err = redis.New(cf.GetString(config.SectionRedis, "hosts"),
+		cf.GetString(config.SectionRedis, "password"),
+		cf.GetString(config.SectionRedis, "prefix"),
+		cf.GetInt(config.SectionRedis, "db"), tracer)
+	if err != nil {
+		_ = level.Error(logger).Log("redis", "connect", "err", err.Error())
+	}
+	// 实例化cache
+	cacheSvc = kitcache.New(logger, logging.TraceId, rds)
+	cacheSvc = kitcache.NewLoggingServer(logger, cacheSvc, logging.TraceId)
+	// 实例化仓库
+	store = repository.New(db, logger, logging.TraceId, tracer, rds)
+	// 实例化外部API
+	apiSvc = api.NewApi(logger, logging.TraceId, tracer, cf, cacheSvc)
+
+	return err
 }

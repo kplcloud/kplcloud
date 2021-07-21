@@ -24,7 +24,7 @@ var (
 		SilenceErrors:     false,
 		DisableAutoGenTag: false,
 		Example: `## 命令参考
-kit-admin setting -h
+kplcloud setting -h
 `,
 	}
 
@@ -34,7 +34,7 @@ kit-admin setting -h
 		SilenceErrors:     false,
 		DisableAutoGenTag: false,
 		Example: `
-kit-admin setting add HELLO world --desc "这是干啥的"
+kplcloud setting add HELLO world --desc "这是干啥的"
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// 关闭资源连接
@@ -61,7 +61,7 @@ kit-admin setting add HELLO world --desc "这是干啥的"
 		SilenceErrors:     false,
 		DisableAutoGenTag: false,
 		Example: `
-kit-admin setting delete HELLO
+kplcloud setting delete HELLO
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// 关闭资源连接
@@ -88,7 +88,7 @@ kit-admin setting delete HELLO
 		SilenceErrors:     false,
 		DisableAutoGenTag: false,
 		Example: `
-kit-admin setting update HELLO 12324 --desc "这是干啥的"
+kplcloud setting update HELLO 12324 --desc "这是干啥的"
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// 关闭资源连接
@@ -115,7 +115,7 @@ kit-admin setting update HELLO 12324 --desc "这是干啥的"
 		SilenceErrors:     false,
 		DisableAutoGenTag: false,
 		Example: `
-kit-admin setting get HELLO
+kplcloud setting get HELLO
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// 关闭资源连接

@@ -9,7 +9,7 @@ package repository
 
 import "github.com/jinzhu/gorm"
 
-type Repository interface {
+type Repository2 interface {
 	Build() BuildRepository
 	Notice() NoticesRepository
 	Proclaim() NoticesRepository
@@ -69,7 +69,7 @@ type store struct {
 	configEnv       ConfigEnvRepository
 }
 
-func NewRepository(db *gorm.DB) Repository {
+func NewRepository2(db *gorm.DB) Repository2 {
 	return &store{
 		db:              db,
 		build:           NewBuildRepository(db),

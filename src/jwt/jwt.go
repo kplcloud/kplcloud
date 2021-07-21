@@ -10,7 +10,7 @@ var jwtKey = os.Getenv("JWT_KEY")
 
 func init() {
 	if jwtKey == "" {
-		jwtKey = "hello@Yrd!Kplcloud"
+		jwtKey = "hello@2022!Kplcloud"
 	}
 }
 

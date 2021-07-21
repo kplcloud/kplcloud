@@ -1,25 +1,57 @@
-FROM golang:1.13.0-alpine3.10 as build-env
+FROM golang:1.14.15-alpine3.11 as build-env
+
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+RUN apk add --no-cache \
+		ca-certificates \
+		tzdata \
+		git \
+		openssh \
+		vim \
+		make \
+		mercurial \
+		subversion \
+		bzr \
+		fossil \
+		&& cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+		&& echo "Asia/Shanghai" > /etc/timezone \
+		&& apk del tzdata \
+		&& rm -rf /var/cache/apk/*
 
 ENV GO111MODULE=on
-
 ENV GOPROXY=https://goproxy.cn
-ENV BUILDPATH=github.com/kplcloud/kplcloud
+ENV BUILDPATH=github.com/icowan/kplcloud
 RUN mkdir -p /go/src/${BUILDPATH}
 COPY ./ /go/src/${BUILDPATH}
-RUN cd /go/src/${BUILDPATH} && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install -v
+WORKDIR /go/src/${BUILDPATH}/cmd
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install -v
 
-FROM alpine:latest
+# 前端打包基础镜像
+FROM node:12.13.0-alpine AS node-build-env
 
-RUN apk update \
-        && apk upgrade \
-        && apk add --no-cache \
-        ca-certificates \
-        curl \
-        && update-ca-certificates 2>/dev/null || true
+RUN mkdir /opt/build
+COPY ./web/admin/ /opt/build
+WORKDIR /opt/build
 
-COPY --from=build-env /go/bin/kplcloud /go/bin/kplcloud
-COPY ./static /go/bin/static
-COPY ./database /go/bin/database
+RUN yarn config set registry https://registry.npm.taobao.org
+RUN yarn build --registry https://registry.npm.taobao.org
 
-WORKDIR /go/bin/
-CMD ["/go/bin/kplcloud", "start", "-p", ":8080", "-c", "/etc/kplcloud/app.cfg", "-k", "/etc/kplcloud/config.yaml"]
+# 运行镜像
+FROM alpine:3.11
+RUN apk add --no-cache \
+		ca-certificates \
+		curl \
+		tzdata \
+		&& cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+		&& echo "Asia/Shanghai" > /etc/timezone \
+		&& apk del tzdata \
+		&& rm -rf /var/cache/apk/*
+
+COPY --from=build-env /go/bin/cmd /usr/local/kplcloud/bin/kplcloud
+COPY --from=node-build-env /opt/build/dist/ /usr/local/kplcloud/web/admin
+
+WORKDIR /usr/local/kplcloud/
+ENV PATH=$PATH:/usr/local/kplcloud/bin/
+
+#COPY ./app.prod.cfg /usr/local/kplcloud/etc/app.cfg
+
+CMD ["kplcloud", "start", "-c", "/usr/local/kplcloud/etc/app.cfg"]
