@@ -9,25 +9,25 @@ package server
 
 import (
 	"context"
-	"github.com/go-kit/kit/endpoint"
-	"github.com/go-kit/kit/log/level"
-	"github.com/gorilla/mux"
-	"github.com/icowan/config"
-	"github.com/kplcloud/kplcloud/src/encode"
-	"github.com/kplcloud/kplcloud/src/logging"
-	"github.com/kplcloud/kplcloud/src/middleware"
-	"github.com/kplcloud/kplcloud/src/pkg/syspermission"
-	"github.com/kplcloud/kplcloud/src/pkg/sysrole"
-	"github.com/kplcloud/kplcloud/src/pkg/sysuser"
-	"github.com/oklog/oklog/pkg/group"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/spf13/cobra"
-	"golang.org/x/time/rate"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/go-kit/kit/endpoint"
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
+	kithttp "github.com/go-kit/kit/transport/http"
+	"github.com/gorilla/mux"
+	"github.com/icowan/config"
+	"github.com/oklog/oklog/pkg/group"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/spf13/cobra"
+	"golang.org/x/time/rate"
+
+	"github.com/kplcloud/kplcloud/src/encode"
 	installSrc "github.com/kplcloud/kplcloud/src/install"
+	"github.com/kplcloud/kplcloud/src/logging"
+	"github.com/kplcloud/kplcloud/src/middleware"
 )
 
 var (
@@ -100,7 +100,7 @@ func install() (err error) {
 	r := mux.NewRouter()
 
 	// 以下安装模块
-	r.PathPrefix("/install/").Handler(http.StripPrefix("/install/", sysuser.MakeHTTPHandler(sysUserSvc, tokenEms, opts)))
+	r.PathPrefix("/install/").Handler(http.StripPrefix("/install/", installSrc.MakeHTTPHandler(installSvc, tokenEms, opts)))
 
 	// 以下为业务模块
 
@@ -111,7 +111,7 @@ func install() (err error) {
 		_, _ = writer.Write([]byte("ok"))
 	})
 	// web页面
-	r.PathPrefix("/").Handler(http.FileServer(http.Dir(webPath)))
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir(webPath + "/install/")))
 
 	http.Handle("/", accessControl(r, httpLogger))
 

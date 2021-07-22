@@ -7,16 +7,16 @@ import { ACCESS_TOKEN } from '@/store/mutation-types'
 // import {=} from 'vuetify'
 
 // Routes
-import ShowRouters from './show.routes'
+import InstallRouters from './install.routes'
 // import store from '../store'
 
 Vue.use(Router)
 
 export const routes = [{
   path: '/',
-  redirect: '/show'
+  redirect: '/install'
 },
-  ...ShowRouters,
+  ...InstallRouters,
   {
     path: '/blank',
     name: 'blank',
@@ -44,9 +44,9 @@ const router = new Router({
 
 NProgress.configure({ showSpinner: false }) // NProgress Configuration
 
-const allowList = ['auth-signin', 'auth-signin-locked', 'error', 'login', 'show', 'show-page'] // no redirect allowList
+const allowList = ['error', 'install-page'] // no redirect allowList
 const loginRoutePath = '/auth/signin'
-const defaultRoutePath = '/dashboard/analytics'
+// const defaultRoutePath = '/dashboard/analytics'
 
 /**
  * Before each route update
@@ -56,12 +56,12 @@ router.beforeEach((to, from, next) => {
   // to.meta && (typeof to.meta.title !== 'undefined' && setDocumentTitle(to.meta.title `- ${domTitle}`))
   if (storage.get(ACCESS_TOKEN)) {
     if (to.path === loginRoutePath) {
-      const { redirect } = to.query
-      if (redirect !== '') {
-        next({ path: redirect })
-      } else {
-        next({ path: defaultRoutePath })
-      }
+      // const { redirect } = to.query
+      // if (redirect !== '') {
+      //   next({ path: "/install" })
+      // } else {
+      //   next({ path: "/" })
+      // }
       NProgress.done()
     } else {
       // const redirect = decodeURIComponent(from.query.redirect || to.path)
