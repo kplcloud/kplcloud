@@ -138,7 +138,7 @@ kplcloud setting get HELLO
 )
 
 func getSetting(key string) error {
-	res, err := store.SysSetting().Find(context.Background(), strings.ToUpper(key))
+	res, err := store.SysSetting().Find(context.Background(), "", strings.ToUpper(key))
 	if err != nil {
 		return err
 	}
@@ -153,15 +153,15 @@ func getSetting(key string) error {
 }
 
 func addSetting(key, value, desc string) error {
-	return store.SysSetting().Add(context.Background(), strings.ToUpper(key), value, desc)
+	return store.SysSetting().Add(context.Background(), "", strings.ToUpper(key), value, desc)
 }
 
 func deleteSetting(key string) error {
-	return store.SysSetting().Delete(context.Background(), strings.ToUpper(key))
+	return store.SysSetting().Delete(context.Background(), "", strings.ToUpper(key))
 }
 
 func updateSetting(key, value, desc string) error {
-	res, err := store.SysSetting().Find(context.Background(), strings.ToUpper(key))
+	res, err := store.SysSetting().Find(context.Background(), "", strings.ToUpper(key))
 	if err != nil {
 		return err
 	}

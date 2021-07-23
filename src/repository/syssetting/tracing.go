@@ -23,16 +23,33 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
-func (s *tracing) Delete(ctx context.Context, key string) (err error) {
+func (s *tracing) FindAll(ctx context.Context) (res []types.SysSetting, err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "FindAll", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "repository.Setting",
+	})
+	defer func() {
+		span.LogKV(
+			"error", err,
+		)
+		span.Finish()
+	}()
+	return s.next.FindAll(ctx)
+}
+
+func (s *tracing) Delete(ctx context.Context, section, key string) (err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Delete", opentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "repository.Setting",
 	})
 	defer func() {
-		span.LogKV("key", key, "error", err)
+		span.LogKV(
+			"key", key,
+			"section", section,
+			"error", err)
 		span.Finish()
 	}()
-	return s.next.Delete(ctx, key)
+	return s.next.Delete(ctx, section, key)
 }
 
 func (s *tracing) Update(ctx context.Context, data *types.SysSetting) (err error) {
@@ -41,34 +58,42 @@ func (s *tracing) Update(ctx context.Context, data *types.SysSetting) (err error
 		Value: "repository.Setting",
 	})
 	defer func() {
-		span.LogKV("error", err)
+		span.LogKV(
+			"error", err)
 		span.Finish()
 	}()
 	return s.next.Update(ctx, data)
 }
 
-func (s *tracing) Find(ctx context.Context, key string) (res types.SysSetting, err error) {
+func (s *tracing) Find(ctx context.Context, section, key string) (res types.SysSetting, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Find", opentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "repository.Setting",
 	})
 	defer func() {
-		span.LogKV("key", key, "error", err)
+		span.LogKV(
+			"section", section,
+			"key", key,
+			"error", err)
 		span.Finish()
 	}()
-	return s.next.Find(ctx, key)
+	return s.next.Find(ctx, section, key)
 }
 
-func (s *tracing) Add(ctx context.Context, key, val, desc string) (err error) {
+func (s *tracing) Add(ctx context.Context, section, key, val, desc string) (err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Add", opentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "repository.Setting",
 	})
 	defer func() {
-		span.LogKV("key", key, "val", val, "desc", desc, "error", err)
+		span.LogKV(
+			"section", section,
+			"key", key,
+			"val", val,
+			"desc", desc, "error", err)
 		span.Finish()
 	}()
-	return s.next.Add(ctx, key, val, desc)
+	return s.next.Add(ctx, section, key, val, desc)
 }
 
 func NewTracing(otTracer opentracing.Tracer) Middleware {

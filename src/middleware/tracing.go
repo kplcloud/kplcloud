@@ -22,6 +22,9 @@ import (
 
 func TracingServerBefore(tracer stdopentracing.Tracer) kithttp.RequestFunc {
 	return func(ctx context.Context, request *http.Request) context.Context {
+		if tracer == nil {
+			return ctx
+		}
 		reqPath := ctx.Value(kithttp.ContextKeyRequestURI).(string)
 		u, _ := url.Parse(reqPath)
 		span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, tracer, u.Path, stdopentracing.Tag{
@@ -66,6 +69,9 @@ func TracingServerBefore(tracer stdopentracing.Tracer) kithttp.RequestFunc {
 func TracingMiddleware(tracer stdopentracing.Tracer) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+			if tracer == nil {
+				return next(ctx, request)
+			}
 			span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, tracer, "Middleware", stdopentracing.Tag{
 				Key:   string(ext.Component),
 				Value: "Middleware",

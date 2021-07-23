@@ -11,8 +11,8 @@ import navigation from './navigation'
 export default {
   // product display information
   product: {
-    name: '网盘分享平台',
-    version: '1.5.1'
+    name: 'Kplcloud平台安装',
+    version: '2.0.1'
   },
 
   // google maps

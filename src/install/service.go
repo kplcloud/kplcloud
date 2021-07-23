@@ -15,7 +15,9 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/icowan/config"
 	mysqlclient "github.com/icowan/mysql-client"
+	redisclient "github.com/icowan/redis-client"
 	"github.com/jinzhu/gorm"
+	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	"github.com/kplcloud/kplcloud/src/util"
@@ -27,20 +29,26 @@ import (
 type Middleware func(Service) Service
 
 type Service interface {
-	// 0
-	Init(ctx context.Context, appName string) (err error)
 	// 1. 初始化数据库,重新加载配置文件,连接数据库
 	InitDb(ctx context.Context, drive, host string, port int, username, password, database string) (err error)
-	// 2. 初始化Redis
+	// 2. platform设置
+	InitPlatform(ctx context.Context, appName, adminName, adminPassword, appKey, domain, domainSuffix, logPath, logLevel, uploadPath string, debug bool) (err error)
+	// 8. logo 设置
+	InitLogo(ctx context.Context) (err error)
+	// 9. 跨域配置
+	InitCors(ctx context.Context, allow bool, origin, methods, headers string) (err error)
+	// 3. 初始化Redis
 	InitRedis(ctx context.Context, hosts, auth string, db int) (err error)
-	// 初始化Jenkins构建机器
+	// 4. 初始化Jenkins构建机器
 	InitJenkins(ctx context.Context) (err error)
-	// 初始化MQ 可以考虑直接用redis
+	// 5. 初始化MQ 可以考虑直接用redis
 	InitMq(ctx context.Context) (err error)
-	// 初始化镜像仓库
+	// 6. 初始化镜像仓库
 	InitRepo(ctx context.Context) (err error)
-	// 初始化k8s集群
+	// 7. 初始化k8s集群
 	InitK8sCluster(ctx context.Context) (err error)
+	// 10. 配置写入文件
+	StoreToConfig(ctx context.Context) (err error)
 
 	configReload(ctx context.Context) (err error)
 	setValue(ctx context.Context, section, key, value string) bool
@@ -53,32 +61,84 @@ type service struct {
 	cfgPath    string
 	repository repository.Repository
 	db         *gorm.DB
+	rds        *redisclient.RedisClient
 }
 
-func (s *service) Init(ctx context.Context, appName string) (err error) {
-	_ = s.setValue(ctx, "server", "app.name", appName)
-	_ = s.setValue(ctx, "server", "app.debug", "true")
+func (s *service) InitPlatform(ctx context.Context, appName, adminName, adminPassword, appKey, domain, domainSuffix, logPath, logLevel, uploadPath string, debug bool) (err error) {
+	if strings.EqualFold(appKey, "") {
+		appKey = string(util.Krand(12, util.KC_RAND_KIND_ALL))
+	}
+	_ = s.repository.SysSetting().Add(ctx, "server", "name", appName, "平台名称")
+	_ = s.repository.SysSetting().Add(ctx, "server", "key", appKey, "平台Key")
+	_ = s.repository.SysSetting().Add(ctx, "server", "domain", domain, "平台域名")
+	_ = s.repository.SysSetting().Add(ctx, "server", "domain.suffix", domainSuffix, "平台域名后缀,生成对名域名用")
+	_ = s.repository.SysSetting().Add(ctx, "server", "log.path", logPath, "平台日志路径,不填的话打在控制台")
+	_ = s.repository.SysSetting().Add(ctx, "server", "log.level", logLevel, "平台输出的日志级别,支持五个级别 all,error,warn,info,debug")
+	_ = s.repository.SysSetting().Add(ctx, "server", "upload.path", uploadPath, "平台文件上传路径")
+	_ = s.repository.SysSetting().Add(ctx, "server", "debug", strconv.FormatBool(debug), "是否输出Debug日志")
+
+	// 保存管理员账号到SysUser
+	// 查询角色
+	roles, err := s.repository.SysRole().FindByIds(ctx, []int64{1})
+	if err != nil {
+		err = errors.Wrap(err, "repository.SysRole.FindByIds")
+		return
+	}
+	err = s.repository.SysUser().Save(ctx, &types.SysUser{
+		Username:  adminName,
+		LoginName: adminName,
+		Email:     adminName,
+		Password:  util.EncodePassword(adminPassword, appKey),
+		SysRoles:  roles,
+	})
 
 	return
+}
+
+func (s *service) InitLogo(ctx context.Context) (err error) {
+	_ = s.repository.SysSetting().Add(ctx, "server", "logo", "", "平台logo")
+	return
+}
+
+func (s *service) InitCors(ctx context.Context, allow bool, origin, methods, headers string) (err error) {
+	_ = s.repository.SysSetting().Add(ctx, "cors", "allow", strconv.FormatBool(allow), "是否允许跨域")
+	_ = s.repository.SysSetting().Add(ctx, "cors", "origin", origin, "跨域来源 '*' 表示所有来源")
+	_ = s.repository.SysSetting().Add(ctx, "cors", "methods", methods, "允许跨域Method")
+	_ = s.repository.SysSetting().Add(ctx, "cors", "methods", headers, "允许跨域Headers")
+	return
+}
+
+func (s *service) StoreToConfig(ctx context.Context) (err error) {
+	res, err := s.repository.SysSetting().FindAll(ctx)
+	if err != nil {
+		return
+	}
+
+	for _, v := range res {
+		s.setValue(ctx, v.Section, v.Key, v.Value)
+	}
+
+	return s.configReload(ctx)
 }
 
 func (s *service) InitDb(ctx context.Context, drive, host string, port int, username, password, database string) (err error) {
 	err = s.database(ctx, drive, host, port, username, password, database)
 	if err != nil {
-		err = errors.Wrap(err, "database.init")
+		err = encode.ErrInstallDbConnect.Wrap(errors.Wrap(err, "database.init"))
 		return
 	}
 	if !strings.EqualFold(drive, "mysql") {
-		err = errors.New("暂不支持其他数据库.")
+		err = encode.ErrInstallDbDrive.Error()
 		return
 	}
 	dbUrl := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=true&loc=Local&timeout=20m&collation=utf8mb4_unicode_ci",
 		username, password, host, port, database)
 
 	// 连接数据库
-	db, err := mysqlclient.NewMysql(dbUrl, s.cfg.GetBool(config.SectionServer, "app.debug"))
+	db, err := mysqlclient.NewMysql(dbUrl, s.cfg.GetBool(config.SectionServer, "debug"))
 	if err != nil {
 		_ = level.Error(s.logger).Log("db", "connect", "err", err)
+		err = encode.ErrInstallDbConnect.Wrap(err)
 		return err
 	}
 
@@ -108,8 +168,8 @@ func (s *service) initData(ctx context.Context) (err error) {
 	privateKey := strings.TrimSpace(string(authRsaPrivateKey))
 	publicKey = strings.Trim(publicKey, "\n")
 	privateKey = strings.Trim(privateKey, "\n")
-	_ = s.logger.Log("add", "data", "publicKey", s.repository.SysSetting().Add(ctx, "AUTH_RSA_PUBLIC_KEY", publicKey, "公钥"))
-	_ = s.logger.Log("add", "data", "privateKey", s.repository.SysSetting().Add(ctx, "AUTH_RSA_PRIVATE_KEY", privateKey, "私钥"))
+	_ = s.logger.Log("add", "data", "publicKey", s.repository.SysSetting().Add(ctx, "server", "rsa.public.key", publicKey, "公钥"))
+	_ = s.logger.Log("add", "data", "privateKey", s.repository.SysSetting().Add(ctx, "server", "rsa.private.key", privateKey, "私钥"))
 
 	// TODO: 写入角色数据
 	// TODO: 写入权限数据
@@ -119,7 +179,18 @@ func (s *service) initData(ctx context.Context) (err error) {
 }
 
 func (s *service) InitRedis(ctx context.Context, hosts, auth string, db int) (err error) {
-	panic("implement me")
+	_ = s.repository.SysSetting().Add(ctx, "redis", "hosts", hosts, "单点 hosts: 127.0.0.1:6379;集群 hosts: 127.0.0.1:6380 用\",\"隔开")
+	_ = s.repository.SysSetting().Add(ctx, "redis", "auth", auth, "密码")
+	_ = s.repository.SysSetting().Add(ctx, "redis", "db", strconv.Itoa(db), "db")
+
+	rds, err := redisclient.NewRedisClient(hosts, auth, "kplcloud", db)
+	if err != nil {
+		_ = level.Error(s.logger).Log("redisclient", "NewRedisClient", "err", err.Error())
+		return
+	}
+	s.rds = &rds
+
+	return nil
 }
 
 func (s *service) InitJenkins(ctx context.Context) (err error) {

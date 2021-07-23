@@ -45,7 +45,7 @@ push:
 	docker image tag $(APPNAME):$(TAG) $(HUB_ADDR)/$(NAMESPACE)/$(APPNAME):$(TAG)
 	docker push $(HUB_ADDR)/$(NAMESPACE)/$(APPNAME):$(TAG)
 
-install:
+init:
 	GO111MODULE=on $(GORUN) ./cmd/main.go install -p :8080 -c ./app.dev.cfg
 
 run:

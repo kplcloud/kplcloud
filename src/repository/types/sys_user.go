@@ -15,6 +15,7 @@ type SysUser struct {
 	Mobile            string     `gorm:"column:mobile;null;comment:'手机号'" json:"mobile"`                                 // 手机号
 	LoginName         string     `gorm:"column:login_name;notnull;index;size:16;unique;comment:'登录名'" json:"login_name"` // 登录号
 	Email             string     `gorm:"column:email;notnull;index;size:24;unique;comment:'邮箱'" json:"email"`            // 邮箱
+	Password          string     `gorm:"column:password;null;size:64;comment:'密码'" json:"password"`                      // 密码
 	Locked            bool       `gorm:"column:locked;null;default:false;comment:'是否锁定'" json:"locked"`                  // 是否锁定
 	Expired           bool       `gorm:"column:expired;null;default:false;comment:'是否过期'" json:"expired"`                // 是否过期
 	ConfirmationToken string     `gorm:"column:confirmation_token;null" json:"confirmation_token"`                       // 确认TOKEN

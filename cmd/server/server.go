@@ -48,7 +48,7 @@ var (
 		DisableAutoGenTag: true,
 		Long: `# 活动平台
 可用的配置类型：
-[start, generate, setting]
+[start, install, generate, setting]
 有关本系统的相关概述，请参阅 http://github.com/kplcloud/kplcloud
 `,
 	}

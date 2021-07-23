@@ -9,13 +9,10 @@ package server
 
 import (
 	"context"
-	"strings"
-
 	"github.com/go-kit/kit/log/level"
 	"github.com/spf13/cobra"
 
 	"github.com/kplcloud/kplcloud/src/repository/types"
-	"github.com/kplcloud/kplcloud/src/util"
 )
 
 var (
@@ -86,23 +83,23 @@ kplcloud generate init-data
 
 func generateInitData() (err error) {
 	// 初始化数据
-	authRsaPublicKey, authRsaPrivateKey, err := util.GenRsaKey()
-	if err != nil {
-		_ = level.Error(logger).Log("util", "GenRsaKey", "err", err.Error())
-		return
-	}
-	ctx := context.Background()
-	publicKey := strings.TrimSpace(string(authRsaPublicKey))
-	privateKey := strings.TrimSpace(string(authRsaPrivateKey))
-	publicKey = strings.Trim(publicKey, "\n")
-	privateKey = strings.Trim(privateKey, "\n")
-	_ = logger.Log("add", "data", "publicKey", store.SysSetting().Add(ctx, "AUTH_RSA_PUBLIC_KEY", publicKey, "公钥"))
-	_ = logger.Log("add", "data", "privateKey", store.SysSetting().Add(ctx, "AUTH_RSA_PRIVATE_KEY", privateKey, "私钥"))
-
-	if cacheSvc != nil {
-		_ = cacheSvc.Del(context.Background(), "auth:publicKey")
-		_ = cacheSvc.Del(context.Background(), "auth:privateKey")
-	}
+	//authRsaPublicKey, authRsaPrivateKey, err := util.GenRsaKey()
+	//if err != nil {
+	//	_ = level.Error(logger).Log("util", "GenRsaKey", "err", err.Error())
+	//	return
+	//}
+	//ctx := context.Background()
+	//publicKey := strings.TrimSpace(string(authRsaPublicKey))
+	//privateKey := strings.TrimSpace(string(authRsaPrivateKey))
+	//publicKey = strings.Trim(publicKey, "\n")
+	//privateKey = strings.Trim(privateKey, "\n")
+	//_ = logger.Log("add", "data", "publicKey", store.SysSetting().Add(ctx, "AUTH_RSA_PUBLIC_KEY", publicKey, "公钥"))
+	//_ = logger.Log("add", "data", "privateKey", store.SysSetting().Add(ctx, "AUTH_RSA_PRIVATE_KEY", privateKey, "私钥"))
+	//
+	//if cacheSvc != nil {
+	//	_ = cacheSvc.Del(context.Background(), "auth:publicKey")
+	//	_ = cacheSvc.Del(context.Background(), "auth:privateKey")
+	//}
 
 	return
 }

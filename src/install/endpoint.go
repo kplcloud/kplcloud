@@ -15,29 +15,24 @@ import (
 
 type (
 	initDbRequest struct {
-		Drive    string `json:"drive"`
-		Host     string `json:"host"`
-		Port     int    `json:"port"`
-		User     string `json:"user"`
-		Password string `json:"password"`
-		Database string `json:"database"`
+		Drive    string `json:"drive" valid:"required"`
+		Host     string `json:"host" valid:"required"`
+		Port     int    `json:"port" valid:"required"`
+		User     string `json:"user" valid:"required"`
+		Password string `json:"password" valid:"required"`
+		Database string `json:"database" valid:"required"`
 	}
 )
 
 type Endpoints struct {
-	InitEndpoint   endpoint.Endpoint
 	InitDbEndpoint endpoint.Endpoint
 }
 
 func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	eps := Endpoints{
 		InitDbEndpoint: makeInitDbEndpoint(s),
-		InitEndpoint:   nil,
 	}
 
-	for _, m := range dmw["Init"] {
-		eps.InitEndpoint = m(eps.InitEndpoint)
-	}
 	for _, m := range dmw["InitDb"] {
 		eps.InitDbEndpoint = m(eps.InitDbEndpoint)
 	}
