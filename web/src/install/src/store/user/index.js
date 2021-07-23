@@ -1,5 +1,5 @@
 import storage from 'store'
-import { login, logout } from '@/api/auth.service'
+// import { login, logout } from '@/api/auth.service'
 import { ACCESS_TOKEN } from '@/store/mutation-types'
 // import { welcome } from '@/utils/util'
 
@@ -37,23 +37,24 @@ const user = {
     // 登录
     Login({ commit }, userInfo) {
       return new Promise((resolve, reject) => {
-        login(userInfo).then(response => {
-          if(!response) {
+        console.log(userInfo, reject)
+        // login(userInfo).then(response => {
+        //   if(!response) {
             resolve()
-            return
-          }
-          const result = response.data
-          if (result.token === '') {
-            resolve(result)
-            return
-          }
-          storage.set(ACCESS_TOKEN, result.token, 7 * 24 * 60 * 60 * 1000)
-          commit('SET_TOKEN', result.token)
-          commit('SET_NAME', result.username)
-          resolve(result)
-        }).catch(error => {
-          reject(error)
-        })
+        //     return
+        //   }
+        //   const result = response.data
+        //   if (result.token === '') {
+        //     resolve(result)
+        //     return
+        //   }
+        //   storage.set(ACCESS_TOKEN, result.token, 7 * 24 * 60 * 60 * 1000)
+        //   commit('SET_TOKEN', result.token)
+        //   commit('SET_NAME', result.username)
+        //   resolve(result)
+        // }).catch(error => {
+        //   reject(error)
+        // })
       })
     },
 
@@ -90,9 +91,9 @@ const user = {
     // },
 
     // 登出
-    Logout ({ commit, state }) {
+    Logout ({ commit }) {
       return new Promise((resolve) => {
-        logout(state.token).then(() => {
+        // logout(state.token).then(() => {
           commit('SET_TOKEN', '')
           commit('SET_ROLES', [])
           commit('SET_INFO', {})
@@ -100,10 +101,10 @@ const user = {
           commit('SET_AVATAR', '')
           storage.remove(ACCESS_TOKEN)
           resolve()
-        }).catch(() => {
-          resolve()
-        }).finally(() => {
-        })
+        // }).catch(() => {
+        //   resolve()
+        // }).finally(() => {
+        // })
       })
     }
 

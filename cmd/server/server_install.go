@@ -20,7 +20,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/icowan/config"
 	"github.com/oklog/oklog/pkg/group"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 	"golang.org/x/time/rate"
 
@@ -93,19 +92,15 @@ func install() (err error) {
 	}
 
 	tokenEms := []endpoint.Middleware{
-		middleware.CheckAuthMiddleware(logger, cacheSvc, tracer),
+		//middleware.CheckAuthMiddleware(logger, cacheSvc, tracer),
 	}
 	tokenEms = append(tokenEms, ems...)
 
 	r := mux.NewRouter()
 
 	// 以下安装模块
-	r.PathPrefix("/install/").Handler(http.StripPrefix("/install/", installSrc.MakeHTTPHandler(installSvc, tokenEms, opts)))
+	r.PathPrefix("/install").Handler(http.StripPrefix("/install", installSrc.MakeHTTPHandler(installSvc, tokenEms, opts)))
 
-	// 以下为业务模块
-
-	// 对外metrics
-	r.Handle("/metrics", promhttp.Handler())
 	// 心跳检测
 	r.HandleFunc("/health", func(writer http.ResponseWriter, request *http.Request) {
 		_, _ = writer.Write([]byte("ok"))

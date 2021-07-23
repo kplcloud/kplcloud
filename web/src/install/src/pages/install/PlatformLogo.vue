@@ -1,7 +1,7 @@
 <template>
   <v-stepper-content
     key="plot-form-content"
-    :step="2"
+    :step="3"
   >
     <v-card
       class="mb-12"
@@ -26,7 +26,7 @@
   import { mapActions } from 'vuex'
 
   export default {
-    name: 'plat-form',
+    name: 'platform-logo',
     props: {
       title: {
         type: String,

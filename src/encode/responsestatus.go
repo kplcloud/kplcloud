@@ -38,6 +38,9 @@ var ResponseMessage = map[ResStatus]int{
 	ErrSysRoleUserLen:      2005,
 	ErrSysRoleUserDelete:   2006,
 	ErrSysUserNotfound:     2007,
+
+	ErrInstallDbConnect: 901,
+	ErrInstallDbDrive:   902,
 }
 
 const (
@@ -48,6 +51,9 @@ const (
 	ErrBadRoute    ResStatus = "请求路由错误"
 	ErrParamsPhone ResStatus = "手机格式不正确"
 	ErrLimiter     ResStatus = "太快了,等我一会儿..."
+
+	ErrInstallDbConnect ResStatus = "数据库连接失败"
+	ErrInstallDbDrive   ResStatus = "暂不支持其他数据库"
 
 	// 中间件错误信息
 	ErrSystem             ResStatus = "系统错误"

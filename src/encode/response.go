@@ -53,7 +53,7 @@ func JsonError(ctx context.Context, err error, w http.ResponseWriter) {
 	}
 
 	if !errDefined {
-		err = ErrSystem.Error()
+		err = errors.Wrap(ErrSystem.Error(), err.Error())
 	}
 	if err == nil {
 		err = errors.Wrap(err, ErrSystem.Error().Error())

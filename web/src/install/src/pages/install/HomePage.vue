@@ -1,6 +1,6 @@
 <template>
   <div class="w-full">
-    <v-card class="pa-12" flat>
+    <v-card class="pa-6" flat>
       <v-stepper v-model="e1">
         <v-stepper-header>
           <template v-for="st in steps">
@@ -11,19 +11,16 @@
         </v-stepper-header>
 
         <v-stepper-items>
-          <db :nextStep="nextStep(2)" :v-if="e1===1"/>
-          <plat-form :click="nextStep(3)" :v-if="e1===2"/>
-          <plat-form :click="nextStep(3)" :v-if="e1===3"/>
-          <plat-form :click="nextStep(3)" :v-if="e1===4"/>
-          <plat-form :click="nextStep(3)" :v-if="e1===5"/>
-          <plat-form :click="nextStep(3)" :v-if="e1===6"/>
-          <plat-form :click="nextStep(3)" :v-if="e1===7"/>
+          <db :nextStep="nextStep" :v-if="e1===1"/>
+          <platform :nextStep="nextStep" :v-if="e1===2"/>
+          <platform-logo :nextStep="nextStep" :v-if="e1===3"/>
+
         </v-stepper-items>
       </v-stepper>
       <v-divider class="my-3"></v-divider>
       <div>
         <div class="text-h6">{{ $t('ecommerce.description') }}</div>
-        <div class="text-body-1 my-2">注意是否是敏感文件.</div>
+        <div class="text-body-1 my-2">如有疑问请联系管理员.</div>
       </div>
     </v-card>
   </div>
@@ -33,12 +30,14 @@
   import { mapActions } from 'vuex'
 
   import Db from './Db'
-  import PlatForm from './PlatForm'
+  import Platform from './Platform'
+  import PlatformLogo from './PlatformLogo'
 
   export default {
     components: {
       Db,
-      PlatForm,
+      Platform,
+      PlatformLogo,
     },
     data () {
       return {
@@ -51,7 +50,7 @@
           { key: 'redis-step', step: 5, title: 'Redis设置' },
           { key: 'build-step', step: 6, title: '构建设置' },
           { key: 'repo-step', step: 7, title: '镜像仓库' },
-          { key: 'reboot-step', step: 8, title: '重启' },
+          { key: 'reboot-step', step: 8, title: '开始使用' },
         ]
       }
     },
@@ -75,10 +74,12 @@
       //   code = path[i]
       //   break
       // }
+      console.log(this.e1)
     },
     methods: {
       ...mapActions('app', ['showError', 'showSuccess']),
       nextStep (n) {
+        console.log(n)
         if (n === this.steps.length) {
           this.e1 = 1
         } else {

@@ -47,6 +47,7 @@ func (s *service) Find(_ context.Context, section, key string) (res types.SysSet
 
 func (s *service) Add(_ context.Context, section, key, val, desc string) (err error) {
 	return s.db.Model(&types.SysSetting{}).Save(&types.SysSetting{
+		Section:     section,
 		Key:         key,
 		Value:       val,
 		Description: desc,

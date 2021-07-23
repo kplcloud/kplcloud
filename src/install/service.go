@@ -17,6 +17,7 @@ import (
 	mysqlclient "github.com/icowan/mysql-client"
 	redisclient "github.com/icowan/redis-client"
 	"github.com/jinzhu/gorm"
+	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	"github.com/kplcloud/kplcloud/src/util"
@@ -123,11 +124,11 @@ func (s *service) StoreToConfig(ctx context.Context) (err error) {
 func (s *service) InitDb(ctx context.Context, drive, host string, port int, username, password, database string) (err error) {
 	err = s.database(ctx, drive, host, port, username, password, database)
 	if err != nil {
-		err = errors.Wrap(err, "database.init")
+		err = encode.ErrInstallDbConnect.Wrap(errors.Wrap(err, "database.init"))
 		return
 	}
 	if !strings.EqualFold(drive, "mysql") {
-		err = errors.New("暂不支持其他数据库.")
+		err = encode.ErrInstallDbDrive.Error()
 		return
 	}
 	dbUrl := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=true&loc=Local&timeout=20m&collation=utf8mb4_unicode_ci",
@@ -137,6 +138,7 @@ func (s *service) InitDb(ctx context.Context, drive, host string, port int, user
 	db, err := mysqlclient.NewMysql(dbUrl, s.cfg.GetBool(config.SectionServer, "debug"))
 	if err != nil {
 		_ = level.Error(s.logger).Log("db", "connect", "err", err)
+		err = encode.ErrInstallDbConnect.Wrap(err)
 		return err
 	}
 
