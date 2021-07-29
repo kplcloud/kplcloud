@@ -38,6 +38,12 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodPost)
+	r.Handle("/init-platform", kithttp.NewServer(
+		eps.InitDbEndpoint,
+		decodeInitDbRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodPost)
 
 	return r
 }

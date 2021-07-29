@@ -22,22 +22,49 @@ type (
 		Password string `json:"password" valid:"required"`
 		Database string `json:"database" valid:"required"`
 	}
+	initPlatformRequest struct {
+		AppName       string `json:"appAame"`
+		AdminName     string `json:"adminName"`
+		AdminPassword string `json:"adminPassword"`
+		AppKey        string `json:"appKey"`
+		Domain        string `json:"domain"`
+		DomainSuffix  string `json:"domainSuffix"`
+		LogPath       string `json:"logPath"`
+		LogLevel      string `json:"logLevel"`
+		UploadPath    string `json:"uploadPath"`
+		Debug         bool   `json:"debug"`
+	}
 )
 
 type Endpoints struct {
-	InitDbEndpoint endpoint.Endpoint
+	InitDbEndpoint       endpoint.Endpoint
+	InitPlatformEndpoint endpoint.Endpoint
 }
 
 func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	eps := Endpoints{
-		InitDbEndpoint: makeInitDbEndpoint(s),
+		InitDbEndpoint:       makeInitDbEndpoint(s),
+		InitPlatformEndpoint: makeInitPlatformEndpoint(s),
 	}
 
 	for _, m := range dmw["InitDb"] {
 		eps.InitDbEndpoint = m(eps.InitDbEndpoint)
 	}
+	for _, m := range dmw["InitPlatform"] {
+		eps.InitPlatformEndpoint = m(eps.InitPlatformEndpoint)
+	}
 
 	return eps
+}
+
+func makeInitPlatformEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(initPlatformRequest)
+		err = s.InitPlatform(ctx, req.AppName, req.AdminName, req.AdminPassword, req.AppKey, req.Domain, req.DomainSuffix, req.LogPath, req.LogLevel, req.UploadPath, req.Debug)
+		return encode.Response{
+			Error: err,
+		}, err
+	}
 }
 
 func makeInitDbEndpoint(s Service) endpoint.Endpoint {
