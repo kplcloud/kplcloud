@@ -9,7 +9,7 @@ package types
 
 import "time"
 
-// 系统一些配置,keyvaleu的方式
+// 系统一些配置,key value 的方式
 type SysSetting struct {
 	Id          int64      `gorm:"column:id;rimary_key" json:"id"`
 	Section     string     `gorm:"column:section;index;notnull;size:24;comment:'Section'" json:"section"`

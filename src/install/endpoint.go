@@ -11,6 +11,7 @@ import (
 	"context"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/kplcloud/kplcloud/src/encode"
+	"mime/multipart"
 )
 
 type (
@@ -22,29 +23,36 @@ type (
 		Password string `json:"password" valid:"required"`
 		Database string `json:"database" valid:"required"`
 	}
+
 	initPlatformRequest struct {
-		AppName       string `json:"appAame"`
-		AdminName     string `json:"adminName"`
-		AdminPassword string `json:"adminPassword"`
+		AppName       string `json:"appName" valid:"required"`
+		AdminName     string `json:"adminName" valid:"required"`
+		AdminPassword string `json:"adminPassword" valid:"required"`
 		AppKey        string `json:"appKey"`
-		Domain        string `json:"domain"`
-		DomainSuffix  string `json:"domainSuffix"`
+		Domain        string `json:"domain" valid:"required"`
+		DomainSuffix  string `json:"domainSuffix" valid:"required"`
 		LogPath       string `json:"logPath"`
 		LogLevel      string `json:"logLevel"`
-		UploadPath    string `json:"uploadPath"`
+		UploadPath    string `json:"uploadPath" valid:"required"`
 		Debug         bool   `json:"debug"`
+	}
+
+	initLogoRequest struct {
+		Files []*multipart.FileHeader
 	}
 )
 
 type Endpoints struct {
 	InitDbEndpoint       endpoint.Endpoint
 	InitPlatformEndpoint endpoint.Endpoint
+	InitLogoEndpoint     endpoint.Endpoint
 }
 
 func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	eps := Endpoints{
 		InitDbEndpoint:       makeInitDbEndpoint(s),
 		InitPlatformEndpoint: makeInitPlatformEndpoint(s),
+		InitLogoEndpoint:     makeInitLogoEndpoint(s),
 	}
 
 	for _, m := range dmw["InitDb"] {
@@ -53,8 +61,21 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	for _, m := range dmw["InitPlatform"] {
 		eps.InitPlatformEndpoint = m(eps.InitPlatformEndpoint)
 	}
+	for _, m := range dmw["InitLogo"] {
+		eps.InitLogoEndpoint = m(eps.InitLogoEndpoint)
+	}
 
 	return eps
+}
+
+func makeInitLogoEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(initLogoRequest)
+		err = s.InitLogo(ctx, req.Files[0])
+		return encode.Response{
+			Error: err,
+		}, err
+	}
 }
 
 func makeInitPlatformEndpoint(s Service) endpoint.Endpoint {

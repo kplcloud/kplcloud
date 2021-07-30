@@ -22,6 +22,7 @@ import (
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	"github.com/kplcloud/kplcloud/src/util"
 	"github.com/pkg/errors"
+	"mime/multipart"
 	"strconv"
 	"strings"
 )
@@ -34,7 +35,7 @@ type Service interface {
 	// 2. platform设置
 	InitPlatform(ctx context.Context, appName, adminName, adminPassword, appKey, domain, domainSuffix, logPath, logLevel, uploadPath string, debug bool) (err error)
 	// 8. logo 设置
-	InitLogo(ctx context.Context) (err error)
+	InitLogo(ctx context.Context, f *multipart.FileHeader) (err error)
 	// 9. 跨域配置
 	InitCors(ctx context.Context, allow bool, origin, methods, headers string) (err error)
 	// 3. 初始化Redis
@@ -95,7 +96,7 @@ func (s *service) InitPlatform(ctx context.Context, appName, adminName, adminPas
 	return
 }
 
-func (s *service) InitLogo(ctx context.Context) (err error) {
+func (s *service) InitLogo(ctx context.Context, f *multipart.FileHeader) (err error) {
 	_ = s.repository.SysSetting().Add(ctx, "server", "logo", "", "平台logo")
 	return
 }
@@ -230,6 +231,6 @@ func (s *service) setValue(ctx context.Context, section, key, value string) bool
 	return s.cfg.ConfigFile.SetValue(section, key, value)
 }
 
-func New(logger log.Logger, cfg *config.Config, cfgPath string) Service {
-	return &service{cfg: cfg, cfgPath: cfgPath, logger: logger}
+func New(logger log.Logger, cfg *config.Config, cfgPath string, store repository.Repository) Service {
+	return &service{cfg: cfg, cfgPath: cfgPath, logger: logger, repository: store}
 }
