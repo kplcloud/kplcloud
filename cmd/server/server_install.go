@@ -9,8 +9,12 @@ package server
 
 import (
 	"context"
+	"fmt"
+	mysqlclient "github.com/icowan/mysql-client"
+	"github.com/kplcloud/kplcloud/src/repository"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
@@ -54,14 +58,15 @@ kplcloud install -p :8080
 func install() (err error) {
 	// 关闭资源连接
 	defer func() {
-		//_ = level.Debug(logger).Log("db", "close", "err", db.Close())
+		if db != nil {
+			_ = level.Debug(logger).Log("db", "close", "err", db.Close())
+		}
 		if rds != nil {
 			_ = level.Debug(logger).Log("redis", "close", "err", rds.Close(context.Background()))
 		}
 	}()
-	logger = logging.SetLogging(logger, cf)
 
-	installSvc = installSrc.New(logger, cf, configPath)
+	installSvc = installSrc.New(logger, cf, configPath, store)
 
 	//ctx := context.Background()
 
@@ -132,6 +137,23 @@ func installPre() error {
 
 	if appName == "" {
 		appName = cf.GetString(config.SectionServer, "app.name")
+	}
+
+	logger = logging.SetLogging(logger, cf)
+	if strings.EqualFold(cf.GetString("database", "drive"), "mysql") {
+		dbUrl := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=true&loc=Local&timeout=20m&collation=utf8mb4_unicode_ci",
+			cf.GetString("database", "user"), cf.GetString("database", "password"),
+			cf.GetString("database", "host"), cf.GetInt("database", "port"),
+			cf.GetString("database", "database"))
+
+		// 连接数据库
+		db, err = mysqlclient.NewMysql(dbUrl, true)
+		if err != nil {
+			_ = level.Error(logger).Log("db", "connect", "err", err)
+			err = encode.ErrInstallDbConnect.Wrap(err)
+			return err
+		}
+		store = repository.New(db, logger, "traceId", nil, nil)
 	}
 
 	return err

@@ -41,7 +41,7 @@
     },
     data () {
       return {
-        e1: 1,
+        e1: 3,
         steps: [
           { key: 'db-step', step: 1, title: '数据库配置' },
           { key: 'plot-form-step', step: 2, title: '平台初始化' },
