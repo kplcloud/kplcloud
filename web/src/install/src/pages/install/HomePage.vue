@@ -14,6 +14,8 @@
           <db :nextStep="nextStep" :v-if="e1===1"/>
           <platform :nextStep="nextStep" :v-if="e1===2"/>
           <platform-logo :nextStep="nextStep" :v-if="e1===3"/>
+          <cors :nextStep="nextStep" :v-if="e1===4"/>
+          <redis :nextStep="nextStep" :v-if="e1===5"/>
 
         </v-stepper-items>
       </v-stepper>
@@ -32,19 +34,23 @@
   import Db from './Db'
   import Platform from './Platform'
   import PlatformLogo from './PlatformLogo'
+  import Cors from './Cors'
+  import Redis from './Redis'
 
   export default {
     components: {
       Db,
       Platform,
       PlatformLogo,
+      Cors,
+      Redis,
     },
     data () {
       return {
-        e1: 3,
+        e1: 1,
         steps: [
           { key: 'db-step', step: 1, title: '数据库配置' },
-          { key: 'plot-form-step', step: 2, title: '平台初始化' },
+          { key: 'platform-step', step: 2, title: '平台初始化' },
           { key: 'logo-step', step: 3, title: '设置Logo' },
           { key: 'cors-step', step: 4, title: '跨域设置' },
           { key: 'redis-step', step: 5, title: 'Redis设置' },
@@ -64,27 +70,34 @@
         }
       }
     },
+    created () {
+      let step = 1
+      this.steps.map((item, key) => {
+        if (this.$route.params.step === item.key) {
+          step = item.step
+          return
+        }
+      })
+      this.e1 = step
+    },
     mounted () {
-      // const path = (window.location.pathname).split('/')
-      // let code = ''
-      // for (let i in path) {
-      //   if (path[i] === '' || path[i] === 's') {
-      //     continue
-      //   }
-      //   code = path[i]
-      //   break
-      // }
-      console.log(this.e1)
+      console.log(this.$route.params)
     },
     methods: {
       ...mapActions('app', ['showError', 'showSuccess']),
-      nextStep (n) {
-        console.log(n)
+      nextStep (step) {
+        let n = this.e1
+        this.steps.map((item, key) => {
+          if (step === item.key) {
+            n = item.step
+          }
+        })
         if (n === this.steps.length) {
           this.e1 = 1
         } else {
           this.e1 = n + 1
         }
+        this.$router.push({ params: { step: step } })
       }
     }
   }

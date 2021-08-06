@@ -15,7 +15,7 @@ type SysSetting struct {
 	Section     string     `gorm:"column:section;index;notnull;size:24;comment:'Section'" json:"section"`
 	Key         string     `gorm:"column:key;index;notnull;size:128;comment:'标识'" json:"key"`           // 标识
 	Value       string     `gorm:"column:value;null;size:5000;comment:'值'" json:"value"`                // 值
-	Enable      bool       `gorm:"column:enable;null;default:false;comment:'是否启用'" json:"enable"`       // 是否启用
+	Enable      bool       `gorm:"column:enable;null;default:true;comment:'是否启用'" json:"enable"`        // 是否启用
 	Description string     `gorm:"column:description;notnull;size:500;comment:'备注'" json:"description"` // 备注
 	CreatedAt   time.Time  `gorm:"column:created_at" json:"created_at"`                                 // 创建时间
 	UpdatedAt   time.Time  `gorm:"column:updated_at" json:"updated_at"`                                 // 更新时间

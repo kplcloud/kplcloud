@@ -5,7 +5,10 @@
   >
     <v-row justify="center">
       <v-col cols="12" sm="10" md="8" lg="6">
-        <v-card>
+        <v-card
+          :disabled="loading"
+          :loading="loading"
+        >
           <v-form
             ref="form"
             v-model="valid"
@@ -175,7 +178,7 @@
         }).then(res => {
           if(res && res.success) {
             // this.$router.push({})// install/platform
-            this.nextStep(2)
+            this.nextStep("platform-step")
           }
         }).finally(() => {
           this.loading = false;

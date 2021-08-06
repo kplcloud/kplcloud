@@ -22,9 +22,11 @@ import (
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	"github.com/kplcloud/kplcloud/src/util"
 	"github.com/pkg/errors"
+	"io/ioutil"
 	"mime/multipart"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Middleware func(Service) Service
@@ -39,7 +41,7 @@ type Service interface {
 	// 9. 跨域配置
 	InitCors(ctx context.Context, allow bool, origin, methods, headers string) (err error)
 	// 3. 初始化Redis
-	InitRedis(ctx context.Context, hosts, auth string, db int) (err error)
+	InitRedis(ctx context.Context, hosts, auth string, db int, prefix string) (err error)
 	// 4. 初始化Jenkins构建机器
 	InitJenkins(ctx context.Context) (err error)
 	// 5. 初始化MQ 可以考虑直接用redis
@@ -76,6 +78,7 @@ func (s *service) InitPlatform(ctx context.Context, appName, adminName, adminPas
 	_ = s.repository.SysSetting().Add(ctx, "server", "log.path", logPath, "平台日志路径,不填的话打在控制台")
 	_ = s.repository.SysSetting().Add(ctx, "server", "log.level", logLevel, "平台输出的日志级别,支持五个级别 all,error,warn,info,debug")
 	_ = s.repository.SysSetting().Add(ctx, "server", "upload.path", uploadPath, "平台文件上传路径")
+	_ = s.repository.SysSetting().Add(ctx, "server", "web.path", "/usr/local/kplcloud/web/v2", "Web路径")
 	_ = s.repository.SysSetting().Add(ctx, "server", "debug", strconv.FormatBool(debug), "是否输出Debug日志")
 
 	// 保存管理员账号到SysUser
@@ -97,7 +100,35 @@ func (s *service) InitPlatform(ctx context.Context, appName, adminName, adminPas
 }
 
 func (s *service) InitLogo(ctx context.Context, f *multipart.FileHeader) (err error) {
-	_ = s.repository.SysSetting().Add(ctx, "server", "logo", "", "平台logo")
+	st, err := s.repository.SysSetting().Find(ctx, "server", "web.path")
+	if err != nil {
+		_ = level.Error(s.logger).Log("repository.SysSetting", "Find", "err", err.Error())
+		err = encode.ErrInstallUploadPath.Error()
+		return
+	}
+
+	file, err := f.Open()
+	if err != nil {
+		_ = level.Error(s.logger).Log("f", "Open", "err", err.Error())
+		err = encode.ErrInstallUpload.Wrap(err)
+		return
+	}
+	b, err := ioutil.ReadAll(file)
+	if err != nil {
+		_ = level.Error(s.logger).Log("ioutil", "ReadAll", "err", err.Error())
+		err = encode.ErrInstallUpload.Wrap(err)
+		return
+	}
+
+	logoPath := fmt.Sprintf("%s/images/logo%s", st.Value, ".png" /*path.Ext(f.Filename)*/)
+
+	if err = ioutil.WriteFile(logoPath, b, 0666); err != nil {
+		_ = level.Error(s.logger).Log("ioutil", "WriteFile", "err", err.Error())
+		err = encode.ErrInstallUpload.Wrap(err)
+		return
+	}
+
+	_ = s.repository.SysSetting().Add(ctx, "server", "logo", logoPath, "平台logo")
 	return
 }
 
@@ -105,7 +136,8 @@ func (s *service) InitCors(ctx context.Context, allow bool, origin, methods, hea
 	_ = s.repository.SysSetting().Add(ctx, "cors", "allow", strconv.FormatBool(allow), "是否允许跨域")
 	_ = s.repository.SysSetting().Add(ctx, "cors", "origin", origin, "跨域来源 '*' 表示所有来源")
 	_ = s.repository.SysSetting().Add(ctx, "cors", "methods", methods, "允许跨域Method")
-	_ = s.repository.SysSetting().Add(ctx, "cors", "methods", headers, "允许跨域Headers")
+	_ = s.repository.SysSetting().Add(ctx, "cors", "headers", headers, "允许跨域Headers")
+
 	return
 }
 
@@ -116,7 +148,8 @@ func (s *service) StoreToConfig(ctx context.Context) (err error) {
 	}
 
 	for _, v := range res {
-		s.setValue(ctx, v.Section, v.Key, v.Value)
+		s.cfg.ConfigFile.SetKeyComments(v.Section, v.Key, v.Description)
+		s.cfg.ConfigFile.SetValue(v.Section, v.Key, v.Value)
 	}
 
 	return s.configReload(ctx)
@@ -151,11 +184,11 @@ func (s *service) InitDb(ctx context.Context, drive, host string, port int, user
 }
 
 func (s *service) initData(ctx context.Context) (err error) {
-	_ = s.logger.Log("create", "table", "SysRole", s.db.CreateTable(types.SysRole{}).Error)
-	_ = s.logger.Log("create", "table", "SysUser", s.db.CreateTable(types.SysUser{}).Error)
-	_ = s.logger.Log("create", "table", "SysPermission", s.db.CreateTable(types.SysPermission{}).Error)
-	_ = s.logger.Log("create", "table", "SysSetting", s.db.CreateTable(types.SysSetting{}).Error)
-	_ = s.logger.Log("create", "table", "SysNamespace", s.db.CreateTable(types.SysNamespace{}).Error)
+	_ = s.logger.Log("create", "table", "SysRole", s.db.AutoMigrate(types.SysRole{}).Error)
+	_ = s.logger.Log("create", "table", "SysUser", s.db.AutoMigrate(types.SysUser{}).Error)
+	_ = s.logger.Log("create", "table", "SysPermission", s.db.AutoMigrate(types.SysPermission{}).Error)
+	_ = s.logger.Log("create", "table", "SysSetting", s.db.AutoMigrate(types.SysSetting{}).Error)
+	_ = s.logger.Log("create", "table", "SysNamespace", s.db.AutoMigrate(types.SysNamespace{}).Error)
 
 	// 初始化数据
 	authRsaPublicKey, authRsaPrivateKey, err := util.GenRsaKey()
@@ -179,14 +212,19 @@ func (s *service) initData(ctx context.Context) (err error) {
 	return
 }
 
-func (s *service) InitRedis(ctx context.Context, hosts, auth string, db int) (err error) {
+func (s *service) InitRedis(ctx context.Context, hosts, auth string, db int, prefix string) (err error) {
 	_ = s.repository.SysSetting().Add(ctx, "redis", "hosts", hosts, "单点 hosts: 127.0.0.1:6379;集群 hosts: 127.0.0.1:6380 用\",\"隔开")
 	_ = s.repository.SysSetting().Add(ctx, "redis", "auth", auth, "密码")
 	_ = s.repository.SysSetting().Add(ctx, "redis", "db", strconv.Itoa(db), "db")
+	_ = s.repository.SysSetting().Add(ctx, "redis", "prefix", prefix, "前缀")
 
-	rds, err := redisclient.NewRedisClient(hosts, auth, "kplcloud", db)
+	rds, err := redisclient.NewRedisClient(hosts, auth, prefix, db)
 	if err != nil {
 		_ = level.Error(s.logger).Log("redisclient", "NewRedisClient", "err", err.Error())
+		return
+	}
+	if err = rds.Set(ctx, "hello", "world", time.Second*5); err != nil {
+		_ = level.Error(s.logger).Log("rds", "Set", "err", err.Error())
 		return
 	}
 	s.rds = &rds

@@ -39,8 +39,11 @@ var ResponseMessage = map[ResStatus]int{
 	ErrSysRoleUserDelete:   2006,
 	ErrSysUserNotfound:     2007,
 
-	ErrInstallDbConnect: 901,
-	ErrInstallDbDrive:   902,
+	ErrInstallDbConnect:  901,
+	ErrInstallDbDrive:    902,
+	ErrInstallUploadPath: 903,
+	ErrInstallWebPath:    904,
+	ErrInstallUpload:     905,
 }
 
 const (
@@ -52,8 +55,11 @@ const (
 	ErrParamsPhone ResStatus = "手机格式不正确"
 	ErrLimiter     ResStatus = "太快了,等我一会儿..."
 
-	ErrInstallDbConnect ResStatus = "数据库连接失败"
-	ErrInstallDbDrive   ResStatus = "暂不支持其他数据库"
+	ErrInstallDbConnect  ResStatus = "数据库连接失败"
+	ErrInstallDbDrive    ResStatus = "暂不支持其他数据库"
+	ErrInstallUploadPath ResStatus = "文件目录未配置"
+	ErrInstallWebPath    ResStatus = "Web目录未配置"
+	ErrInstallUpload     ResStatus = "上传文件失败"
 
 	// 中间件错误信息
 	ErrSystem             ResStatus = "系统错误"

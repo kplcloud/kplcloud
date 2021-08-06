@@ -5,7 +5,10 @@
   >
     <v-row justify="center">
       <v-col cols="12" sm="10" md="8" lg="6">
-        <v-card>
+        <v-card
+          :disabled="loading"
+          :loading="loading"
+        >
           <v-form
             ref="form"
             v-model="valid"
@@ -81,6 +84,16 @@
                 placeholder="/data/upload"
                 required
               ></v-text-field>
+              <!--              <v-text-field-->
+              <!--                ref="webPath"-->
+              <!--                aria-disabled="true"-->
+              <!--                v-model="webPath"-->
+              <!--                :rules="[() => !!webPath || 'Web路径为必填']"-->
+              <!--                :error-messages="errorMessages"-->
+              <!--                label="Web路径"-->
+              <!--                placeholder="web/admin"-->
+              <!--                required-->
+              <!--              ></v-text-field>-->
               <v-switch
                 v-model="debug"
                 :label="`Debug : ${debug.toString()}`"
@@ -155,6 +168,7 @@
         uploadPath: '',
         passwordShow: false,
         debug: true,
+        webPath: 'web/kplcloud',
         rules: {
           required: (value) => !!value || 'Required.',
           min: (v) => v.length >= 4 || 'Min 4 characters',
@@ -193,10 +207,11 @@
           logLevel: this.logLevel,
           uploadPath: this.uploadPath,
           debug: this.debug === true,
+          webPath: this.webPath,
         }).then(res => {
           if (res && res.success) {
             // this.$router.push({})// install/platform
-            this.nextStep(3)
+            this.nextStep('logo-step')
           }
         }).finally(() => {
           this.loading = false
