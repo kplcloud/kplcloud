@@ -105,10 +105,10 @@ func generateInitData() (err error) {
 }
 
 func generateTable() (err error) {
-	_ = logger.Log("create", "table", "SysRole", db.CreateTable(types.SysRole{}).Error)
-	_ = logger.Log("create", "table", "SysUser", db.CreateTable(types.SysUser{}).Error)
-	_ = logger.Log("create", "table", "SysPermission", db.CreateTable(types.SysPermission{}).Error)
-	_ = logger.Log("create", "table", "SysNamespace", db.CreateTable(types.SysNamespace{}).Error)
-	_ = logger.Log("create", "table", "SysSetting", db.CreateTable(types.SysSetting{}).Error)
+	_ = logger.Log("create", "table", "SysRole", db.AutoMigrate(types.SysRole{}).Error)
+	_ = logger.Log("create", "table", "SysUser", db.AutoMigrate(types.SysUser{}).Error)
+	_ = logger.Log("create", "table", "SysPermission", db.AutoMigrate(types.SysPermission{}).Error)
+	_ = logger.Log("create", "table", "SysNamespace", db.AutoMigrate(types.SysNamespace{}).Error)
+	_ = logger.Log("create", "table", "SysSetting", db.AutoMigrate(types.SysSetting{}).Error)
 	return
 }

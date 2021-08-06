@@ -10,10 +10,10 @@ package install
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/kplcloud/kplcloud/src/util"
 	"github.com/pkg/errors"
 	"net/http"
+	"strings"
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/go-kit/kit/endpoint"
@@ -47,13 +47,59 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		opts...,
 	)).Methods(http.MethodPost)
 	r.Handle("/init-logo", kithttp.NewServer(
-		eps.InitPlatformEndpoint,
+		eps.InitLogoEndpoint,
 		decodeInitLogoPlatformRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodPost)
+	r.Handle("/init-cors", kithttp.NewServer(
+		eps.InitCorsEndpoint,
+		decodeInitCorsRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodPost)
+	r.Handle("/init-redis", kithttp.NewServer(
+		eps.InitRedisEndpoint,
+		decodeInitRedisRequest,
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodPost)
 
 	return r
+}
+
+func decodeInitRedisRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req initRedisRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
+	}
+	validResult, err := valid.ValidateStruct(req)
+	if err != nil {
+		return nil, encode.InvalidParams.Wrap(err)
+	}
+	if !validResult {
+		return nil, encode.InvalidParams.Wrap(errors.New("valid false"))
+	}
+	return req, nil
+}
+
+func decodeInitCorsRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req initCorsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, err
+	}
+	if req.Allow {
+		validResult, err := valid.ValidateStruct(req)
+		if err != nil {
+			return nil, encode.InvalidParams.Wrap(err)
+		}
+		if !validResult {
+			return nil, encode.InvalidParams.Wrap(errors.New("valid false"))
+		}
+		req.Method = strings.Join(req.Methods, ",")
+	}
+
+	return req, nil
 }
 
 func decodeInitDbRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -98,11 +144,10 @@ func decodeInitLogoPlatformRequest(_ context.Context, r *http.Request) (interfac
 		return nil, errors.Wrap(err, "reader.ReadForm")
 	}
 
-	if form.File == nil {
-		return nil, errors.New("文件不存在")
+	if form.File == nil || form.File["logo"] == nil {
+		return nil, errors.New("请选择所需要上传的logo")
 	}
-	fmt.Println(form.File)
 
-	return initLogoRequest{Files: form.File["file"]}, nil
+	return initLogoRequest{Files: form.File["logo"]}, nil
 
 }

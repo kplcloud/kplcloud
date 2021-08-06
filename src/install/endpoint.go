@@ -40,12 +40,29 @@ type (
 	initLogoRequest struct {
 		Files []*multipart.FileHeader
 	}
+
+	initCorsRequest struct {
+		Allow   bool     `json:"allow"`
+		Methods []string `json:"methods" valid:"required"`
+		Headers string   `json:"headers" valid:"required"`
+		Origin  string   `json:"origin"  valid:"required"`
+		Method  string   `json:"-"`
+	}
+
+	initRedisRequest struct {
+		Hosts    string `json:"hosts" valid:"required"`
+		Password string `json:"password"`
+		Database int    `json:"database"`
+		Prefix   string `json:"prefix"`
+	}
 )
 
 type Endpoints struct {
 	InitDbEndpoint       endpoint.Endpoint
 	InitPlatformEndpoint endpoint.Endpoint
 	InitLogoEndpoint     endpoint.Endpoint
+	InitCorsEndpoint     endpoint.Endpoint
+	InitRedisEndpoint    endpoint.Endpoint
 }
 
 func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
@@ -53,6 +70,8 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 		InitDbEndpoint:       makeInitDbEndpoint(s),
 		InitPlatformEndpoint: makeInitPlatformEndpoint(s),
 		InitLogoEndpoint:     makeInitLogoEndpoint(s),
+		InitCorsEndpoint:     makeInitCorsEndpoint(s),
+		InitRedisEndpoint:    makeInitRedisEndpoint(s),
 	}
 
 	for _, m := range dmw["InitDb"] {
@@ -64,8 +83,34 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	for _, m := range dmw["InitLogo"] {
 		eps.InitLogoEndpoint = m(eps.InitLogoEndpoint)
 	}
+	for _, m := range dmw["InitCors"] {
+		eps.InitCorsEndpoint = m(eps.InitCorsEndpoint)
+	}
+	for _, m := range dmw["InitRedis"] {
+		eps.InitRedisEndpoint = m(eps.InitRedisEndpoint)
+	}
 
 	return eps
+}
+
+func makeInitRedisEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(initRedisRequest)
+		err = s.InitRedis(ctx, req.Hosts, req.Password, req.Database, req.Prefix)
+		return encode.Response{
+			Error: err,
+		}, err
+	}
+}
+
+func makeInitCorsEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(initCorsRequest)
+		err = s.InitCors(ctx, req.Allow, req.Origin, req.Method, req.Headers)
+		return encode.Response{
+			Error: err,
+		}, err
+	}
 }
 
 func makeInitLogoEndpoint(s Service) endpoint.Endpoint {

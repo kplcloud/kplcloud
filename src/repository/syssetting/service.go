@@ -45,13 +45,16 @@ func (s *service) Find(_ context.Context, section, key string) (res types.SysSet
 	return
 }
 
-func (s *service) Add(_ context.Context, section, key, val, desc string) (err error) {
-	return s.db.Model(&types.SysSetting{}).Save(&types.SysSetting{
-		Section:     section,
-		Key:         key,
-		Value:       val,
-		Description: desc,
-	}).Error
+func (s *service) Add(ctx context.Context, section, key, val, desc string) (err error) {
+	st, err := s.Find(ctx, section, key)
+	if err != nil {
+		st = types.SysSetting{}
+	}
+	st.Section = section
+	st.Key = key
+	st.Value = val
+	st.Description = desc
+	return s.db.Model(&st).Save(&st).Error
 }
 
 func New(db *gorm.DB) Service {

@@ -7,18 +7,21 @@
       <v-col cols="12" sm="10" md="8" lg="6">
         <v-card
           class="mx-auto"
-          max-width="344"
+          max-width="500"
+          :disabled="loading"
+          :loading="loading"
         >
           <v-card-text>
             <v-file-input
               v-model="file"
               color="deep-purple accent-4"
-              counter
               label="上传logo"
               placeholder="请选择文件"
               accept="image/png, image/jpeg"
               prepend-icon="mdi-camera"
               outlined
+              show-size
+              :rules="[rules.required]"
             >
               <template v-slot:selection="{ index, text }">
                 <v-chip
@@ -46,7 +49,7 @@
 
     <v-btn
       color="primary"
-      @click="nextStep(2)"
+      @click="onSubmit"
     >
       下一步
     </v-btn>
@@ -57,6 +60,7 @@
 
 <script>
   import { mapActions } from 'vuex'
+  import { initLogo } from '../../api/install.service'
 
   export default {
     name: 'platform-logo',
@@ -73,18 +77,30 @@
       return {
         loading: false,
         valid: true,
-        appName: '',
         file: [],
         rules: {
-          required: (value) => !!value || 'Required.',
-          min: (v) => v.length >= 4 || 'Min 4 characters',
-        },
-        errorMessages: '',
-        formHasErrors: ''
+          required: (value) => !!value || '请选择上传的logo文件.',
+        }
       }
     },
     methods: {
       ...mapActions('app', ['showError', 'showSuccess']),
+      onSubmit () {
+        if (!this.file || this.file.length === 0) {
+          this.showError({ error: { message: '请选择上传的logo文件' } })
+          return
+        }
+        let formData = new FormData()
+        formData.append('logo', this.file)
+        this.loading = true
+        initLogo(formData).then(res => {
+          if (res && res.success) {
+            this.nextStep('cors-step')
+          }
+        }).finally(() => {
+          this.loading = false
+        })
+      }
     }
   }
 </script>
