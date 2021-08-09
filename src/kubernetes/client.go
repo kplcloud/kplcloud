@@ -8,10 +8,14 @@
 package kubernetes
 
 import (
-	"github.com/icowan/config"
+	"context"
+	"github.com/kplcloud/kplcloud/src/middleware"
+	"github.com/kplcloud/kplcloud/src/repository"
+	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"log"
 	"time"
 )
 
@@ -21,38 +25,61 @@ const (
 )
 
 type K8sClient interface {
-	Do() *kubernetes.Clientset
-	Config() *rest.Config
+	Do(ctx context.Context) *kubernetes.Clientset
+	Config(ctx context.Context) *rest.Config
 }
 
 type client struct {
-	clientSet *kubernetes.Clientset
-	config    *rest.Config
+	clientSet map[string]*kubernetes.Clientset
+	config    map[string]*rest.Config
 }
 
-func NewClient(cf *config.Config) (cli K8sClient, err error) {
-	cliConfig, err := clientcmd.BuildConfigFromFlags("", cf.GetString("server", "kube_config"))
+// TODO: logging
+func NewClient(store repository.Repository) (cli K8sClient, err error) {
+
+	clusters, err := store.Cluster(context.Background()).FindAll(context.Background(), 1)
 	if err != nil {
+		err = errors.Wrap(err, "store.Cluster")
 		return
 	}
 
-	cliConfig.QPS = defaultQPS
-	cliConfig.Burst = defaultBurst
-	cliConfig.Timeout = time.Second * 10
+	clientSetMap := map[string]*kubernetes.Clientset{}
+	clientConfigMap := map[string]*rest.Config{}
 
-	// create the clientset
-	clientset, err := kubernetes.NewForConfig(cliConfig)
-	if err != nil {
-		return
+	for _, v := range clusters {
+		cliConfig, err := clientcmd.BuildConfigFromFlags("", v.ConfigData)
+		if err != nil {
+			log.Print("err", "clientcmd.BuildConfigFromFlags")
+			continue
+		}
+		cliConfig.QPS = defaultQPS
+		cliConfig.Burst = defaultBurst
+		cliConfig.Timeout = time.Second * 10
+
+		clientSet, err := kubernetes.NewForConfig(cliConfig)
+		if err != nil {
+			log.Print("err", "kubernetes.NewForConfig")
+			continue
+		}
+		clientSetMap[v.Name] = clientSet
+		clientConfigMap[v.Name] = cliConfig
 	}
 
-	return &client{clientSet: clientset, config: cliConfig}, nil
+	return &client{clientSet: clientSetMap, config: cliConfig}, nil
 }
 
-func (c *client) Do() *kubernetes.Clientset {
-	return c.clientSet
+func (c *client) Do(ctx context.Context) *kubernetes.Clientset {
+	cluster, ok := ctx.Value(middleware.ClusterContextKey).(string)
+	if !ok {
+		cluster = "c1"
+	}
+	return c.clientSet[cluster]
 }
 
-func (c *client) Config() *rest.Config {
-	return c.config
+func (c *client) Config(ctx context.Context) *rest.Config {
+	cluster, ok := ctx.Value(middleware.ClusterContextKey).(string)
+	if !ok {
+		cluster = "c1"
+	}
+	return c.config[cluster]
 }

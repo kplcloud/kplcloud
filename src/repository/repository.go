@@ -8,9 +8,11 @@
 package repository
 
 import (
+	"context"
 	"github.com/go-kit/kit/log"
 	redisclient "github.com/icowan/redis-client"
 	"github.com/jinzhu/gorm"
+	"github.com/kplcloud/kplcloud/src/repository/cluster"
 	"github.com/opentracing/opentracing-go"
 
 	"github.com/kplcloud/kplcloud/src/repository/sysnamespace"
@@ -21,6 +23,8 @@ import (
 )
 
 type Repository interface {
+	Cluster(ctx context.Context) cluster.Service
+
 	SysSetting() syssetting.Service
 	SysUser() sysuser.Service
 	SysNamespace() sysnamespace.Service
@@ -29,11 +33,17 @@ type Repository interface {
 }
 
 type repository struct {
+	clusterSvc cluster.Service
+
 	sysSetting    syssetting.Service
 	sysUser       sysuser.Service
 	sysNamespace  sysnamespace.Service
 	sysRole       sysrole.Service
 	sysPermission syspermission.Service
+}
+
+func (r *repository) Cluster(ctx context.Context) cluster.Service {
+	return r.clusterSvc
 }
 
 func (r *repository) SysPermission() syspermission.Service {
@@ -73,6 +83,8 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 	sysPermission := syspermission.New(db)
 	sysPermission = syspermission.NewLogging(logger, traceId)(sysPermission)
 
+	clusterSvc := cluster.New(db)
+
 	if tracer != nil {
 		sysSetting = syssetting.NewTracing(tracer)(sysSetting)
 		sysUser = sysuser.NewTracing(tracer)(sysUser)
@@ -90,5 +102,7 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 		sysNamespace:  sysNamespace,
 		sysRole:       sysRole,
 		sysPermission: sysPermission,
+
+		clusterSvc: clusterSvc,
 	}
 }
