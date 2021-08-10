@@ -10,6 +10,7 @@ package server
 import (
 	"flag"
 	"fmt"
+	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"os"
 
 	"github.com/go-kit/kit/log"
@@ -57,9 +58,10 @@ var (
 var (
 	rateBucketNum = 5000
 
-	rds      redisclient.RedisClient
-	cacheSvc kitcache.Service
-	apiSvc   api.Service
+	rds       redisclient.RedisClient
+	cacheSvc  kitcache.Service
+	apiSvc    api.Service
+	k8sClient kubernetes.K8sClient
 	//hashId   hashids.HashIds
 )
 

@@ -9,14 +9,16 @@ package kubernetes
 
 import (
 	"context"
-	"github.com/kplcloud/kplcloud/src/middleware"
-	"github.com/kplcloud/kplcloud/src/repository"
+	"log"
+	"time"
+
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"log"
-	"time"
+
+	"github.com/kplcloud/kplcloud/src/middleware"
+	"github.com/kplcloud/kplcloud/src/repository"
 )
 
 const (
@@ -27,20 +29,53 @@ const (
 type K8sClient interface {
 	Do(ctx context.Context) *kubernetes.Clientset
 	Config(ctx context.Context) *rest.Config
+	Reload(ctx context.Context) (err error)
+	Connect(ctx context.Context, name string) (err error)
 }
 
 type client struct {
-	clientSet map[string]*kubernetes.Clientset
-	config    map[string]*rest.Config
+	clientSet      map[string]*kubernetes.Clientset
+	config         map[string]*rest.Config
+	defaultCluster string
+	store          repository.Repository
 }
 
-// TODO: logging
-func NewClient(store repository.Repository) (cli K8sClient, err error) {
+func (c *client) Connect(ctx context.Context, name string) (err error) {
+	cluster, err := c.store.Cluster(ctx).FindByName(ctx, name)
+	if err != nil {
+		err = errors.Wrap(err, "store.Cluster.FindByName")
+		return
+	}
+	cliConfig, err := clientcmd.BuildConfigFromFlags("", cluster.ConfigData)
+	if err != nil {
+		err = errors.Wrap(err, "clientcmd.BuildConfigFromFlags")
+		return
+	}
+	cliConfig.QPS = defaultQPS
+	cliConfig.Burst = defaultBurst
+	cliConfig.Timeout = time.Second * 10
 
-	clusters, err := store.Cluster(context.Background()).FindAll(context.Background(), 1)
+	clientSet, err := kubernetes.NewForConfig(cliConfig)
+	if err != nil {
+		err = errors.Wrap(err, "kubernetes.NewForConfig")
+		return
+	}
+
+	c.clientSet[cluster.Name] = clientSet
+	c.config[cluster.Name] = cliConfig
+
+	return
+}
+
+func (c *client) Reload(ctx context.Context) (err error) {
+	clusters, err := c.store.Cluster(context.Background()).FindAll(context.Background(), 1)
 	if err != nil {
 		err = errors.Wrap(err, "store.Cluster")
 		return
+	}
+	var defaultCluster string
+	if clusters != nil {
+		defaultCluster = clusters[0].Name
 	}
 
 	clientSetMap := map[string]*kubernetes.Clientset{}
@@ -58,14 +93,54 @@ func NewClient(store repository.Repository) (cli K8sClient, err error) {
 
 		clientSet, err := kubernetes.NewForConfig(cliConfig)
 		if err != nil {
-			log.Print("err", "kubernetes.NewForConfig")
+			log.Println("err", "kubernetes.NewForConfig")
+			continue
+		}
+		clientSetMap[v.Name] = clientSet
+		clientConfigMap[v.Name] = cliConfig
+	}
+	c.clientSet = clientSetMap
+	c.config = clientConfigMap
+	c.defaultCluster = defaultCluster
+	return nil
+}
+
+// TODO: logging
+func NewClient(store repository.Repository) (cli K8sClient, err error) {
+
+	clusters, err := store.Cluster(context.Background()).FindAll(context.Background(), 1)
+	if err != nil {
+		err = errors.Wrap(err, "store.Cluster")
+		return
+	}
+	var defaultCluster string
+	if clusters != nil {
+		defaultCluster = clusters[0].Name
+	}
+
+	clientSetMap := map[string]*kubernetes.Clientset{}
+	clientConfigMap := map[string]*rest.Config{}
+
+	for _, v := range clusters {
+		cliConfig, err := clientcmd.BuildConfigFromFlags("", v.ConfigData)
+		if err != nil {
+			log.Print("err", "clientcmd.BuildConfigFromFlags")
+			continue
+		}
+		cliConfig.QPS = defaultQPS
+		cliConfig.Burst = defaultBurst
+		cliConfig.Timeout = time.Second * 10
+
+		clientSet, err := kubernetes.NewForConfig(cliConfig)
+		if err != nil {
+			log.Println("err", "kubernetes.NewForConfig")
 			continue
 		}
 		clientSetMap[v.Name] = clientSet
 		clientConfigMap[v.Name] = cliConfig
 	}
 
-	return &client{clientSet: clientSetMap, config: cliConfig}, nil
+	return &client{store: store, clientSet: clientSetMap, config: clientConfigMap, defaultCluster: defaultCluster}, nil
 }
 
 func (c *client) Do(ctx context.Context) *kubernetes.Clientset {

@@ -75,7 +75,7 @@ func (c *service) PodsMetrics(ctx context.Context) (res map[string]interface{}, 
 	ns := ctx.Value(middleware.NamespaceContext).(string)
 	name := ctx.Value(middleware.NameContext).(string)
 
-	dep, err := c.k8sClient.Do().AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
+	dep, err := c.k8sClient.Do(ctx).AppsV1().Deployments(ns).Get(name, metav1.GetOptions{})
 	if err != nil {
 		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return nil, ErrPodDeploymentGet
@@ -87,7 +87,7 @@ func (c *service) PodsMetrics(ctx context.Context) (res map[string]interface{}, 
 		selectorVal = val
 	}
 
-	podList, err := c.k8sClient.Do().CoreV1().Pods(ns).List(metav1.ListOptions{
+	podList, err := c.k8sClient.Do(ctx).CoreV1().Pods(ns).List(metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("%s=%s", selectorKey, selectorVal),
 	})
 
@@ -162,7 +162,7 @@ func (c *service) Delete(ctx context.Context, podName string) (err error) {
 
 	var gracePeriodSeconds = int64(0) // 1 强制删除
 	var policy = metav1.DeletePropagationBackground
-	if err = c.k8sClient.Do().CoreV1().Pods(ns).Delete(podName, &metav1.DeleteOptions{
+	if err = c.k8sClient.Do(ctx).CoreV1().Pods(ns).Delete(podName, &metav1.DeleteOptions{
 		GracePeriodSeconds: &gracePeriodSeconds,
 		PropagationPolicy:  &policy,
 	}); err != nil {
@@ -186,7 +186,7 @@ func (c *service) Delete(ctx context.Context, podName string) (err error) {
 func (c *service) DownloadLog(ctx context.Context, podName, container string, previous bool) (res io.ReadCloser, err error) {
 	ns := ctx.Value(middleware.NamespaceContext).(string)
 
-	logStream, err := c.k8sClient.Do().CoreV1().RESTClient().Get().
+	logStream, err := c.k8sClient.Do(ctx).CoreV1().RESTClient().Get().
 		Namespace(ns).
 		Name(podName).
 		Resource("pods").
@@ -207,7 +207,7 @@ func (c *service) DownloadLog(ctx context.Context, podName, container string, pr
 
 func (c *service) GetLog(ctx context.Context, podName, container string, previous bool) (res *LogDetails, err error) {
 	ns := ctx.Value(middleware.NamespaceContext).(string)
-	pod, err := c.k8sClient.Do().CoreV1().Pods(ns).Get(podName, metav1.GetOptions{})
+	pod, err := c.k8sClient.Do(ctx).CoreV1().Pods(ns).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		_ = level.Error(c.logger).Log("Pods", "List", "err", err.Error())
 		return nil, ErrPodGet
@@ -235,7 +235,7 @@ func (c *service) GetLog(ctx context.Context, podName, container string, previou
 		container = pod.Spec.Containers[0].Name
 	}
 
-	result, err := c.getLogDetails(ns, podName, container, logSelector, previous)
+	result, err := c.getLogDetails(ctx, ns, podName, container, logSelector, previous)
 	if err != nil {
 		_ = level.Error(c.logger).Log("c", "getLogDetails", "err", err.Error())
 		return nil, ErrPodLogGet
@@ -244,9 +244,9 @@ func (c *service) GetLog(ctx context.Context, podName, container string, previou
 	return result, nil
 }
 
-func (c *service) getLogDetails(ns, podId, container string, logSelector *Selection, usePreviousLogs bool) (*LogDetails, error) {
+func (c *service) getLogDetails(ctx context.Context, ns, podId, container string, logSelector *Selection, usePreviousLogs bool) (*LogDetails, error) {
 	logOptions := c.mapToLogOptions(container, logSelector, usePreviousLogs)
-	rawLogs, err := c.readRawLogs(ns, podId, logOptions)
+	rawLogs, err := c.readRawLogs(ctx, ns, podId, logOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -272,9 +272,9 @@ func (c *service) mapToLogOptions(container string, logSelector *Selection, prev
 	return logOptions
 }
 
-func (c *service) readRawLogs(namespace, podID string, logOptions *v1.PodLogOptions) (
+func (c *service) readRawLogs(ctx context.Context, namespace, podID string, logOptions *v1.PodLogOptions) (
 	string, error) {
-	readCloser, err := c.openStream(namespace, podID, logOptions)
+	readCloser, err := c.openStream(ctx, namespace, podID, logOptions)
 	if err != nil {
 		return err.Error(), nil
 	}
@@ -291,8 +291,8 @@ func (c *service) readRawLogs(namespace, podID string, logOptions *v1.PodLogOpti
 	return string(result), nil
 }
 
-func (c *service) openStream(namespace, podID string, logOptions *v1.PodLogOptions) (io.ReadCloser, error) {
-	return c.k8sClient.Do().CoreV1().RESTClient().Get().Namespace(namespace).
+func (c *service) openStream(ctx context.Context, namespace, podID string, logOptions *v1.PodLogOptions) (io.ReadCloser, error) {
+	return c.k8sClient.Do(ctx).CoreV1().RESTClient().Get().Namespace(namespace).
 		Name(podID).Resource("pods").
 		SubResource("log").VersionedParams(logOptions, scheme.ParameterCodec).
 		Stream()
@@ -327,7 +327,7 @@ func isReadLimitReached(bytesLoaded int64, linesLoaded int64, logFilePosition st
 func (c *service) ProjectPods(ctx context.Context) (res []map[string]interface{}, err error) {
 	project := ctx.Value(middleware.ProjectContext).(*types.Project)
 
-	dep, err := c.k8sClient.Do().AppsV1().Deployments(project.Namespace).Get(project.Name, metav1.GetOptions{})
+	dep, err := c.k8sClient.Do(ctx).AppsV1().Deployments(project.Namespace).Get(project.Name, metav1.GetOptions{})
 	if err != nil {
 		_ = level.Error(c.logger).Log("Deployments", "Get", "err", err.Error())
 		return nil, ErrPodDeploymentGet
@@ -339,7 +339,7 @@ func (c *service) ProjectPods(ctx context.Context) (res []map[string]interface{}
 		selectorVal = val
 	}
 
-	podList, err := c.k8sClient.Do().CoreV1().Pods(project.Namespace).List(metav1.ListOptions{
+	podList, err := c.k8sClient.Do(ctx).CoreV1().Pods(project.Namespace).List(metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("%s=%s", selectorKey, selectorVal),
 	})
 
@@ -371,7 +371,7 @@ func (c *service) ProjectPods(ctx context.Context) (res []map[string]interface{}
 func (c *service) Detail(ctx context.Context, podName string) (res map[string]interface{}, err error) {
 	project := ctx.Value(middleware.ProjectContext).(*types.Project)
 
-	pod, err := c.k8sClient.Do().CoreV1().Pods(project.Namespace).Get(podName, metav1.GetOptions{})
+	pod, err := c.k8sClient.Do(ctx).CoreV1().Pods(project.Namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		_ = level.Error(c.logger).Log("Pods", "Get", "err", err.Error())
 		return nil, ErrPodGet
