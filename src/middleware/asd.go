@@ -40,6 +40,8 @@ const (
 	IsAdmin           ASDContext = "isAdmin"
 	CronJobContext    ASDContext = "cronJob"
 	StartTime         ASDContext = "start-time"
+
+	ClusterContextKey ASDContext = "cluster-context"
 )
 
 var (

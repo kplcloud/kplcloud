@@ -16,6 +16,8 @@
           <platform-logo :nextStep="nextStep" :v-if="e1===3"/>
           <cors :nextStep="nextStep" :v-if="e1===4"/>
           <redis :nextStep="nextStep" :v-if="e1===5"/>
+          <build :nextStep="nextStep" :v-if="e1===6"/>
+          <repo :nextStep="nextStep" :v-if="e1===7"/>
 
         </v-stepper-items>
       </v-stepper>
@@ -36,6 +38,8 @@
   import PlatformLogo from './PlatformLogo'
   import Cors from './Cors'
   import Redis from './Redis'
+  import Build from './Build'
+  import Repo from './Repo'
 
   export default {
     components: {
@@ -44,6 +48,8 @@
       PlatformLogo,
       Cors,
       Redis,
+      Build,
+      Repo,
     },
     data () {
       return {

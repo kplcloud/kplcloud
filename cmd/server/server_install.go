@@ -100,7 +100,7 @@ func install() (err error) {
 		//middleware.CheckAuthMiddleware(logger, cacheSvc, tracer),
 	}
 	tokenEms = append(tokenEms, ems...)
-	installSvc.StoreToConfig(context.Background())
+	//installSvc.StoreToConfig(context.Background())
 
 	r := mux.NewRouter()
 

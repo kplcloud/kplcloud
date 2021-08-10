@@ -44,6 +44,9 @@ var ResponseMessage = map[ResStatus]int{
 	ErrInstallUploadPath: 903,
 	ErrInstallWebPath:    904,
 	ErrInstallUpload:     905,
+
+	ErrClusterAdd:     920,
+	ErrClusterConnect: 921,
 }
 
 const (
@@ -60,6 +63,9 @@ const (
 	ErrInstallUploadPath ResStatus = "文件目录未配置"
 	ErrInstallWebPath    ResStatus = "Web目录未配置"
 	ErrInstallUpload     ResStatus = "上传文件失败"
+
+	ErrClusterAdd     ResStatus = "集群添加错误"
+	ErrClusterConnect ResStatus = "集群链接错误"
 
 	// 中间件错误信息
 	ErrSystem             ResStatus = "系统错误"

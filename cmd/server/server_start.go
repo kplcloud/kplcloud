@@ -14,6 +14,7 @@ import (
 	kitcache "github.com/icowan/kit-cache"
 	mysqlclient "github.com/icowan/mysql-client"
 	"github.com/kplcloud/kplcloud/src/api"
+	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/redis"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"net/http"
@@ -290,17 +291,24 @@ func prepare() error {
 		cf.GetString(config.SectionMysql, "database"))
 
 	// 连接数据库
-	db, err = mysqlclient.NewMysql(dbUrl, cf.GetBool(config.SectionServer, "app.debug"))
+	db, err = mysqlclient.NewMysql(dbUrl, true)
 	if err != nil {
 		_ = level.Error(logger).Log("db", "connect", "err", err)
 		return err
 	}
 
+	// 读取所有配置
+	settings, err := store.SysSetting().FindAll(context.Background())
 	if err != nil {
-		_ = level.Error(logger).Log("redis", "connect", "err", err)
+		_ = level.Error(logger).Log("store.SysSetting", "FindAll", "err", err.Error())
 		return err
 	}
-	_ = level.Info(logger).Log("rds", "connect", "success", true)
+
+	for _, v := range settings {
+		cf.SetValue(v.Section, v.Key, v.Value)
+	}
+
+	db.LogMode(cf.GetBool("server", "debug"))
 
 	//hashId = hashids.New("", cf.GetString(config.SectionServer, "app.key"), 12)
 
@@ -317,6 +325,8 @@ func prepare() error {
 	if err != nil {
 		_ = level.Error(logger).Log("redis", "connect", "err", err.Error())
 	}
+	_ = level.Info(logger).Log("rds", "connect", "success", true)
+
 	// 实例化cache
 	cacheSvc = kitcache.New(logger, logging.TraceId, rds)
 	cacheSvc = kitcache.NewLoggingServer(logger, cacheSvc, logging.TraceId)
@@ -325,5 +335,11 @@ func prepare() error {
 	// 实例化外部API
 	apiSvc = api.NewApi(logger, logging.TraceId, tracer, cf, cacheSvc)
 
-	return err
+	// 实例化k8s client
+	k8sClient, err = kubernetes.NewClient(store)
+	if err != nil {
+		_ = level.Error(logger).Log("kubernetes", "NewClient", "err", err.Error())
+	}
+
+	return nil
 }
