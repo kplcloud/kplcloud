@@ -23,9 +23,13 @@ type Nodes struct {
 	ContainerVersion string     `gorm:"column:container_version;null;comment:'容器版本'" json:"container_version"`
 	OsImage          string     `gorm:"column:os_image;null;comment:'系统镜像'" json:"os_image"`
 	Status           string     `gorm:"column:status;null;comment:'状态'" json:"status"`
+	Scheduled        bool       `gorm:"column:scheduled;null;default:false;comment:'是否调度'" json:"scheduled"`
+	Remark           string     `gorm:"column:remark;null;comment:'备注'" json:"remark"`
 	CreatedAt        time.Time  `gorm:"column:created_at" json:"created_at" form:"created_at"` // 创建时间
 	UpdatedAt        time.Time  `gorm:"column:updated_at" json:"updated_at" form:"updated_at"` // 更新时间
 	DeletedAt        *time.Time `gorm:"column:deleted_at" json:"deleted_at"`
+
+	Labels []Label `gorm:"many2many:node_label;foreignkey:id;association_foreignkey:id;association_jointable_foreignkey:label_id;jointable_foreignkey:node_id;"`
 }
 
 // TableName set table

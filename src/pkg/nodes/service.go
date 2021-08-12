@@ -91,6 +91,7 @@ func (s *service) Sync(ctx context.Context, clusterName string) (err error) {
 			n.ContainerVersion = node.Status.NodeInfo.ContainerRuntimeVersion
 			n.OsImage = node.Status.NodeInfo.OSImage
 			n.Status = status
+			n.Scheduled = !node.Spec.Unschedulable
 
 			if err = s.repository.Nodes(ctx).Save(ctx, &n); err != nil {
 				_ = level.Error(logger).Log("repository.Nodes", "Save", "err", err.Error())

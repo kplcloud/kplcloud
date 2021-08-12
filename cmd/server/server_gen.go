@@ -112,5 +112,6 @@ func generateTable() (err error) {
 	_ = logger.Log("migrate", "table", "SysSetting", db.AutoMigrate(types.SysSetting{}).Error)
 	_ = logger.Log("migrate", "table", "Cluster", db.AutoMigrate(types.Cluster{}).Error)
 	_ = logger.Log("migrate", "table", "Nodes", db.AutoMigrate(types.Nodes{}).Error)
+	_ = logger.Log("migrate", "table", "Nodes", db.AutoMigrate(types.Label{}).Error)
 	return
 }
