@@ -9,16 +9,19 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
+	"strings"
 	"time"
 
+	"github.com/kplcloud/kplcloud/src/middleware"
+	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-
-	"github.com/kplcloud/kplcloud/src/middleware"
-	"github.com/kplcloud/kplcloud/src/repository"
 )
 
 const (
@@ -26,11 +29,13 @@ const (
 	defaultBurst = 1e2
 )
 
+type Middleware func(K8sClient) K8sClient
+
 type K8sClient interface {
 	Do(ctx context.Context) *kubernetes.Clientset
 	Config(ctx context.Context) *rest.Config
 	Reload(ctx context.Context) (err error)
-	Connect(ctx context.Context, name string) (err error)
+	Connect(ctx context.Context, name, configData string) (err error)
 }
 
 type client struct {
@@ -40,13 +45,20 @@ type client struct {
 	store          repository.Repository
 }
 
-func (c *client) Connect(ctx context.Context, name string) (err error) {
-	cluster, err := c.store.Cluster(ctx).FindByName(ctx, name)
-	if err != nil {
-		err = errors.Wrap(err, "store.Cluster.FindByName")
-		return
+func (c *client) Connect(ctx context.Context, name, configData string) (err error) {
+	if strings.EqualFold(configData, "") {
+		cluster, err := c.store.Cluster(ctx).FindByName(ctx, name)
+		if err != nil {
+			return errors.Wrap(err, "store.Cluster.FindByName")
+		}
+		configData = cluster.ConfigData
 	}
-	cliConfig, err := clientcmd.BuildConfigFromFlags("", cluster.ConfigData)
+	_ = ioutil.WriteFile("/tmp/config", []byte(configData), os.ModePerm)
+	//cliConfig, err := clientcmd.BuildConfigFromKubeconfigGetter("", func() (config *clientcmdapi.Config, e error) {
+	//	e = yaml.Unmarshal([]byte(configData), &config)
+	//	return
+	//})
+	cliConfig, err := clientcmd.BuildConfigFromFlags("", "/tmp/config")
 	if err != nil {
 		err = errors.Wrap(err, "clientcmd.BuildConfigFromFlags")
 		return
@@ -61,8 +73,8 @@ func (c *client) Connect(ctx context.Context, name string) (err error) {
 		return
 	}
 
-	c.clientSet[cluster.Name] = clientSet
-	c.config[cluster.Name] = cliConfig
+	c.clientSet[name] = clientSet
+	c.config[name] = cliConfig
 
 	return
 }
@@ -73,35 +85,11 @@ func (c *client) Reload(ctx context.Context) (err error) {
 		err = errors.Wrap(err, "store.Cluster")
 		return
 	}
-	var defaultCluster string
-	if clusters != nil {
-		defaultCluster = clusters[0].Name
-	}
-
-	clientSetMap := map[string]*kubernetes.Clientset{}
-	clientConfigMap := map[string]*rest.Config{}
-
 	for _, v := range clusters {
-		cliConfig, err := clientcmd.BuildConfigFromFlags("", v.ConfigData)
-		if err != nil {
-			log.Print("err", "clientcmd.BuildConfigFromFlags")
-			continue
+		if err = c.Connect(ctx, v.Name, v.ConfigData); err != nil {
+			log.Println(fmt.Sprintf("cluserName: %s err: %s", v.Name, err.Error()))
 		}
-		cliConfig.QPS = defaultQPS
-		cliConfig.Burst = defaultBurst
-		cliConfig.Timeout = time.Second * 10
-
-		clientSet, err := kubernetes.NewForConfig(cliConfig)
-		if err != nil {
-			log.Println("err", "kubernetes.NewForConfig")
-			continue
-		}
-		clientSetMap[v.Name] = clientSet
-		clientConfigMap[v.Name] = cliConfig
 	}
-	c.clientSet = clientSetMap
-	c.config = clientConfigMap
-	c.defaultCluster = defaultCluster
 	return nil
 }
 
@@ -114,7 +102,7 @@ func NewClient(store repository.Repository) (cli K8sClient, err error) {
 		return
 	}
 	var defaultCluster string
-	if clusters != nil {
+	if clusters != nil && len(clusters) > 0 {
 		defaultCluster = clusters[0].Name
 	}
 
@@ -122,14 +110,15 @@ func NewClient(store repository.Repository) (cli K8sClient, err error) {
 	clientConfigMap := map[string]*rest.Config{}
 
 	for _, v := range clusters {
-		cliConfig, err := clientcmd.BuildConfigFromFlags("", v.ConfigData)
+		_ = ioutil.WriteFile("/tmp/config", []byte(v.ConfigData), os.ModePerm)
+		cliConfig, err := clientcmd.BuildConfigFromFlags("", "/tmp/config")
 		if err != nil {
 			log.Print("err", "clientcmd.BuildConfigFromFlags")
 			continue
 		}
 		cliConfig.QPS = defaultQPS
 		cliConfig.Burst = defaultBurst
-		cliConfig.Timeout = time.Second * 10
+		cliConfig.Timeout = time.Second * 15
 
 		clientSet, err := kubernetes.NewForConfig(cliConfig)
 		if err != nil {

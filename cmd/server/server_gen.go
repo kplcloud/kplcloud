@@ -105,10 +105,12 @@ func generateInitData() (err error) {
 }
 
 func generateTable() (err error) {
-	_ = logger.Log("create", "table", "SysRole", db.AutoMigrate(types.SysRole{}).Error)
-	_ = logger.Log("create", "table", "SysUser", db.AutoMigrate(types.SysUser{}).Error)
-	_ = logger.Log("create", "table", "SysPermission", db.AutoMigrate(types.SysPermission{}).Error)
-	_ = logger.Log("create", "table", "SysNamespace", db.AutoMigrate(types.SysNamespace{}).Error)
-	_ = logger.Log("create", "table", "SysSetting", db.AutoMigrate(types.SysSetting{}).Error)
+	_ = logger.Log("migrate", "table", "SysRole", db.AutoMigrate(types.SysRole{}).Error)
+	_ = logger.Log("migrate", "table", "SysUser", db.AutoMigrate(types.SysUser{}).Error)
+	_ = logger.Log("migrate", "table", "SysPermission", db.AutoMigrate(types.SysPermission{}).Error)
+	_ = logger.Log("migrate", "table", "SysNamespace", db.AutoMigrate(types.SysNamespace{}).Error)
+	_ = logger.Log("migrate", "table", "SysSetting", db.AutoMigrate(types.SysSetting{}).Error)
+	_ = logger.Log("migrate", "table", "Cluster", db.AutoMigrate(types.Cluster{}).Error)
+	_ = logger.Log("migrate", "table", "Nodes", db.AutoMigrate(types.Nodes{}).Error)
 	return
 }

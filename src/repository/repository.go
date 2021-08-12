@@ -13,6 +13,7 @@ import (
 	redisclient "github.com/icowan/redis-client"
 	"github.com/jinzhu/gorm"
 	"github.com/kplcloud/kplcloud/src/repository/cluster"
+	"github.com/kplcloud/kplcloud/src/repository/nodes"
 	"github.com/opentracing/opentracing-go"
 
 	"github.com/kplcloud/kplcloud/src/repository/sysnamespace"
@@ -24,6 +25,7 @@ import (
 
 type Repository interface {
 	Cluster(ctx context.Context) cluster.Service
+	Nodes(ctx context.Context) nodes.Service
 
 	SysSetting() syssetting.Service
 	SysUser() sysuser.Service
@@ -34,12 +36,17 @@ type Repository interface {
 
 type repository struct {
 	clusterSvc cluster.Service
+	nodesSvc   nodes.Service
 
 	sysSetting    syssetting.Service
 	sysUser       sysuser.Service
 	sysNamespace  sysnamespace.Service
 	sysRole       sysrole.Service
 	sysPermission syspermission.Service
+}
+
+func (r *repository) Nodes(ctx context.Context) nodes.Service {
+	return r.nodesSvc
 }
 
 func (r *repository) Cluster(ctx context.Context) cluster.Service {
@@ -69,7 +76,7 @@ func (r *repository) SysSetting() syssetting.Service {
 func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Tracer, redis redisclient.RedisClient) Repository {
 	// 平台系统相关仓库
 	sysSetting := syssetting.New(db)
-	sysSetting = syssetting.NewLogging(logger, traceId)(sysSetting)
+	//sysSetting = syssetting.NewLogging(logger, traceId)(sysSetting)
 
 	sysNamespace := sysnamespace.New(db)
 	sysNamespace = sysnamespace.NewLogging(logger, traceId)(sysNamespace)
@@ -85,8 +92,10 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 
 	clusterSvc := cluster.New(db)
 
+	nodesSvc := nodes.New(db)
+
 	if tracer != nil {
-		sysSetting = syssetting.NewTracing(tracer)(sysSetting)
+		//sysSetting = syssetting.NewTracing(tracer)(sysSetting)
 		sysUser = sysuser.NewTracing(tracer)(sysUser)
 		sysNamespace = sysnamespace.NewTracing(tracer)(sysNamespace)
 		sysRole = sysrole.NewTracing(tracer)(sysRole)
@@ -104,5 +113,6 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 		sysPermission: sysPermission,
 
 		clusterSvc: clusterSvc,
+		nodesSvc:   nodesSvc,
 	}
 }

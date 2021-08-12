@@ -49,4 +49,4 @@ init:
 	GO111MODULE=on $(GORUN) ./cmd/main.go install -p :8080 -c ./app.dev.cfg
 
 run:
-	GO111MODULE=on $(GORUN) ./cmd/main.go start -p :8080 -c ./app.dev.cfg
+	GO111MODULE=on $(GORUN) ./cmd/main.go start -p :8082 -c ./app.dev.cfg -a kplcloud

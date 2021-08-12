@@ -15,11 +15,14 @@ import (
 	mysqlclient "github.com/icowan/mysql-client"
 	"github.com/kplcloud/kplcloud/src/api"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
+	"github.com/kplcloud/kplcloud/src/pkg/cluster"
+	"github.com/kplcloud/kplcloud/src/pkg/nodes"
 	"github.com/kplcloud/kplcloud/src/redis"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -69,6 +72,9 @@ kplcloud start -p :8080 -g :8082
 	sysUserSvc       sysuser.Service
 	sysRoleSvc       sysrole.Service
 	sysPermissionSvc syspermission.Service
+
+	clusterSvc cluster.Service
+	nodeSvc    nodes.Service
 )
 
 func start() (err error) {
@@ -116,10 +122,17 @@ func start() (err error) {
 	sysPermissionSvc = syspermission.New(logger, logging.TraceId, store)
 	sysPermissionSvc = syspermission.NewLogging(logger, logging.TraceId)(sysPermissionSvc)
 
+	clusterSvc = cluster.New(logger, logging.TraceId, store, k8sClient)
+	clusterSvc = cluster.NewLogging(logger, logging.TraceId)(clusterSvc)
+	nodeSvc = nodes.New(logger, logging.TraceId, k8sClient, store)
+	nodeSvc = nodes.NewLogging(logger, logging.TraceId)(nodeSvc)
+
 	if tracer != nil {
 		//authSvc = auth.NewTracing(tracer)(authSvc)
 		sysUserSvc = sysuser.NewTracing(tracer)(sysUserSvc)
 		sysRoleSvc = sysrole.NewTracing(tracer)(sysRoleSvc)
+		clusterSvc = cluster.NewTracing(tracer)(clusterSvc)
+		nodeSvc = nodes.NewTracing(tracer)(nodeSvc)
 	}
 
 	g := &group.Group{}
@@ -189,6 +202,9 @@ func initHttpHandler(g *group.Group) {
 	// 授权登录模块
 	//r.PathPrefix("/admin/auth").Handler(http.StripPrefix("/admin/auth", auth.MakeHTTPHandler(authSvc, ems, opts)))
 	//r.PathPrefix("/admin/account").Handler(http.StripPrefix("/admin/account", account.MakeHTTPHandler(accountSvc, tokenEms, opts)))
+
+	r.PathPrefix("/cluster").Handler(http.StripPrefix("/cluster", cluster.MakeHTTPHandler(clusterSvc, tokenEms, opts)))
+	r.PathPrefix("/node").Handler(http.StripPrefix("/node", nodes.MakeHTTPHandler(nodeSvc, tokenEms, opts)))
 
 	// 以下为系统模块
 	// 系统用户模块
@@ -281,24 +297,27 @@ func prepare() error {
 		appName = cf.GetString(config.SectionServer, "app.name")
 	}
 
-	logger = logging.SetLogging(logger, cf)
+	if strings.EqualFold(cf.GetString("database", "drive"), "mysql") {
+		dbUrl := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=true&loc=Local&timeout=20m&collation=utf8mb4_unicode_ci",
+			cf.GetString("database", "user"), cf.GetString("database", "password"),
+			cf.GetString("database", "host"), cf.GetInt("database", "port"),
+			cf.GetString("database", "database"))
 
-	dbUrl := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local&timeout=20m&collation=utf8mb4_unicode_ci",
-		cf.GetString(config.SectionMysql, "user"),
-		cf.GetString(config.SectionMysql, "password"),
-		cf.GetString(config.SectionMysql, "host"),
-		cf.GetString(config.SectionMysql, "port"),
-		cf.GetString(config.SectionMysql, "database"))
-
-	// 连接数据库
-	db, err = mysqlclient.NewMysql(dbUrl, true)
-	if err != nil {
-		_ = level.Error(logger).Log("db", "connect", "err", err)
-		return err
+		// 连接数据库
+		db, err = mysqlclient.NewMysql(dbUrl, true)
+		if err != nil {
+			_ = level.Error(logger).Log("db", "connect", "err", err)
+			err = encode.ErrInstallDbConnect.Wrap(err)
+			return err
+		}
+		// 实例化仓库
+		store = repository.New(db, logger, "traceId", tracer, rds)
 	}
 
+	ctx := context.Background()
+
 	// 读取所有配置
-	settings, err := store.SysSetting().FindAll(context.Background())
+	settings, err := store.SysSetting().FindAll(ctx)
 	if err != nil {
 		_ = level.Error(logger).Log("store.SysSetting", "FindAll", "err", err.Error())
 		return err
@@ -308,12 +327,14 @@ func prepare() error {
 		cf.SetValue(v.Section, v.Key, v.Value)
 	}
 
+	logger = logging.SetLogging(logger, cf)
 	db.LogMode(cf.GetBool("server", "debug"))
 
 	//hashId = hashids.New("", cf.GetString(config.SectionServer, "app.key"), 12)
 
 	// 链路追踪
 	tracer, _, err = newJaegerTracer(cf)
+
 	if err != nil {
 		_ = level.Error(logger).Log("jaegerTracer", "connect", "err", err.Error())
 	}
@@ -330,8 +351,7 @@ func prepare() error {
 	// 实例化cache
 	cacheSvc = kitcache.New(logger, logging.TraceId, rds)
 	cacheSvc = kitcache.NewLoggingServer(logger, cacheSvc, logging.TraceId)
-	// 实例化仓库
-	store = repository.New(db, logger, logging.TraceId, tracer, rds)
+
 	// 实例化外部API
 	apiSvc = api.NewApi(logger, logging.TraceId, tracer, cf, cacheSvc)
 
@@ -339,6 +359,11 @@ func prepare() error {
 	k8sClient, err = kubernetes.NewClient(store)
 	if err != nil {
 		_ = level.Error(logger).Log("kubernetes", "NewClient", "err", err.Error())
+	} else {
+		k8sClient = kubernetes.NewLogging(logger, logging.TraceId)(k8sClient)
+		if tracer != nil {
+			k8sClient = kubernetes.NewTracing(tracer)(k8sClient)
+		}
 	}
 
 	return nil
