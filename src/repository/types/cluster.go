@@ -16,7 +16,7 @@ type Cluster struct {
 	Remark     string     `gorm:"column:remark;comment:'备注'" json:"remark"`                     // 备注
 	Label      string     `gorm:"column:label;comment:'标签'" json:"label"`                       // 标签
 	Status     int        `gorm:"column:status;default:0;comment:'状态:0未启用,1:正常'" json:"status"` // 状态
-	ConfigData string     `gorm:"column:config_data;comment:'配置文件'" json:"config_data"`
+	ConfigData string     `gorm:"column:config_data;type:text;comment:'配置文件'" json:"config_data"`
 	CreatedAt  time.Time  `gorm:"column:created_at" json:"created_at"` // 创建时间
 	UpdatedAt  time.Time  `gorm:"column:updated_at" json:"updated_at"` // 更新时间
 	DeletedAt  *time.Time `gorm:"column:deleted_at" json:"deleted_at"`

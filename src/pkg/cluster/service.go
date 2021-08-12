@@ -21,6 +21,7 @@ type Middleware func(Service) Service
 
 type Service interface {
 	Add(ctx context.Context, name, alias, data string) (err error)
+	//List(ctx context.Context, name string, page, pageSize int) (res )
 }
 
 type service struct {
@@ -41,7 +42,7 @@ func (s *service) Add(ctx context.Context, name, alias, data string) (err error)
 	}
 
 	if err = s.repository.Cluster(ctx).Save(ctx, &cluster, func() error {
-		if err = s.k8sClient.Connect(ctx, name); err != nil {
+		if err = s.k8sClient.Connect(ctx, name, data); err != nil {
 			_ = level.Error(logger).Log("k8sClient.Connect", "err", err.Error())
 			return encode.ErrClusterConnect.Error()
 		}

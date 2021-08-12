@@ -11,6 +11,7 @@ import (
 	"context"
 	"github.com/jinzhu/gorm"
 	"github.com/kplcloud/kplcloud/src/repository/types"
+	"github.com/pkg/errors"
 )
 
 type Call func() error
@@ -48,7 +49,8 @@ func (s *service) Save(ctx context.Context, data *types.Cluster, calls ...Call) 
 
 	for _, call := range calls {
 		if err = call(); err != nil {
-			return tx.Rollback().Error
+			tx.Rollback()
+			return errors.Wrap(err, "call")
 		}
 	}
 

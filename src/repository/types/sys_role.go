@@ -10,7 +10,7 @@ package types
 import "time"
 
 type SysRole struct {
-	Id          int64      `json:"id"`
+	Id          int64      `gorm:"column:id;rimary_key" json:"id"`
 	Alias       string     `gorm:"column:alias;notnull;comment:'名称'" json:"alias"`
 	Name        string     `gorm:"column:name;notnull;size:24;unique;comment:'标识'" json:"name"`
 	Enabled     bool       `gorm:"column:enabled;null;default:true;comment:'是否可用'" json:"enabled"`
