@@ -48,6 +48,9 @@ var ResponseMessage = map[ResStatus]int{
 	ErrClusterAdd:      920,
 	ErrClusterConnect:  921,
 	ErrClusterNotfound: 922,
+	ErrClusterParams:   923,
+
+	ErrNamespaceNotfound: 940,
 }
 
 const (
@@ -68,6 +71,9 @@ const (
 	ErrClusterAdd      ResStatus = "集群添加错误"
 	ErrClusterConnect  ResStatus = "集群链接错误"
 	ErrClusterNotfound ResStatus = "集群不存在"
+	ErrClusterParams   ResStatus = "集群参数错误"
+
+	ErrNamespaceNotfound ResStatus = "空间不存在"
 
 	// 中间件错误信息
 	ErrSystem             ResStatus = "系统错误"

@@ -177,7 +177,7 @@ func (s *service) InitDb(ctx context.Context, drive, host string, port int, user
 	}
 
 	s.db = db
-	s.repository = repository.New(db, s.logger, "traceId", nil, nil)
+	s.repository = repository.New(db, s.logger, "traceId", nil, nil, nil)
 
 	// 初始化数据
 	return s.initData(ctx)

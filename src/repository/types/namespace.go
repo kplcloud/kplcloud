@@ -1,18 +1,21 @@
 package types
 
-import "gopkg.in/guregu/null.v3"
+import (
+	"time"
+)
 
 type Namespace struct {
-	CreatedAt   null.Time `gorm:"column:created_at" json:"created_at"`
-	ID          int64     `gorm:"column:id;primary_key" json:"id"`
-	DisplayName string    `gorm:"column:display_name" json:"display_name"`
-	Name        string    `gorm:"column:name" json:"name"`
-	UpdatedAt   null.Time `gorm:"column:updated_at" json:"updated_at"`
-
-	Members []Member `gorm:"many2many:namespaces_memberss;foreignkey:id;association_foreignkey:id;association_jointable_foreignkey:members_id;jointable_foreignkey:namespaces_id"`
+	Id        int64      `gorm:"column:id;primary_key" json:"id"`
+	ClusterId int64      `gorm:"column:cluster_id;comment:'集群ID'" json:"cluster_id"`
+	Alias     string     `gorm:"column:alias;comment:'别名'" json:"alias"`
+	Name      string     `gorm:"column:name;index;comment:'名称'" json:"name"`
+	Status    string     `gorm:"column:status;comment:'状态'" json:"status"`
+	CreatedAt time.Time  `gorm:"column:created_at" json:"created_at"` // 创建时间
+	UpdatedAt time.Time  `gorm:"column:updated_at" json:"updated_at"` // 更新时间
+	DeletedAt *time.Time `gorm:"column:deleted_at" json:"deleted_at"`
 }
 
 // TableName sets the insert table name for this struct type
-func (n *Namespace) TableName() string {
-	return "namespaces"
+func (*Namespace) TableName() string {
+	return "namespace"
 }

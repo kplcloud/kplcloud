@@ -1,59 +1,43 @@
+/**
+ * @Time : 8/13/21 2:55 PM
+ * @Author : solacowa@gmail.com
+ * @File : endpoint
+ * @Software: GoLand
+ */
+
 package namespace
 
 import (
 	"context"
 	"github.com/go-kit/kit/endpoint"
-	"github.com/kplcloud/kplcloud/src/repository/types"
-	"github.com/kplcloud/kplcloud/src/util/encode"
+	"github.com/kplcloud/kplcloud/src/encode"
+	"github.com/kplcloud/kplcloud/src/middleware"
 )
 
-type nsRequest struct {
-	Name        string `json:"name,omitempty"`
-	DisplayName string `json:"display_name,omitempty"`
+type Endpoints struct {
+	SyncEndpoint endpoint.Endpoint
 }
 
-type nsResponse struct {
-	Code int              `json:"code"`
-	Data *types.Namespace `json:"data,omitempty"`
-	Err  error            `json:"error,omitempty"`
-}
-
-func (r nsResponse) error() error { return r.Err }
-
-func makeGetEndpoint(s Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(nsRequest)
-		rs, err := s.Get(ctx, req.Name)
-		return encode.Response{Err: err, Data: rs}, err
+func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
+	eps := Endpoints{
+		SyncEndpoint: makeSyncEndpoint(s),
 	}
-}
 
-func makePostEndpoint(s Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(nsRequest)
-		err := s.Post(ctx, req.Name, req.DisplayName)
-		return encode.Response{Err: err}, err
+	for _, m := range dmw["Sync"] {
+		eps.SyncEndpoint = m(eps.SyncEndpoint)
 	}
-}
-
-func makeUpdateEndpoint(s Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		req := request.(nsRequest)
-		err := s.Update(ctx, req.Name, req.DisplayName)
-		return encode.Response{Err: err}, err
-	}
+	return eps
 }
 
 func makeSyncEndpoint(s Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		err := s.Sync(ctx)
-		return encode.Response{Err: err}, err
-	}
-}
-
-func makeListEndpoint(s Service) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		res, err := s.List(ctx)
-		return encode.Response{Err: err, Data: res}, err
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		clusterId, ok := ctx.Value(middleware.ContextKeyClusterId).(int64)
+		if !ok {
+			return nil, encode.ErrClusterNotfound.Error()
+		}
+		err = s.Sync(ctx, clusterId)
+		return encode.Response{
+			Error: err,
+		}, err
 	}
 }

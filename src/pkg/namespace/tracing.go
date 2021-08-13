@@ -5,7 +5,7 @@
  * @Software: GoLand
  */
 
-package nodes
+package namespace
 
 import (
 	"context"
@@ -20,34 +20,18 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
-func (s *tracing) List(ctx context.Context, clusterId int64, page, pageSize int) (res []nodeResult, total int, err error) {
-	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", stdopentracing.Tag{
+func (s *tracing) Sync(ctx context.Context, clusterId int64) (err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Sync", stdopentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Nodes",
+		Value: "Namespace",
 	})
 	defer func() {
 		span.LogKV(
 			"clusterId", clusterId,
-			"page", page,
-			"pageSize", pageSize,
 			"err", err)
 		span.Finish()
 	}()
-	return s.next.List(ctx, clusterId, page, pageSize)
-}
-
-func (s *tracing) Sync(ctx context.Context, clusterName string) (err error) {
-	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Sync", stdopentracing.Tag{
-		Key:   string(ext.Component),
-		Value: "Nodes",
-	})
-	defer func() {
-		span.LogKV(
-			"clusterName", clusterName,
-			"err", err)
-		span.Finish()
-	}()
-	return s.next.Sync(ctx, clusterName)
+	return s.next.Sync(ctx, clusterId)
 }
 
 func NewTracing(otTracer stdopentracing.Tracer) Middleware {

@@ -154,7 +154,7 @@ func installPre() error {
 			err = encode.ErrInstallDbConnect.Wrap(err)
 			return err
 		}
-		store = repository.New(db, logger, "traceId", nil, nil)
+		store = repository.New(db, logger, "traceId", nil, nil, nil)
 	}
 
 	return err

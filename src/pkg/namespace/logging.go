@@ -1,84 +1,46 @@
+/**
+ * @Time : 8/11/21 4:21 PM
+ * @Author : solacowa@gmail.com
+ * @File : logging
+ * @Software: GoLand
+ */
+
 package namespace
 
 import (
 	"context"
+	"time"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	kithttp "github.com/go-kit/kit/transport/http"
-	"github.com/kplcloud/kplcloud/src/repository/types"
-	"time"
 )
 
-type loggingService struct {
-	logger log.Logger
-	Service
+type logging struct {
+	logger  log.Logger
+	next    Service
+	traceId string
 }
 
-func NewLoggingService(logger log.Logger, s Service) Service {
-	return &loggingService{level.Info(logger), s}
-}
-
-func (s *loggingService) Get(ctx context.Context, name string) (resp *types.Namespace, err error) {
+func (s *logging) Sync(ctx context.Context, clusterId int64) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
-			"uri", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "get",
-			"name", name,
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Sync",
+			"clusterId", clusterId,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return s.Service.Get(ctx, name)
+	return s.next.Sync(ctx, clusterId)
 }
 
-func (s *loggingService) Post(ctx context.Context, name, displayName string) (err error) {
-	defer func(begin time.Time) {
-		_ = s.logger.Log(
-			"uri", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "post",
-			"name", name,
-			"displayName", displayName,
-			"took", time.Since(begin),
-			"err", err,
-		)
-	}(time.Now())
-	return s.Service.Post(ctx, name, displayName)
-}
-
-func (s *loggingService) Update(ctx context.Context, name, displayName string) (err error) {
-	defer func(begin time.Time) {
-		_ = s.logger.Log(
-			"uri", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "update",
-			"name", name,
-			"displayName", displayName,
-			"took", time.Since(begin),
-			"err", err,
-		)
-	}(time.Now())
-	return s.Service.Update(ctx, name, displayName)
-}
-
-func (s *loggingService) Sync(ctx context.Context) (err error) {
-	defer func(begin time.Time) {
-		_ = s.logger.Log(
-			"uri", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "sync",
-			"took", time.Since(begin),
-			"err", err,
-		)
-	}(time.Now())
-	return s.Service.Sync(ctx)
-}
-
-func (s *loggingService) List(ctx context.Context) (res []*types.Namespace, err error) {
-	defer func(begin time.Time) {
-		_ = s.logger.Log(
-			"uri", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "List",
-			"took", time.Since(begin),
-			"err", err,
-		)
-	}(time.Now())
-	return s.Service.List(ctx)
+func NewLogging(logger log.Logger, traceId string) Middleware {
+	logger = log.With(logger, "namespace", "logging")
+	return func(next Service) Service {
+		return &logging{
+			logger:  level.Info(logger),
+			next:    next,
+			traceId: traceId,
+		}
+	}
 }

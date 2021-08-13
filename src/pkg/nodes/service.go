@@ -9,24 +9,24 @@ package nodes
 
 import (
 	"context"
-	"github.com/kplcloud/kplcloud/src/middleware"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/jinzhu/gorm"
-	"github.com/kplcloud/kplcloud/src/encode"
-	"github.com/kplcloud/kplcloud/src/repository/types"
 	v1 "k8s.io/api/core/v1"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/repository"
+	"github.com/kplcloud/kplcloud/src/repository/types"
 )
 
 type Middleware func(Service) Service
 
 type Service interface {
 	Sync(ctx context.Context, clusterName string) (err error)
+	List(ctx context.Context, clusterId int64, page, pageSize int) (res []nodeResult, total int, err error)
 }
 
 type service struct {
@@ -34,6 +34,26 @@ type service struct {
 	traceId    string
 	k8sClient  kubernetes.K8sClient
 	repository repository.Repository
+}
+
+func (s *service) List(ctx context.Context, clusterId int64, page, pageSize int) (res []nodeResult, total int, err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	list, total, err := s.repository.Nodes(ctx).List(ctx, clusterId, page, pageSize)
+	if err != nil {
+		_ = level.Error(logger).Log("repository.Nodes", "List", "err", err.Error())
+		return
+	}
+
+	for _, v := range list {
+		res = append(res, nodeResult{
+			Name:   v.Name,
+			Memory: v.Memory,
+			Cpu:    v.Cpu,
+		})
+	}
+
+	return
 }
 
 func (s *service) Sync(ctx context.Context, clusterName string) (err error) {
@@ -46,9 +66,7 @@ func (s *service) Sync(ctx context.Context, clusterName string) (err error) {
 		return
 	}
 
-	ctx = context.WithValue(ctx, middleware.ClusterContextKey, clusterName)
-
-	if nodes, err := s.k8sClient.Do(ctx).CoreV1().Nodes().List(ctx, meta_v1.ListOptions{}); err == nil {
+	if nodes, err := s.k8sClient.Do(ctx).CoreV1().Nodes().List(ctx, metav1.ListOptions{}); err == nil {
 		for _, node := range nodes.Items {
 			cpu, _ := node.Status.Capacity.Cpu().AsInt64()
 			memory, _ := node.Status.Capacity.Memory().AsInt64()

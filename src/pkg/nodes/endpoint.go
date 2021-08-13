@@ -11,16 +11,28 @@ import (
 	"context"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/kplcloud/kplcloud/src/encode"
+	"github.com/kplcloud/kplcloud/src/middleware"
 )
 
 type (
 	syncRequest struct {
 		ClusterName string `json:"clusterName"  valid:"required"`
 	}
+
+	nodeResult struct {
+		Name   string `json:"name"`
+		Memory int64  `json:"memory"`
+		Cpu    int64  `json:"cpu"`
+	}
+
+	listRequest struct {
+		page, pageSize int
+	}
 )
 
 type Endpoints struct {
 	SyncEndpoint endpoint.Endpoint
+	ListEndpoint endpoint.Endpoint
 }
 
 func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
@@ -36,8 +48,11 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 
 func makeSyncEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(syncRequest)
-		err = s.Sync(ctx, req.ClusterName)
+		clusterName, ok := ctx.Value(middleware.ContextKeyClusterName).(string)
+		if !ok {
+			return nil, encode.ErrClusterNotfound.Error()
+		}
+		err = s.Sync(ctx, clusterName)
 		return encode.Response{
 			Error: err,
 		}, err

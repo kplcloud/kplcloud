@@ -16,12 +16,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/kplcloud/kplcloud/src/middleware"
-	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	"github.com/kplcloud/kplcloud/src/middleware"
+	"github.com/kplcloud/kplcloud/src/repository"
 )
 
 const (
@@ -133,7 +134,7 @@ func NewClient(store repository.Repository) (cli K8sClient, err error) {
 }
 
 func (c *client) Do(ctx context.Context) *kubernetes.Clientset {
-	cluster, ok := ctx.Value(middleware.ClusterContextKey).(string)
+	cluster, ok := ctx.Value(middleware.ContextKeyClusterName).(string)
 	if !ok {
 		cluster = "c1"
 	}
@@ -141,7 +142,7 @@ func (c *client) Do(ctx context.Context) *kubernetes.Clientset {
 }
 
 func (c *client) Config(ctx context.Context) *rest.Config {
-	cluster, ok := ctx.Value(middleware.ClusterContextKey).(string)
+	cluster, ok := ctx.Value(middleware.ContextKeyClusterName).(string)
 	if !ok {
 		cluster = "c1"
 	}
