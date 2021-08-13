@@ -11,6 +11,7 @@ import (
 	"context"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/jinzhu/gorm"
 	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/repository"
@@ -41,7 +42,7 @@ func (s *service) Add(ctx context.Context, name, alias, data string) (err error)
 		ConfigData: data,
 	}
 
-	if err = s.repository.Cluster(ctx).Save(ctx, &cluster, func() error {
+	if err = s.repository.Cluster(ctx).Save(ctx, &cluster, func(tx *gorm.DB) error {
 		if err = s.k8sClient.Connect(ctx, name, data); err != nil {
 			_ = level.Error(logger).Log("k8sClient.Connect", "err", err.Error())
 			return encode.ErrClusterConnect.Error()

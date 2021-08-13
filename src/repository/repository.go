@@ -10,9 +10,11 @@ package repository
 import (
 	"context"
 	"github.com/go-kit/kit/log"
+	kitcache "github.com/icowan/kit-cache"
 	redisclient "github.com/icowan/redis-client"
 	"github.com/jinzhu/gorm"
 	"github.com/kplcloud/kplcloud/src/repository/cluster"
+	"github.com/kplcloud/kplcloud/src/repository/namespace"
 	"github.com/kplcloud/kplcloud/src/repository/nodes"
 	"github.com/opentracing/opentracing-go"
 
@@ -26,6 +28,7 @@ import (
 type Repository interface {
 	Cluster(ctx context.Context) cluster.Service
 	Nodes(ctx context.Context) nodes.Service
+	Namespace(ctx context.Context) namespace.Service
 
 	SysSetting() syssetting.Service
 	SysUser() sysuser.Service
@@ -35,14 +38,19 @@ type Repository interface {
 }
 
 type repository struct {
-	clusterSvc cluster.Service
-	nodesSvc   nodes.Service
+	clusterSvc   cluster.Service
+	nodesSvc     nodes.Service
+	namespaceSvc namespace.Service
 
 	sysSetting    syssetting.Service
 	sysUser       sysuser.Service
 	sysNamespace  sysnamespace.Service
 	sysRole       sysrole.Service
 	sysPermission syspermission.Service
+}
+
+func (r *repository) Namespace(ctx context.Context) namespace.Service {
+	return r.namespaceSvc
 }
 
 func (r *repository) Nodes(ctx context.Context) nodes.Service {
@@ -73,7 +81,7 @@ func (r *repository) SysSetting() syssetting.Service {
 	return r.sysSetting
 }
 
-func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Tracer, redis redisclient.RedisClient) Repository {
+func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Tracer, redis redisclient.RedisClient, kcache kitcache.Service) Repository {
 	// 平台系统相关仓库
 	sysSetting := syssetting.New(db)
 	//sysSetting = syssetting.NewLogging(logger, traceId)(sysSetting)
@@ -91,8 +99,11 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 	sysPermission = syspermission.NewLogging(logger, traceId)(sysPermission)
 
 	clusterSvc := cluster.New(db)
-
+	clusterSvc = cluster.NewLogging(logger, traceId)(clusterSvc)
 	nodesSvc := nodes.New(db)
+	nodesSvc = nodes.NewLogging(logger, traceId)(nodesSvc)
+	namespaceSvc := namespace.New(db)
+	namespaceSvc = namespace.NewLogging(logger, traceId)(namespaceSvc)
 
 	if tracer != nil {
 		//sysSetting = syssetting.NewTracing(tracer)(sysSetting)
@@ -100,9 +111,17 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 		sysNamespace = sysnamespace.NewTracing(tracer)(sysNamespace)
 		sysRole = sysrole.NewTracing(tracer)(sysRole)
 		//sysPermission = sysrole.NewTracing(tracer)(sysPermission)
+
+		clusterSvc = cluster.NewTracing(tracer)(clusterSvc)
+		nodesSvc = nodes.NewTracing(tracer)(nodesSvc)
+		namespaceSvc = namespace.NewTracing(tracer)(namespaceSvc)
 	}
 
 	if redis != nil {
+	}
+
+	if kcache != nil {
+		clusterSvc = cluster.NewCache(logger, traceId, kcache)(clusterSvc)
 	}
 
 	return &repository{
@@ -112,7 +131,8 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 		sysRole:       sysRole,
 		sysPermission: sysPermission,
 
-		clusterSvc: clusterSvc,
-		nodesSvc:   nodesSvc,
+		clusterSvc:   clusterSvc,
+		nodesSvc:     nodesSvc,
+		namespaceSvc: namespaceSvc,
 	}
 }

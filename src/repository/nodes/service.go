@@ -18,10 +18,18 @@ type Middleware func(Service) Service
 type Service interface {
 	Save(ctx context.Context, data *types.Nodes) (err error)
 	FindByName(ctx context.Context, clusterId int64, name string) (res types.Nodes, err error)
+	List(ctx context.Context, clusterId int64, page, pageSize int) (res []types.Nodes, total int, err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) List(ctx context.Context, clusterId int64, page, pageSize int) (res []types.Nodes, total int, err error) {
+	err = s.db.Model(&types.Nodes{}).Where("cluster_id = ?", clusterId).
+		Count(&total).
+		Find(&res).Error
+	return
 }
 
 func (s *service) FindByName(ctx context.Context, clusterId int64, name string) (res types.Nodes, err error) {

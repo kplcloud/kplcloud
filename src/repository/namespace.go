@@ -13,15 +13,15 @@ type NamespaceRepository interface {
 	FindAll() (res []*types.Namespace, err error)
 }
 
-type namespace struct {
+type ns struct {
 	db *gorm.DB
 }
 
 func NewNamespaceRepository(db *gorm.DB) NamespaceRepository {
-	return &namespace{db: db}
+	return &ns{db: db}
 }
 
-func (c *namespace) Find(name string) (res *types.Namespace, err error) {
+func (c *ns) Find(name string) (res *types.Namespace, err error) {
 	var ns types.Namespace
 	if err = c.db.First(&ns, "name = ?", name).Error; err != nil {
 		return
@@ -29,21 +29,21 @@ func (c *namespace) Find(name string) (res *types.Namespace, err error) {
 	return &ns, nil
 }
 
-func (c *namespace) Create(ns *types.Namespace) error {
+func (c *ns) Create(ns *types.Namespace) error {
 	return c.db.Save(ns).Error
 }
 
-func (c *namespace) UserMyNsList(memberId int64) ([]types.Namespace, error) {
+func (c *ns) UserMyNsList(memberId int64) ([]types.Namespace, error) {
 	var m types.Member
 	err := c.db.Preload("Namespaces").First(&m, memberId).Error
 	return m.Namespaces, err
 }
 
-func (c *namespace) FindByNames(names []string) (res []*types.Namespace, err error) {
+func (c *ns) FindByNames(names []string) (res []*types.Namespace, err error) {
 	err = c.db.Find(&res, "name in (?)", names).Error
 	return
 }
-func (c *namespace) FindAll() (res []*types.Namespace, err error) {
+func (c *ns) FindAll() (res []*types.Namespace, err error) {
 	err = c.db.Find(&res).Error
 	return
 }

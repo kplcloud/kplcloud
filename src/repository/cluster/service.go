@@ -14,7 +14,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Call func() error
+type Call func(tx *gorm.DB) error
+
+type Middleware func(Service) Service
 
 type Service interface {
 	FindAll(ctx context.Context, status int) (res []types.Cluster, err error)
@@ -48,7 +50,7 @@ func (s *service) Save(ctx context.Context, data *types.Cluster, calls ...Call) 
 	}
 
 	for _, call := range calls {
-		if err = call(); err != nil {
+		if err = call(tx); err != nil {
 			tx.Rollback()
 			return errors.Wrap(err, "call")
 		}

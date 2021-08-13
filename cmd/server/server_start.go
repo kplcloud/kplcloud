@@ -10,15 +10,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"github.com/icowan/config"
-	kitcache "github.com/icowan/kit-cache"
-	mysqlclient "github.com/icowan/mysql-client"
-	"github.com/kplcloud/kplcloud/src/api"
-	"github.com/kplcloud/kplcloud/src/kubernetes"
-	"github.com/kplcloud/kplcloud/src/pkg/cluster"
-	"github.com/kplcloud/kplcloud/src/pkg/nodes"
-	"github.com/kplcloud/kplcloud/src/redis"
-	"github.com/kplcloud/kplcloud/src/repository"
 	"net/http"
 	"os"
 	"os/signal"
@@ -31,18 +22,28 @@ import (
 	"github.com/go-kit/kit/log/level"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
+	"github.com/icowan/config"
+	kitcache "github.com/icowan/kit-cache"
+	mysqlclient "github.com/icowan/mysql-client"
 	"github.com/oklog/oklog/pkg/group"
 	stdopentracing "github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
 	"golang.org/x/time/rate"
 
+	"github.com/kplcloud/kplcloud/src/api"
 	"github.com/kplcloud/kplcloud/src/encode"
+	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/logging"
 	"github.com/kplcloud/kplcloud/src/middleware"
+	"github.com/kplcloud/kplcloud/src/pkg/cluster"
+	pkgNs "github.com/kplcloud/kplcloud/src/pkg/namespace"
+	"github.com/kplcloud/kplcloud/src/pkg/nodes"
 	"github.com/kplcloud/kplcloud/src/pkg/syspermission"
 	"github.com/kplcloud/kplcloud/src/pkg/sysrole"
 	"github.com/kplcloud/kplcloud/src/pkg/sysuser"
+	"github.com/kplcloud/kplcloud/src/redis"
+	"github.com/kplcloud/kplcloud/src/repository"
 )
 
 var (
@@ -73,8 +74,9 @@ kplcloud start -p :8080 -g :8082
 	sysRoleSvc       sysrole.Service
 	sysPermissionSvc syspermission.Service
 
-	clusterSvc cluster.Service
-	nodeSvc    nodes.Service
+	clusterSvc   cluster.Service
+	nodeSvc      nodes.Service
+	namespaceSvc pkgNs.Service
 )
 
 func start() (err error) {
@@ -126,6 +128,8 @@ func start() (err error) {
 	clusterSvc = cluster.NewLogging(logger, logging.TraceId)(clusterSvc)
 	nodeSvc = nodes.New(logger, logging.TraceId, k8sClient, store)
 	nodeSvc = nodes.NewLogging(logger, logging.TraceId)(nodeSvc)
+	namespaceSvc = pkgNs.New(logger, logging.TraceId, k8sClient, store)
+	namespaceSvc = pkgNs.NewLogging(logger, logging.TraceId)(namespaceSvc)
 
 	if tracer != nil {
 		//authSvc = auth.NewTracing(tracer)(authSvc)
@@ -133,6 +137,7 @@ func start() (err error) {
 		sysRoleSvc = sysrole.NewTracing(tracer)(sysRoleSvc)
 		clusterSvc = cluster.NewTracing(tracer)(clusterSvc)
 		nodeSvc = nodes.NewTracing(tracer)(nodeSvc)
+		namespaceSvc = pkgNs.NewTracing(tracer)(namespaceSvc)
 	}
 
 	g := &group.Group{}
@@ -179,32 +184,39 @@ func initHttpHandler(g *group.Group) {
 		kithttp.ServerBefore(func(ctx context.Context, request *http.Request) context.Context {
 			guid := request.Header.Get("X-Request-Id")
 			token := request.Header.Get("Authorization")
-
+			vars := mux.Vars(request)
+			clusterName, ok := vars["cluster"]
+			if !ok {
+				clusterName = request.Header.Get("Cluster")
+			}
 			ctx = context.WithValue(ctx, logging.TraceId, guid)
 			ctx = context.WithValue(ctx, "token-context", token)
+			ctx = context.WithValue(ctx, middleware.ContextKeyClusterName, clusterName)
 			return ctx
 		}),
 		kithttp.ServerBefore(middleware.TracingServerBefore(tracer)),
 	}
 
 	ems := []endpoint.Middleware{
-		middleware.TracingMiddleware(tracer),                                                      // 1
+		middleware.ClusterMiddleware(store),  //2
+		middleware.TracingMiddleware(tracer), // 1
 		middleware.TokenBucketLimitter(rate.NewLimiter(rate.Every(time.Second*1), rateBucketNum)), // 0
 	}
 
 	tokenEms := []endpoint.Middleware{
-		middleware.CheckAuthMiddleware(logger, cacheSvc, tracer),
+		//middleware.CheckAuthMiddleware(logger, cacheSvc, tracer), // 3
 	}
 	tokenEms = append(tokenEms, ems...)
 
 	r := mux.NewRouter()
 
 	// 授权登录模块
-	//r.PathPrefix("/admin/auth").Handler(http.StripPrefix("/admin/auth", auth.MakeHTTPHandler(authSvc, ems, opts)))
-	//r.PathPrefix("/admin/account").Handler(http.StripPrefix("/admin/account", account.MakeHTTPHandler(accountSvc, tokenEms, opts)))
+	//r.PathPrefix("/auth").Handler(http.StripPrefix("/auth", auth.MakeHTTPHandler(authSvc, ems, opts)))
+	//r.PathPrefix("/account").Handler(http.StripPrefix("/account", account.MakeHTTPHandler(accountSvc, tokenEms, opts)))
 
 	r.PathPrefix("/cluster").Handler(http.StripPrefix("/cluster", cluster.MakeHTTPHandler(clusterSvc, tokenEms, opts)))
 	r.PathPrefix("/node").Handler(http.StripPrefix("/node", nodes.MakeHTTPHandler(nodeSvc, tokenEms, opts)))
+	r.PathPrefix("/namespace").Handler(http.StripPrefix("/namespace", pkgNs.MakeHTTPHandler(namespaceSvc, tokenEms, opts)))
 
 	// 以下为系统模块
 	// 系统用户模块
@@ -297,6 +309,8 @@ func prepare() error {
 		appName = cf.GetString(config.SectionServer, "app.name")
 	}
 
+	logger = logging.SetLogging(logger, cf)
+
 	if strings.EqualFold(cf.GetString("database", "drive"), "mysql") {
 		dbUrl := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8mb4&parseTime=true&loc=Local&timeout=20m&collation=utf8mb4_unicode_ci",
 			cf.GetString("database", "user"), cf.GetString("database", "password"),
@@ -311,7 +325,7 @@ func prepare() error {
 			return err
 		}
 		// 实例化仓库
-		store = repository.New(db, logger, "traceId", tracer, rds)
+		store = repository.New(db, logger, "traceId", tracer, rds, cacheSvc)
 	}
 
 	ctx := context.Background()
@@ -327,8 +341,8 @@ func prepare() error {
 		cf.SetValue(v.Section, v.Key, v.Value)
 	}
 
-	logger = logging.SetLogging(logger, cf)
 	db.LogMode(cf.GetBool("server", "debug"))
+	logger = logging.SetLogging(logger, cf)
 
 	//hashId = hashids.New("", cf.GetString(config.SectionServer, "app.key"), 12)
 
@@ -354,6 +368,8 @@ func prepare() error {
 
 	// 实例化外部API
 	apiSvc = api.NewApi(logger, logging.TraceId, tracer, cf, cacheSvc)
+
+	store = repository.New(db, logger, "traceId", tracer, rds, cacheSvc)
 
 	// 实例化k8s client
 	k8sClient, err = kubernetes.NewClient(store)

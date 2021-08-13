@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"github.com/pkg/errors"
 	"net/http"
+	"strconv"
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/go-kit/kit/endpoint"
@@ -27,19 +28,40 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 	ems = append(ems, dmw...)
 
 	eps := NewEndpoint(s, map[string][]endpoint.Middleware{
-		//"Add": ems,
+		"Sync": ems,
 	})
 
 	r := mux.NewRouter()
 
-	r.Handle("/sync", kithttp.NewServer(
+	r.Handle("/{cluster}/sync", kithttp.NewServer(
 		eps.SyncEndpoint,
-		decodeSyncRequest,
+		kithttp.NopRequestDecoder,
 		encode.JsonResponse,
 		opts...,
-	)).Methods(http.MethodPost)
+	)).Methods(http.MethodGet)
+	r.Handle("/{cluster}/list", kithttp.NewServer(
+		eps.ListEndpoint,
+		decodeListRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodGet)
 
 	return r
+}
+
+func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req listRequest
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	if page <= 0 {
+		page = 1
+	}
+	if pageSize <= 1 {
+		pageSize = 10
+	}
+	req.page = page
+	req.pageSize = pageSize
+	return req, nil
 }
 
 func decodeSyncRequest(_ context.Context, r *http.Request) (interface{}, error) {
