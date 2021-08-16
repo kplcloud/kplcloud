@@ -78,11 +78,11 @@ data:
     ; ;mysql_password: admin
     ; ;mysql_database: kplcloud
     [mysql]
-    mysql_host = mysql
-    mysql_port = 3306
-    mysql_user = kplcloud
-    mysql_password = 32-0@g03wje;dm
-    mysql_database = kplcloud
+    host = mysql
+    port = 3306
+    user = kplcloud
+    password = 32-0@g03wje;dm
+    database = kplcloud
 
 
     ; ;[redis]
@@ -94,10 +94,10 @@ data:
     ; ;redis_password: redis auth 密码
     ; ;redis_db: 在redis_drive为cluster的情况下 redis_db 不需要设置
     [redis]
-    redis_drive = single
-    redis_hosts = redis:6379
-    ;redis_password =
-    redis_db = 0
+    drive = single
+    hosts = redis:6379
+    ;password =
+    db = 0
 
     ; ;[kubernetes]
     ; ;kubernetes的一些配置
