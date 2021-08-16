@@ -10,6 +10,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"github.com/kplcloud/kplcloud/src/pkg/deployment"
 	"net/http"
 	"os"
 	"os/signal"
@@ -74,9 +75,10 @@ kplcloud start -p :8080 -g :8082
 	sysRoleSvc       sysrole.Service
 	sysPermissionSvc syspermission.Service
 
-	clusterSvc   cluster.Service
-	nodeSvc      nodes.Service
-	namespaceSvc pkgNs.Service
+	clusterSvc    cluster.Service
+	nodeSvc       nodes.Service
+	namespaceSvc  pkgNs.Service
+	deploymentSvc deployment.Service
 )
 
 func start() (err error) {
@@ -130,6 +132,8 @@ func start() (err error) {
 	nodeSvc = nodes.NewLogging(logger, logging.TraceId)(nodeSvc)
 	namespaceSvc = pkgNs.New(logger, logging.TraceId, k8sClient, store)
 	namespaceSvc = pkgNs.NewLogging(logger, logging.TraceId)(namespaceSvc)
+	deploymentSvc = deployment.New(logger, logging.TraceId, k8sClient, store)
+	deploymentSvc = deployment.NewLogging(logger, logging.TraceId)(deploymentSvc)
 
 	if tracer != nil {
 		//authSvc = auth.NewTracing(tracer)(authSvc)
@@ -138,6 +142,7 @@ func start() (err error) {
 		clusterSvc = cluster.NewTracing(tracer)(clusterSvc)
 		nodeSvc = nodes.NewTracing(tracer)(nodeSvc)
 		namespaceSvc = pkgNs.NewTracing(tracer)(namespaceSvc)
+		deploymentSvc = deployment.NewTracing(tracer)(deploymentSvc)
 	}
 
 	g := &group.Group{}
@@ -189,9 +194,14 @@ func initHttpHandler(g *group.Group) {
 			if !ok {
 				clusterName = request.Header.Get("Cluster")
 			}
+			namespace, ok := vars["namespace"]
+			if !ok {
+				clusterName = request.Header.Get("Namespace")
+			}
 			ctx = context.WithValue(ctx, logging.TraceId, guid)
 			ctx = context.WithValue(ctx, "token-context", token)
 			ctx = context.WithValue(ctx, middleware.ContextKeyClusterName, clusterName)
+			ctx = context.WithValue(ctx, middleware.ContextKeyNamespaceName, namespace)
 			return ctx
 		}),
 		kithttp.ServerBefore(middleware.TracingServerBefore(tracer)),
@@ -217,6 +227,7 @@ func initHttpHandler(g *group.Group) {
 	r.PathPrefix("/cluster").Handler(http.StripPrefix("/cluster", cluster.MakeHTTPHandler(clusterSvc, tokenEms, opts)))
 	r.PathPrefix("/node").Handler(http.StripPrefix("/node", nodes.MakeHTTPHandler(nodeSvc, tokenEms, opts)))
 	r.PathPrefix("/namespace").Handler(http.StripPrefix("/namespace", pkgNs.MakeHTTPHandler(namespaceSvc, tokenEms, opts)))
+	r.PathPrefix("/deployment").Handler(http.StripPrefix("/deployment", deployment.MakeHTTPHandler(deploymentSvc, tokenEms, opts)))
 
 	// 以下为系统模块
 	// 系统用户模块

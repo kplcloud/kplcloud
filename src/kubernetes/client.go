@@ -66,7 +66,7 @@ func (c *client) Connect(ctx context.Context, name, configData string) (err erro
 	}
 	cliConfig.QPS = defaultQPS
 	cliConfig.Burst = defaultBurst
-	cliConfig.Timeout = time.Second * 10
+	cliConfig.Timeout = time.Second * 30
 
 	clientSet, err := kubernetes.NewForConfig(cliConfig)
 	if err != nil {
@@ -119,7 +119,7 @@ func NewClient(store repository.Repository) (cli K8sClient, err error) {
 		}
 		cliConfig.QPS = defaultQPS
 		cliConfig.Burst = defaultBurst
-		cliConfig.Timeout = time.Second * 15
+		cliConfig.Timeout = time.Second * 30
 
 		clientSet, err := kubernetes.NewForConfig(cliConfig)
 		if err != nil {

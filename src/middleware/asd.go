@@ -41,8 +41,10 @@ const (
 	CronJobContext    ASDContext = "cronJob"
 	StartTime         ASDContext = "start-time"
 
-	ContextKeyClusterName ASDContext = "ctx-cluster-name" // 集群名称
-	ContextKeyClusterId   ASDContext = "ctx-cluster-id"   // 集群ID
+	ContextKeyClusterName   ASDContext = "ctx-cluster-name"   // 集群名称
+	ContextKeyClusterId     ASDContext = "ctx-cluster-id"     // 集群ID
+	ContextKeyNamespaceName ASDContext = "ctx-namespace-name" // 空间标识
+	ContextKeyNamespaceId   ASDContext = "ctx-namespace-id"   // 集群id
 )
 
 var (
