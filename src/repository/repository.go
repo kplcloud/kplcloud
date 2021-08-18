@@ -35,6 +35,11 @@ type Repository interface {
 	SysNamespace() sysnamespace.Service
 	SysRole() sysrole.Service
 	SysPermission() syspermission.Service
+
+	// old
+	Groups() GroupsRepository
+	CronJob() CronjobRepository
+	Project() ProjectRepository
 }
 
 type repository struct {
@@ -47,6 +52,18 @@ type repository struct {
 	sysNamespace  sysnamespace.Service
 	sysRole       sysrole.Service
 	sysPermission syspermission.Service
+}
+
+func (r *repository) Project() ProjectRepository {
+	panic("implement me")
+}
+
+func (r *repository) CronJob() CronjobRepository {
+	panic("implement me")
+}
+
+func (r *repository) Groups() GroupsRepository {
+	panic("implement me")
 }
 
 func (r *repository) Namespace(ctx context.Context) namespace.Service {

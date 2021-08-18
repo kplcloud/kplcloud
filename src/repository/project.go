@@ -86,12 +86,14 @@ func (c *project) Create(p *types.Project) error {
 }
 
 func (c *project) Update(project *types.Project) error {
-	return c.db.Model(&types.Project{}).Where("id = ?", project.ID).
-		Update(types.Project{DisplayName: project.DisplayName, Desc: project.Desc}).Error
+	//return c.db.Model(&types.Project{}).Where("id = ?", project.ID).
+	//	Update(types.Project{DisplayName: project.DisplayName, Desc: project.Desc}).Error
+	return nil
 }
 
 func (c *project) UpdateProjectById(project *types.Project) error {
-	return c.db.Model(&types.Project{}).Where("id = ?", project.ID).Update(project).Error
+	//return c.db.Model(&types.Project{}).Where("id = ?", project.ID).Update(project).Error
+	return nil
 }
 
 func (c *project) Find(pId int64) (*types.Project, error) {
@@ -215,7 +217,7 @@ func (c *project) GetProjectByGroupAndPNsAndPName(pName, pNs string, groupId int
 	}
 	var projectIds []int64
 	for _, v := range group.Projects {
-		projectIds = append(projectIds, v.ID)
+		projectIds = append(projectIds, v.Id)
 	}
 
 	//err = c.db.Where("name = ?", pName).Where("namespace = ?", pNs).Where("id in (?)", projectIds).Offset(offset).Limit(limit).Order("id asc").Find(&projects).Error

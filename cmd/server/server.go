@@ -10,7 +10,6 @@ package server
 import (
 	"flag"
 	"fmt"
-	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"os"
 
 	"github.com/go-kit/kit/log"
@@ -21,6 +20,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kplcloud/kplcloud/src/api"
+	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/repository"
 )
 

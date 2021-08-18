@@ -5,7 +5,7 @@
  * @Software: GoLand
  */
 
-package nodes
+package deployment
 
 import (
 	"context"
@@ -20,34 +20,19 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
-func (s *tracing) List(ctx context.Context, clusterId int64, page, pageSize int) (res []nodeResult, total int, err error) {
-	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", stdopentracing.Tag{
+func (s *tracing) Sync(ctx context.Context, clusterId int64, ns string) (err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Sync", stdopentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "package.Nodes",
+		Value: "package.Deployment",
 	})
 	defer func() {
 		span.LogKV(
 			"clusterId", clusterId,
-			"page", page,
-			"pageSize", pageSize,
+			"ns", ns,
 			"err", err)
 		span.Finish()
 	}()
-	return s.next.List(ctx, clusterId, page, pageSize)
-}
-
-func (s *tracing) Sync(ctx context.Context, clusterName string) (err error) {
-	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Sync", stdopentracing.Tag{
-		Key:   string(ext.Component),
-		Value: "package.Nodes",
-	})
-	defer func() {
-		span.LogKV(
-			"clusterName", clusterName,
-			"err", err)
-		span.Finish()
-	}()
-	return s.next.Sync(ctx, clusterName)
+	return s.next.Sync(ctx, clusterId, ns)
 }
 
 func NewTracing(otTracer stdopentracing.Tracer) Middleware {

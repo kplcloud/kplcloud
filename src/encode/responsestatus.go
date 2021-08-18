@@ -51,6 +51,10 @@ var ResponseMessage = map[ResStatus]int{
 	ErrClusterParams:   923,
 
 	ErrNamespaceNotfound: 940,
+
+	ErrDeploymentSyncList: 960,
+
+	ErrConfigMapSyncList: 980,
 }
 
 const (
@@ -74,6 +78,10 @@ const (
 	ErrClusterParams   ResStatus = "集群参数错误"
 
 	ErrNamespaceNotfound ResStatus = "空间不存在"
+
+	ErrDeploymentSyncList ResStatus = "同步失败"
+
+	ErrConfigMapSyncList ResStatus = "ConfigMap同步失败"
 
 	// 中间件错误信息
 	ErrSystem             ResStatus = "系统错误"

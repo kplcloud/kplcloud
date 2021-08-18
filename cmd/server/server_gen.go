@@ -52,7 +52,7 @@ kplcloud generate table all
 			return nil
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return prepare()
+			return installPre()
 		},
 	}
 
@@ -76,7 +76,7 @@ kplcloud generate init-data
 			return generateInitData()
 		},
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return prepare()
+			return installPre()
 		},
 	}
 )

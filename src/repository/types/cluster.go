@@ -20,6 +20,8 @@ type Cluster struct {
 	CreatedAt  time.Time  `gorm:"column:created_at" json:"created_at"` // 创建时间
 	UpdatedAt  time.Time  `gorm:"column:updated_at" json:"updated_at"` // 更新时间
 	DeletedAt  *time.Time `gorm:"column:deleted_at" json:"deleted_at"`
+
+	Nodes []Nodes `gorm:"foreignkey:cluster_id" json:"nodes"`
 }
 
 // TableName sets the insert table name for this struct type
