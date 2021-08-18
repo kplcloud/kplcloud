@@ -1,11 +1,11 @@
 /**
- * @Time : 8/11/21 4:22 PM
- * @Author : solacowa@gmail.com
- * @File : tracing
+ * @Time: 2021/8/18 23:13
+ * @Author: solacowa@gmail.com
+ * @File: tracing
  * @Software: GoLand
  */
 
-package cluster
+package configmap
 
 import (
 	"context"
@@ -20,19 +20,19 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
-func (s *tracing) Add(ctx context.Context, name, alias, data string) (err error) {
-	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Add", stdopentracing.Tag{
+func (s *tracing) Sync(ctx context.Context, ns string) (err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Sync", stdopentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "package.Cluster",
+		Value: "package.ConfigMap",
 	})
 	defer func() {
 		span.LogKV(
-			"name", name,
-			"alias", alias,
-			"err", err)
+			"ns", ns,
+			"err", err,
+		)
 		span.Finish()
 	}()
-	return s.next.Add(ctx, name, alias, data)
+	return s.next.Sync(ctx, ns)
 }
 
 func NewTracing(otTracer stdopentracing.Tracer) Middleware {

@@ -52,7 +52,9 @@ var ResponseMessage = map[ResStatus]int{
 
 	ErrNamespaceNotfound: 940,
 
-	ErrDeploymentList: 960,
+	ErrDeploymentSyncList: 960,
+
+	ErrConfigMapSyncList: 980,
 }
 
 const (
@@ -77,7 +79,9 @@ const (
 
 	ErrNamespaceNotfound ResStatus = "空间不存在"
 
-	ErrDeploymentList ResStatus = "同步失败"
+	ErrDeploymentSyncList ResStatus = "同步失败"
+
+	ErrConfigMapSyncList ResStatus = "ConfigMap同步失败"
 
 	// 中间件错误信息
 	ErrSystem             ResStatus = "系统错误"

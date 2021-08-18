@@ -166,24 +166,24 @@ func (c *projectTemplate) FindProjectTemplateByProjectId(projectId int64) (res [
 }
 
 func (c *projectTemplate) Count(namespace string, kind Kind) (count int, err error) {
-	var projects types.Project
-	var projectTemp types.ProjectTemplate
-
-	query := c.db.Model(&projectTemp).Joins("inner join " + projects.TableName() + " t1 on t1.id = " + projectTemp.TableName() + ".project_id")
-	if namespace != "" {
-		query = query.Where("t1.namespace = ?", namespace)
-	}
-	if kind.String() != "" {
-		query = query.Where("kind = ?", kind.String())
-	}
-	err = query.Count(&count).Error
+	//var projects types.Project
+	//var projectTemp types.ProjectTemplate
+	//
+	//query := c.db.Model(&projectTemp).Joins("inner join " + projects.TableName() + " t1 on t1.id = " + projectTemp.TableName() + ".project_id")
+	//if namespace != "" {
+	//	query = query.Where("t1.namespace = ?", namespace)
+	//}
+	//if kind.String() != "" {
+	//	query = query.Where("kind = ?", kind.String())
+	//}
+	//err = query.Count(&count).Error
 	return
 }
 
 func (c *projectTemplate) FindOffsetLimit(namespace string, kind Kind, offset, limit int) (list []*types.ProjectTemplate, err error) {
-	var projects types.Project
+	//var projects types.Project
 	var projectTemp types.ProjectTemplate
-	query := c.db.Model(&projectTemp).Joins("inner join " + projects.TableName() + " t1 on t1.id = " + projectTemp.TableName() + ".project_id")
+	query := c.db.Model(&projectTemp).Joins("inner join projects t1 on t1.id = " + projectTemp.TableName() + ".project_id")
 	if namespace != "" {
 		query = query.Where("t1.namespace = ?", namespace)
 	}

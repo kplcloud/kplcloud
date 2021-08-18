@@ -101,7 +101,7 @@
         if (n === this.steps.length) {
           this.e1 = 1
         } else {
-          this.e1 = n + 1
+          this.e1 = n
         }
         this.$router.push({ params: { step: step } })
       }

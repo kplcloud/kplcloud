@@ -23,7 +23,7 @@ type tracing struct {
 func (s *tracing) List(ctx context.Context, clusterId int64, page, pageSize int) (res []nodeResult, total int, err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", stdopentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Nodes",
+		Value: "package.Nodes",
 	})
 	defer func() {
 		span.LogKV(
@@ -39,7 +39,7 @@ func (s *tracing) List(ctx context.Context, clusterId int64, page, pageSize int)
 func (s *tracing) Sync(ctx context.Context, clusterName string) (err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Sync", stdopentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Nodes",
+		Value: "package.Nodes",
 	})
 	defer func() {
 		span.LogKV(

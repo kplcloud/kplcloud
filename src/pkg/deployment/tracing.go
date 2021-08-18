@@ -23,7 +23,7 @@ type tracing struct {
 func (s *tracing) Sync(ctx context.Context, clusterId int64, ns string) (err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Sync", stdopentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Nodes",
+		Value: "package.Deployment",
 	})
 	defer func() {
 		span.LogKV(

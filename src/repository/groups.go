@@ -213,11 +213,13 @@ func (c *group) DestroyAndRelation(g *types.Groups) error {
 }
 
 func (c *group) GroupAddProject(group *types.Groups, project *types.Project) error {
-	return c.db.Model(&group).Association("Projects").Append(types.Project{ID: project.ID}).Error
+	return nil
+	//return c.db.Model(&group).Association("Projects").Append(types.Project{ID: project.ID}).Error
 }
 
 func (c *group) GroupDelProject(group *types.Groups, project *types.Project) error {
-	return c.db.Model(&group).Association("Projects").Delete(types.Project{ID: project.ID}).Error
+	return nil
+	//return c.db.Model(&group).Association("Projects").Delete(types.Project{ID: project.ID}).Error
 }
 
 func (c *group) GroupAddCronjob(group *types.Groups, cronjob *types.Cronjob) error {
@@ -315,49 +317,49 @@ func (c *group) CheckPermissionForMidCronJob(cronJobId int64, groupIds []int64) 
 }
 
 func (c *group) CheckPermissionForMidProject(projectId int64, groupIds []int64) (notFound bool, err error) {
-	var project types.Project
-	var group types.Groups
-	groupsName := group.TableName()
-	err = c.db.Where("id = ?", projectId).Preload("Groups", groupsName+".id in (?)", groupIds).Find(&project).Error
-	if len(project.Groups) > 0 {
-		return false, err
-	}
+	//var project types.Project
+	//var group types.Groups
+	//groupsName := group.TableName()
+	//err = c.db.Where("id = ?", projectId).Preload("Groups", groupsName+".id in (?)", groupIds).Find(&project).Error
+	//if len(project.Groups) > 0 {
+	//	return false, err
+	//}
 	return true, err
 }
 
 func (c *group) GetMemberIdsByProjectNameAndNs(pName, pNs string) (members []types.Member) {
-	var project types.Project
-	var group types.Groups
-	notFound := c.db.Where("name = ?", pName).Where("namespace = ?", pNs).Preload("Groups").Preload("Member").Find(&project).RecordNotFound()
-	if project.ID == 0 {
-		return members
-	}
-	if notFound {
-		members = append(members, project.Member)
-		return members
-	}
-	var groupsIds []int64
-
-	for _, v := range project.Groups {
-		groupsIds = append(groupsIds, v.ID)
-	}
-
-	notFound = c.db.Where("id in (?)", groupsIds).Preload("Members").Find(&group).RecordNotFound()
-	if notFound {
-		members = append(members, project.Member)
-		return members
-	}
-	members = group.Members
-	var isTrue bool
-	for _, v := range group.Members {
-		if v.ID == project.MemberID {
-			isTrue = true
-			break
-		}
-	}
-	if !isTrue {
-		members = append(members, project.Member)
-	}
+	//var project types.Project
+	//var group types.Groups
+	//notFound := c.db.Where("name = ?", pName).Where("namespace = ?", pNs).Preload("Groups").Preload("Member").Find(&project).RecordNotFound()
+	//if project.ID == 0 {
+	//	return members
+	//}
+	//if notFound {
+	//	members = append(members, project.Member)
+	//	return members
+	//}
+	//var groupsIds []int64
+	//
+	//for _, v := range project.Groups {
+	//	groupsIds = append(groupsIds, v.ID)
+	//}
+	//
+	//notFound = c.db.Where("id in (?)", groupsIds).Preload("Members").Find(&group).RecordNotFound()
+	//if notFound {
+	//	members = append(members, project.Member)
+	//	return members
+	//}
+	//members = group.Members
+	//var isTrue bool
+	//for _, v := range group.Members {
+	//	if v.ID == project.MemberID {
+	//		isTrue = true
+	//		break
+	//	}
+	//}
+	//if !isTrue {
+	//	members = append(members, project.Member)
+	//}
 	return members
 }
 
@@ -389,18 +391,18 @@ func (c *group) GetIndexProjectByMemberIdAndNs(memberId int64, ns string) (proje
 	}
 
 	var projectIds []int64
-	for _, v := range group.Projects {
-		projectIds = append(projectIds, v.ID)
-	}
-
-	err = query.Find(&projects).Error
-	if err != nil {
-		return
-	}
-
-	for _, n := range projects {
-		projectIds = append(projectIds, n.ID)
-	}
+	//for _, v := range group.Projects {
+	//	projectIds = append(projectIds, v.ID)
+	//}
+	//
+	//err = query.Find(&projects).Error
+	//if err != nil {
+	//	return
+	//}
+	//
+	//for _, n := range projects {
+	//	projectIds = append(projectIds, n.ID)
+	//}
 
 	err = c.db.Where("id in (?)", projectIds).
 		Where("publish_state = ?", PublishPass).

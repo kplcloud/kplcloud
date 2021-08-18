@@ -281,26 +281,26 @@ func ProjectMiddleware(logger log.Logger, projectRepository repository.ProjectRe
 					return nil, ErrProjectNotExists
 				}
 
-				memberId := ctx.Value(UserIdContext).(int64)
-				groupIds, _ := ctx.Value(GroupIdsContext).([]int64)
+				//memberId := ctx.Value(UserIdContext).(int64)
+				//groupIds, _ := ctx.Value(GroupIdsContext).([]int64)
 				isAdmin := ctx.Value(IsAdmin).(bool)
 
 				// 如果project创建者就是登录用户,直接过
 				// 否则看是否项目是否在该登录用户所属组
 				// 如果是超管,直接过
 				if !isAdmin {
-					if method != http.MethodGet && project.MemberID != memberId {
-						notFound, err := groupsRepository.CheckPermissionForMidProject(project.ID, groupIds)
-						if err != nil {
-							_ = level.Error(logger).Log("groupsRepository", "CheckPermissionForMidProject", "err", err.Error())
-							return nil, ErrCheckPermissionFailed
-						}
-						if notFound {
-							_ = level.Error(logger).Log("groupsRepository", "CheckPermissionForMidProject", "err", "project not in this group")
-							return nil, ErrNotPermission
-						}
-
-					}
+					//if method != http.MethodGet && project.MemberID != memberId {
+					//	notFound, err := groupsRepository.CheckPermissionForMidProject(project.ID, groupIds)
+					//	if err != nil {
+					//		_ = level.Error(logger).Log("groupsRepository", "CheckPermissionForMidProject", "err", err.Error())
+					//		return nil, ErrCheckPermissionFailed
+					//	}
+					//	if notFound {
+					//		_ = level.Error(logger).Log("groupsRepository", "CheckPermissionForMidProject", "err", "project not in this group")
+					//		return nil, ErrNotPermission
+					//	}
+					//
+					//}
 				}
 
 				ctx = context.WithValue(ctx, ProjectContext, project)

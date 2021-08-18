@@ -41,7 +41,7 @@ func (s *service) Sync(ctx context.Context, clusterId int64, ns string) (err err
 	var nss *appv1.DeploymentList
 	if nss, err = s.k8sClient.Do(ctx).AppsV1().Deployments(ns).List(ctx, metav1.ListOptions{}); err != nil {
 		_ = level.Error(logger).Log("k8sClient.Do.AppsV1.Deployments", "List", "err", err.Error())
-		return encode.ErrDeploymentList.Wrap(err)
+		return encode.ErrDeploymentSyncList.Wrap(err)
 	}
 
 	fmt.Println(ns)
