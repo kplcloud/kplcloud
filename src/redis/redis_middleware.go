@@ -232,7 +232,7 @@ func (s *redisTraceServer) MSet(ctx context.Context, pairs ...interface{}) error
 func (s *redisTraceServer) MSetNX(ctx context.Context, pairs ...interface{}) (res bool) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "MSetNX", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("pairs", pairs, "res", res)
@@ -248,7 +248,7 @@ func (s *redisTraceServer) SetBit(ctx context.Context, key string, offset int64,
 func (s *redisTraceServer) SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) (res bool) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "SetNX", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", key, "value", value, "expiration", expiration, "res", res)
@@ -260,7 +260,7 @@ func (s *redisTraceServer) SetNX(ctx context.Context, key string, value interfac
 func (s *redisTraceServer) SetXX(ctx context.Context, key string, value interface{}, expiration time.Duration) (res bool) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "SetXX", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", key, "value", value, "expiration", expiration, "res", res)
@@ -652,7 +652,7 @@ func (s *redisTraceServer) ZRevRangeByScoreWithScores(ctx context.Context, key s
 func (s *redisTraceServer) ZRevRank(ctx context.Context, key, member string) (int64, error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "ZRevRank", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", key, "member", member)
@@ -664,7 +664,7 @@ func (s *redisTraceServer) ZRevRank(ctx context.Context, key, member string) (in
 func (s *redisTraceServer) ZScore(ctx context.Context, key, member string) float64 {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "ZScore", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", key, "member", member)
@@ -944,7 +944,7 @@ func (s *redisTraceServer) ReadWrite(ctx context.Context) error {
 func (s *redisTraceServer) MemoryUsage(ctx context.Context, key string, samples ...int) int64 {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "MemoryUsage", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", key, "samples", samples)
@@ -956,7 +956,7 @@ func (s *redisTraceServer) MemoryUsage(ctx context.Context, key string, samples 
 func (s *redisTraceServer) Close(ctx context.Context) error {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Close", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.Finish()
@@ -967,7 +967,7 @@ func (s *redisTraceServer) Close(ctx context.Context) error {
 func (s *redisTraceServer) Del(ctx context.Context, k string) (err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Del", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", k, "error", err)
@@ -979,7 +979,7 @@ func (s *redisTraceServer) Del(ctx context.Context, k string) (err error) {
 func (s *redisTraceServer) Exists(ctx context.Context, keys ...string) int64 {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Exists", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("keys", strings.Join(keys, ","))
@@ -991,7 +991,7 @@ func (s *redisTraceServer) Exists(ctx context.Context, keys ...string) int64 {
 func (s *redisTraceServer) HDel(ctx context.Context, k string, field string) (err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "HDel", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", k, "field", field, "error", err)
@@ -1003,7 +1003,7 @@ func (s *redisTraceServer) HDel(ctx context.Context, k string, field string) (er
 func (s *redisTraceServer) HDelAll(ctx context.Context, k string) (err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "HDelAll", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", k, "error", err)
@@ -1015,7 +1015,7 @@ func (s *redisTraceServer) HDelAll(ctx context.Context, k string) (err error) {
 func (s *redisTraceServer) HGet(ctx context.Context, k string, field string) (res string, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "HGet", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", k, "field", field, "error", err)
@@ -1027,7 +1027,7 @@ func (s *redisTraceServer) HGet(ctx context.Context, k string, field string) (re
 func (s *redisTraceServer) HGetAll(ctx context.Context, k string) (res map[string]string, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "HGetAll", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", k, "error", err)
@@ -1039,7 +1039,7 @@ func (s *redisTraceServer) HGetAll(ctx context.Context, k string) (res map[strin
 func (s *redisTraceServer) HLen(ctx context.Context, k string) (res int64, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "HLen", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", k, "res", res, "error", err)
@@ -1051,7 +1051,7 @@ func (s *redisTraceServer) HLen(ctx context.Context, k string) (res int64, err e
 func (s *redisTraceServer) HSet(ctx context.Context, k string, field string, v interface{}) (err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "HSet", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", k, "field", field, "v", field, "error", err)
@@ -1063,7 +1063,7 @@ func (s *redisTraceServer) HSet(ctx context.Context, k string, field string, v i
 func (s *redisTraceServer) Incr(ctx context.Context, key string, exp time.Duration) error {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Incr", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", key, "key", exp.String())
@@ -1075,7 +1075,7 @@ func (s *redisTraceServer) Incr(ctx context.Context, key string, exp time.Durati
 func (s *redisTraceServer) Keys(ctx context.Context, pattern string) (res []string, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Keys", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("pattern", pattern, "resLen", len(res))
@@ -1087,7 +1087,7 @@ func (s *redisTraceServer) Keys(ctx context.Context, pattern string) (res []stri
 func (s *redisTraceServer) LLen(ctx context.Context, key string) int64 {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "LLen", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", key)
@@ -1099,7 +1099,7 @@ func (s *redisTraceServer) LLen(ctx context.Context, key string) int64 {
 func (s *redisTraceServer) LPush(ctx context.Context, key string, val interface{}) (err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "LPush", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", key, "val", val)
@@ -1111,7 +1111,7 @@ func (s *redisTraceServer) LPush(ctx context.Context, key string, val interface{
 func (s *redisTraceServer) Ping(ctx context.Context) error {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Ping", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		//span.LogKV("ping", "ping")
@@ -1123,7 +1123,7 @@ func (s *redisTraceServer) Ping(ctx context.Context) error {
 func (s *redisTraceServer) Publish(ctx context.Context, channel string, message interface{}) error {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Publish", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("channel", channel)
@@ -1135,7 +1135,7 @@ func (s *redisTraceServer) Publish(ctx context.Context, channel string, message 
 func (s *redisTraceServer) RPop(ctx context.Context, key string) (res string, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "RPop", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", key)
@@ -1147,7 +1147,7 @@ func (s *redisTraceServer) RPop(ctx context.Context, key string) (res string, er
 func (s *redisTraceServer) Set(ctx context.Context, k string, v interface{}, expir ...time.Duration) (err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Set", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", k, "expir", expir)
@@ -1159,7 +1159,7 @@ func (s *redisTraceServer) Set(ctx context.Context, k string, v interface{}, exp
 func (s *redisTraceServer) SetPrefix(ctx context.Context, prefix string) redisclient.RedisClient {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Subscribe", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("prefix", prefix)
@@ -1171,7 +1171,7 @@ func (s *redisTraceServer) SetPrefix(ctx context.Context, prefix string) rediscl
 func (s *redisTraceServer) Subscribe(ctx context.Context, channels ...string) *redis.PubSub {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Subscribe", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", strings.Join(channels, ","))
@@ -1183,7 +1183,7 @@ func (s *redisTraceServer) Subscribe(ctx context.Context, channels ...string) *r
 func (s *redisTraceServer) TTL(ctx context.Context, key string) (t time.Duration) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "TypeOf", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", key, "t", t.String())
@@ -1195,7 +1195,7 @@ func (s *redisTraceServer) TTL(ctx context.Context, key string) (t time.Duration
 func (s *redisTraceServer) TypeOf(ctx context.Context, key string) (res string, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "TypeOf", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", key)
@@ -1207,7 +1207,7 @@ func (s *redisTraceServer) TypeOf(ctx context.Context, key string) (res string, 
 func (s *redisTraceServer) ZAdd(ctx context.Context, k string, score float64, member interface{}) (err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "ZAdd", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", k, "score", score, "member", member)
@@ -1219,7 +1219,7 @@ func (s *redisTraceServer) ZAdd(ctx context.Context, k string, score float64, me
 func (s *redisTraceServer) ZCard(ctx context.Context, k string) (res int64, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "ZCard", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", k)
@@ -1231,7 +1231,7 @@ func (s *redisTraceServer) ZCard(ctx context.Context, k string) (res int64, err 
 func (s *redisTraceServer) ZRangeWithScores(ctx context.Context, k string, start, stop int64) (res []redis.Z, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "ZRangeWithScores", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", k, "start", start, "stop", stop)
@@ -1243,7 +1243,7 @@ func (s *redisTraceServer) ZRangeWithScores(ctx context.Context, k string, start
 func (s *redisTraceServer) Get(ctx context.Context, k string) (v string, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Get", opentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Redis",
+		Value: "drive.Redis",
 	})
 	defer func() {
 		span.LogKV("key", k, "v", v, "error", err)

@@ -7,18 +7,23 @@
 
 package types
 
-import "gopkg.in/guregu/null.v3"
+import (
+	"time"
+)
 
+//
 type ConfigMap struct {
-	CreatedAt null.Time `gorm:"column:created_at" json:"created_at"`
-	Desc      string    `gorm:"column:desc" json:"desc"`
-	ID        int64     `gorm:"column:id;primary_key" json:"id"`
-	Name      string    `gorm:"column:name" json:"name"`
-	Namespace string    `gorm:"column:namespace" json:"namespace"`
-	Type      null.Int  `gorm:"column:type" json:"type"`
-	UpdatedAt null.Time `gorm:"column:updated_at" json:"updated_at"`
+	Id              int64      `json:"id"`
+	ClusterId       int64      `gorm:"column:cluster_id;index;notnull;comment:'集群ID'" json:"cluster_id"`
+	Name            string     `gorm:"column:name;index;notnull;size:32;comment:'名称'" json:"name"`
+	Namespace       string     `gorm:"column:namespace;index;notnull;size:32;comment:'空间'" json:"namespace"`
+	Desc            string     `gorm:"column:desc;null;comment:'备注'" json:"desc"`
+	ResourceVersion string     `gorm:"column:resource_version;null;comment:'版本'" json:"resource_version"`
+	CreatedAt       time.Time  `gorm:"column:created_at" json:"created_at" form:"created_at"` // 创建时间
+	UpdatedAt       time.Time  `gorm:"column:updated_at" json:"updated_at" form:"updated_at"` // 更新时间
+	DeletedAt       *time.Time `gorm:"column:deleted_at" json:"deleted_at"`
 
-	ConfigData []ConfigData `gorm:"ForeignKey:id;AssociationForeignKey:config_map_id"`
+	Data []Data `gorm:"ForeignKey:id;AssociationForeignKey:target_id" json:"data"`
 }
 
 // TableName sets the insert table name for this struct type

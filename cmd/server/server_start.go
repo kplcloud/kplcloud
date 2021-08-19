@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/kplcloud/kplcloud/src/pkg/configmap"
 	"github.com/kplcloud/kplcloud/src/pkg/deployment"
+	"github.com/kplcloud/kplcloud/src/pkg/secret"
 	"net/http"
 	"os"
 	"os/signal"
@@ -81,6 +82,7 @@ kplcloud start -p :8080 -g :8082
 	namespaceSvc  pkgNs.Service
 	deploymentSvc deployment.Service
 	configMapSvc  configmap.Service
+	secretSvc     secret.Service
 )
 
 func start() (err error) {
@@ -138,6 +140,8 @@ func start() (err error) {
 	deploymentSvc = deployment.NewLogging(logger, logging.TraceId)(deploymentSvc)
 	configMapSvc = configmap.New(logger, logging.TraceId, store, k8sClient)
 	configMapSvc = configmap.NewLogging(logger, logging.TraceId)(configMapSvc)
+	secretSvc = secret.New(logger, logging.TraceId, store, k8sClient)
+	secretSvc = secret.NewLogging(logger, logging.TraceId)(secretSvc)
 
 	if tracer != nil {
 		//authSvc = auth.NewTracing(tracer)(authSvc)
@@ -148,6 +152,7 @@ func start() (err error) {
 		namespaceSvc = pkgNs.NewTracing(tracer)(namespaceSvc)
 		deploymentSvc = deployment.NewTracing(tracer)(deploymentSvc)
 		configMapSvc = configmap.NewTracing(tracer)(configMapSvc)
+		secretSvc = secret.NewTracing(tracer)(secretSvc)
 	}
 
 	g := &group.Group{}
@@ -234,6 +239,7 @@ func initHttpHandler(g *group.Group) {
 	r.PathPrefix("/namespace").Handler(http.StripPrefix("/namespace", pkgNs.MakeHTTPHandler(namespaceSvc, tokenEms, opts)))
 	r.PathPrefix("/deployment").Handler(http.StripPrefix("/deployment", deployment.MakeHTTPHandler(deploymentSvc, tokenEms, opts)))
 	r.PathPrefix("/configmap").Handler(http.StripPrefix("/configmap", configmap.MakeHTTPHandler(configMapSvc, tokenEms, opts)))
+	r.PathPrefix("/secret").Handler(http.StripPrefix("/secret", secret.MakeHTTPHandler(secretSvc, tokenEms, opts)))
 
 	// 以下为系统模块
 	// 系统用户模块

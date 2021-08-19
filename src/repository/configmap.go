@@ -86,9 +86,9 @@ func (c *configMap) Delete(id int64) error {
 }
 
 func (c *configMap) DeleteByNsName(ns, name string) error {
-	if configMap, notExist := c.Find(ns, name); notExist == false {
-		c.db.Delete(types.ConfigData{ConfigMap: *configMap})
-		return c.db.Delete(types.ConfigMap{ID: configMap.ID}).Error
-	}
+	//if configMap, notExist := c.Find(ns, name); notExist == false {
+	//	c.db.Delete(types.ConfigMapData{ConfigMap: *configMap})
+	//	//return c.db.Delete(types.ConfigMap{ID: configMap.ID}).Error
+	//}
 	return nil
 }

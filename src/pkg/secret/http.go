@@ -1,19 +1,21 @@
 /**
- * @Time: 2021/8/18 23:14
- * @Author: solacowa@gmail.com
- * @File: http
+ * @Time : 8/11/21 4:26 PM
+ * @Author : solacowa@gmail.com
+ * @File : http
  * @Software: GoLand
  */
 
-package configmap
+package secret
 
 import (
 	"context"
-	"net/http"
-
+	"encoding/json"
+	valid "github.com/asaskevich/govalidator"
 	"github.com/go-kit/kit/endpoint"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
+	"net/http"
 
 	"github.com/kplcloud/kplcloud/src/encode"
 )
@@ -40,6 +42,16 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 }
 
 func decodeSyncRequest(_ context.Context, r *http.Request) (interface{}, error) {
-
-	return nil, nil
+	var req syncRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return req, encode.InvalidParams.Wrap(err)
+	}
+	validResult, err := valid.ValidateStruct(req)
+	if err != nil {
+		return nil, encode.InvalidParams.Wrap(err)
+	}
+	if !validResult {
+		return nil, encode.InvalidParams.Wrap(errors.New("valid false"))
+	}
+	return req, nil
 }
