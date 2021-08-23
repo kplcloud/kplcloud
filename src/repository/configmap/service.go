@@ -55,7 +55,7 @@ func (s *service) Save(ctx context.Context, configMap *types.ConfigMap, data []t
 		return err
 	}
 	for _, v := range data {
-		if err = tx.FirstOrCreate(&v, "target_id = ? AND style = ? AND `key` = ?", configMap.Id, types.DataStyleConfigMap, v.Key).Error; err != nil {
+		if err = tx.Model(&v).FirstOrCreate(&v, "target_id = ? AND style = ? AND `key` = ?", configMap.Id, types.DataStyleConfigMap, v.Key).Error; err != nil {
 			tx.Rollback()
 			return err
 		}

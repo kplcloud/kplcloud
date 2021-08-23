@@ -55,6 +55,10 @@ var ResponseMessage = map[ResStatus]int{
 	ErrDeploymentSyncList: 960,
 
 	ErrConfigMapSyncList: 980,
+
+	ErrStorageClassSync:     1100,
+	ErrStorageClassNotfound: 1101,
+	ErrStorageClassSyncPv:   1102,
 }
 
 const (
@@ -82,6 +86,10 @@ const (
 	ErrDeploymentSyncList ResStatus = "同步失败"
 
 	ErrConfigMapSyncList ResStatus = "ConfigMap同步失败"
+
+	ErrStorageClassSync     ResStatus = "StorageClass同步失败"
+	ErrStorageClassNotfound ResStatus = "StorageClass不存在"
+	ErrStorageClassSyncPv   ResStatus = "StorageClass Pv同步失败"
 
 	// 中间件错误信息
 	ErrSystem             ResStatus = "系统错误"

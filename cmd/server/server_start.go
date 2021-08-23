@@ -13,6 +13,7 @@ import (
 	"github.com/kplcloud/kplcloud/src/pkg/configmap"
 	"github.com/kplcloud/kplcloud/src/pkg/deployment"
 	"github.com/kplcloud/kplcloud/src/pkg/secret"
+	"github.com/kplcloud/kplcloud/src/pkg/storageclass"
 	"net/http"
 	"os"
 	"os/signal"
@@ -77,12 +78,13 @@ kplcloud start -p :8080 -g :8082
 	sysRoleSvc       sysrole.Service
 	sysPermissionSvc syspermission.Service
 
-	clusterSvc    cluster.Service
-	nodeSvc       nodes.Service
-	namespaceSvc  pkgNs.Service
-	deploymentSvc deployment.Service
-	configMapSvc  configmap.Service
-	secretSvc     secret.Service
+	clusterSvc      cluster.Service
+	nodeSvc         nodes.Service
+	namespaceSvc    pkgNs.Service
+	deploymentSvc   deployment.Service
+	configMapSvc    configmap.Service
+	secretSvc       secret.Service
+	storageClassSvc storageclass.Service
 )
 
 func start() (err error) {
@@ -142,6 +144,8 @@ func start() (err error) {
 	configMapSvc = configmap.NewLogging(logger, logging.TraceId)(configMapSvc)
 	secretSvc = secret.New(logger, logging.TraceId, store, k8sClient)
 	secretSvc = secret.NewLogging(logger, logging.TraceId)(secretSvc)
+	storageClassSvc = storageclass.New(logger, logging.TraceId, store, k8sClient)
+	//storageClassSvc = storageclass.NewLogging(logger, logging.TraceId)(storageClassSvc)
 
 	if tracer != nil {
 		//authSvc = auth.NewTracing(tracer)(authSvc)
@@ -240,6 +244,7 @@ func initHttpHandler(g *group.Group) {
 	r.PathPrefix("/deployment").Handler(http.StripPrefix("/deployment", deployment.MakeHTTPHandler(deploymentSvc, tokenEms, opts)))
 	r.PathPrefix("/configmap").Handler(http.StripPrefix("/configmap", configmap.MakeHTTPHandler(configMapSvc, tokenEms, opts)))
 	r.PathPrefix("/secret").Handler(http.StripPrefix("/secret", secret.MakeHTTPHandler(secretSvc, tokenEms, opts)))
+	r.PathPrefix("/storage-class").Handler(http.StripPrefix("/storage-class", storageclass.MakeHTTPHandler(storageClassSvc, tokenEms, opts)))
 
 	// 以下为系统模块
 	// 系统用户模块

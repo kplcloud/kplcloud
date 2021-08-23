@@ -54,6 +54,12 @@ func (c *client) Connect(ctx context.Context, name, configData string) (err erro
 		}
 		configData = cluster.ConfigData
 	}
+
+	defer func() {
+		if e := os.RemoveAll("/tmp/config"); e != nil {
+			log.Println("os.RemoveAll", "err", err.Error())
+		}
+	}()
 	_ = ioutil.WriteFile("/tmp/config", []byte(configData), os.ModePerm)
 	//cliConfig, err := clientcmd.BuildConfigFromKubeconfigGetter("", func() (config *clientcmdapi.Config, e error) {
 	//	e = yaml.Unmarshal([]byte(configData), &config)
@@ -94,9 +100,8 @@ func (c *client) Reload(ctx context.Context) (err error) {
 	return nil
 }
 
-// TODO: logging
+// NewClient TODO: logging
 func NewClient(store repository.Repository) (cli K8sClient, err error) {
-
 	clusters, err := store.Cluster(context.Background()).FindAll(context.Background(), 1)
 	if err != nil {
 		err = errors.Wrap(err, "store.Cluster")

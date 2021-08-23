@@ -9,6 +9,7 @@ package repository
 
 import (
 	"context"
+	"github.com/kplcloud/kplcloud/src/repository/storageclass"
 
 	"github.com/go-kit/kit/log"
 	kitcache "github.com/icowan/kit-cache"
@@ -34,6 +35,7 @@ type Repository interface {
 	Namespace(ctx context.Context) namespace.Service
 	ConfigMap(ctx context.Context) configmap.Service
 	Secrets(ctx context.Context) secrets.Service
+	StorageClass(ctx context.Context) storageclass.Service
 
 	SysSetting() syssetting.Service
 	SysUser() sysuser.Service
@@ -48,17 +50,22 @@ type Repository interface {
 }
 
 type repository struct {
-	clusterSvc   cluster.Service
-	nodesSvc     nodes.Service
-	namespaceSvc namespace.Service
-	configMapSvc configmap.Service
-	secretSvc    secrets.Service
+	clusterSvc      cluster.Service
+	nodesSvc        nodes.Service
+	namespaceSvc    namespace.Service
+	configMapSvc    configmap.Service
+	secretSvc       secrets.Service
+	storageClassSvc storageclass.Service
 
 	sysSetting    syssetting.Service
 	sysUser       sysuser.Service
 	sysNamespace  sysnamespace.Service
 	sysRole       sysrole.Service
 	sysPermission syspermission.Service
+}
+
+func (r *repository) StorageClass(ctx context.Context) storageclass.Service {
+	return r.storageClassSvc
 }
 
 func (r *repository) Secrets(ctx context.Context) secrets.Service {
@@ -140,6 +147,8 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 	configMapSvc = configmap.NewLogging(logger, traceId)(configMapSvc)
 	secretSvc := secrets.New(db)
 	secretSvc = secrets.NewLogging(logger, traceId)(secretSvc)
+	storageClassSvc := storageclass.New(db)
+	storageClassSvc = storageclass.NewLogging(logger, traceId)(storageClassSvc)
 
 	if tracer != nil {
 		sysSetting = syssetting.NewTracing(tracer)(sysSetting)
@@ -153,6 +162,7 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 		namespaceSvc = namespace.NewTracing(tracer)(namespaceSvc)
 		configMapSvc = configmap.NewTracing(tracer)(configMapSvc)
 		secretSvc = secrets.NewTracing(tracer)(secretSvc)
+		storageClassSvc = storageclass.NewTracing(tracer)(storageClassSvc)
 	}
 
 	if kcache != nil {
@@ -160,11 +170,12 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 	}
 
 	return &repository{
-		sysSetting:    sysSetting,
-		sysUser:       sysUser,
-		sysNamespace:  sysNamespace,
-		sysRole:       sysRole,
-		sysPermission: sysPermission,
+		sysSetting:      sysSetting,
+		sysUser:         sysUser,
+		sysNamespace:    sysNamespace,
+		sysRole:         sysRole,
+		sysPermission:   sysPermission,
+		storageClassSvc: storageClassSvc,
 
 		clusterSvc:   clusterSvc,
 		nodesSvc:     nodesSvc,
