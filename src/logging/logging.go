@@ -56,9 +56,10 @@ func (l *LogErrorHandler) Handle(ctx context.Context, err error) {
 		go func(err error) {
 			hostname, _ := os.Hostname()
 			//res, err := l.apiSvc.Alarm().Warn(ctx, l.appId,
-			//	fmt.Sprintf("\nMessage: 未定义错误! \nError: %s \nHostname: %s",
+			//	fmt.Sprintf("\nMessage: 未定义错误! \nError: %s \nHostname: %s \nTraceId: %s",
 			//		err.Error(),
 			//		hostname,
+			//		ctx.Value(TraceId),
 			//	))
 			//if err != nil {
 			//	log.Println(err)

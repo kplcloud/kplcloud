@@ -7,21 +7,26 @@
 
 package types
 
-import "gopkg.in/guregu/null.v3"
+import (
+	"time"
+)
 
 type StorageClass struct {
-	CreatedAt         null.Time   `gorm:"column:created_at" json:"created_at"`
-	Desc              null.String `gorm:"column:desc" json:"desc"`
-	Detail            string      `gorm:"column:detail;type:text;size(10000)" json:"detail"`
-	ID                int64       `gorm:"column:id;primary_key" json:"id"`
-	Name              string      `gorm:"column:name" json:"name"`
-	Provisioner       string      `gorm:"column:provisioner" json:"provisioner"`
-	ReclaimPolicy     string      `gorm:"column:reclaim_policy" json:"reclaim_policy"`
-	UpdatedAt         null.Time   `gorm:"column:updated_at" json:"updated_at"`
-	VolumeBindingMode string      `gorm:"column:volume_binding_mode" json:"volume_binding_mode"`
+	Id                int64      `gorm:"column:id;primary_key" json:"id"`
+	ClusterId         int64      `gorm:"column:cluster_id;index;notnull;comment:'集群ID'" json:"cluster_id"`
+	Name              string     `gorm:"column:name;index;size:32;notnull;comment:'名称'" json:"name"`
+	Provisioner       string     `gorm:"column:provisioner;index;size:32;notnull;comment:'供应商'" json:"provisioner"`
+	ReclaimPolicy     string     `gorm:"column:reclaim_policy;notnull;comment:'回收政策'" json:"reclaim_policy"`
+	VolumeBindingMode string     `gorm:"column:volume_binding_mode;notnull;comment:'卷绑定模式'" json:"volume_binding_mode"`
+	ResourceVersion   string     `gorm:"column:resource_version;null;comment:'版本'" json:"resource_version"`
+	Detail            string     `gorm:"column:detail;type:text;size(10000);comment:'详情'" json:"detail"`
+	Desc              string     `gorm:"column:desc;null;comment:'备注'" json:"desc"`
+	CreatedAt         time.Time  `gorm:"column:created_at" json:"created_at"` // 创建时间
+	UpdatedAt         time.Time  `gorm:"column:updated_at" json:"updated_at"` // 更新时间
+	DeletedAt         *time.Time `gorm:"column:deleted_at" json:"deleted_at"`
 }
 
 // TableName sets the insert table name for this struct type
 func (s *StorageClass) TableName() string {
-	return "storageclass"
+	return "storage_class"
 }

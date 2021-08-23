@@ -1,11 +1,11 @@
 /**
- * @Time: 2021/8/18 23:11
- * @Author: solacowa@gmail.com
- * @File: logging
+ * @Time : 8/11/21 4:21 PM
+ * @Author : solacowa@gmail.com
+ * @File : logging
  * @Software: GoLand
  */
 
-package configmap
+package secret
 
 import (
 	"context"
@@ -36,7 +36,7 @@ func (s *logging) Sync(ctx context.Context, clusterId int64, ns string) (err err
 }
 
 func NewLogging(logger log.Logger, traceId string) Middleware {
-	logger = log.With(logger, "configmap", "logging")
+	logger = log.With(logger, "deployment", "logging")
 	return func(next Service) Service {
 		return &logging{
 			logger:  level.Info(logger),

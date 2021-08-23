@@ -203,7 +203,6 @@ func NamespaceMiddleware(logger log.Logger) endpoint.Middleware {
 			name, _ = ctx.Value(NameContext).(string)
 
 			var permission bool
-
 			var namespaces []string
 			if ctx.Value(NamespacesContext) != nil {
 				namespaces = ctx.Value(NamespacesContext).([]string)

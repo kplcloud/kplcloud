@@ -1,17 +1,34 @@
 /**
- * @Time: 2021/8/18 23:09
- * @Author: solacowa@gmail.com
- * @File: endpoint
+ * @Time : 8/11/21 4:24 PM
+ * @Author : solacowa@gmail.com
+ * @File : endpoint
  * @Software: GoLand
  */
 
-package configmap
+package secret
 
 import (
 	"context"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/middleware"
+)
+
+type (
+	syncRequest struct {
+		ClusterId string `json:"clusterId"`
+		Namespace string `json:"namespace"`
+	}
+
+	nodeResult struct {
+		Name   string `json:"name"`
+		Memory int64  `json:"memory"`
+		Cpu    int64  `json:"cpu"`
+	}
+
+	listRequest struct {
+		page, pageSize int
+	}
 )
 
 type Endpoints struct {
