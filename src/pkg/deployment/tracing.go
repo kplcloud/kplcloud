@@ -20,6 +20,23 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
+func (s *tracing) PutImage(ctx context.Context, clusterId int64, ns, name, image string) (err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "PutImage", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "package.Deployment",
+	})
+	defer func() {
+		span.LogKV(
+			"clusterId", clusterId,
+			"ns", ns,
+			"name", name,
+			"image", image,
+			"err", err)
+		span.Finish()
+	}()
+	return s.next.PutImage(ctx, clusterId, ns, name, image)
+}
+
 func (s *tracing) Sync(ctx context.Context, clusterId int64, ns string) (err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Sync", stdopentracing.Tag{
 		Key:   string(ext.Component),

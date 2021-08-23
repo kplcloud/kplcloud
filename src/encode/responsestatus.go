@@ -51,8 +51,10 @@ var ResponseMessage = map[ResStatus]int{
 	ErrClusterParams:   923,
 
 	ErrNamespaceNotfound: 940,
+	ErrNameNotfound:      941,
 
-	ErrDeploymentSyncList: 960,
+	ErrDeploymentSyncList:    960,
+	ErrDeploymentGetNotfound: 961,
 
 	ErrConfigMapSyncList: 980,
 
@@ -82,8 +84,10 @@ const (
 	ErrClusterParams   ResStatus = "集群参数错误"
 
 	ErrNamespaceNotfound ResStatus = "空间不存在"
+	ErrNameNotfound      ResStatus = "名称不存在"
 
-	ErrDeploymentSyncList ResStatus = "同步失败"
+	ErrDeploymentSyncList    ResStatus = "同步失败"
+	ErrDeploymentGetNotfound ResStatus = "项目不存在"
 
 	ErrConfigMapSyncList ResStatus = "ConfigMap同步失败"
 

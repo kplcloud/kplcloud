@@ -212,10 +212,15 @@ func initHttpHandler(g *group.Group) {
 			if !ok {
 				ns = request.Header.Get("Namespace")
 			}
+			name, ok := vars["name"]
+			if !ok {
+				name = request.Header.Get("Name")
+			}
 			ctx = context.WithValue(ctx, logging.TraceId, guid)
 			ctx = context.WithValue(ctx, "token-context", token)
 			ctx = context.WithValue(ctx, middleware.ContextKeyClusterName, clusterName)
 			ctx = context.WithValue(ctx, middleware.ContextKeyNamespaceName, ns)
+			ctx = context.WithValue(ctx, middleware.ContextKeyName, name)
 			return ctx
 		}),
 		kithttp.ServerBefore(middleware.TracingServerBefore(tracer)),

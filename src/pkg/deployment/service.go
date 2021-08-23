@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -26,6 +27,8 @@ type Middleware func(Service) Service
 
 type Service interface {
 	Sync(ctx context.Context, clusterId int64, ns string) (err error)
+	// PutImage 手动更新Image
+	PutImage(ctx context.Context, clusterId int64, ns, name, image string) (err error)
 }
 
 type service struct {
@@ -33,6 +36,31 @@ type service struct {
 	traceId    string
 	k8sClient  kubernetes.K8sClient
 	repository repository.Repository
+}
+
+func (s *service) PutImage(ctx context.Context, clusterId int64, ns, name, image string) (err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	get, err := s.k8sClient.Do(ctx).AppsV1().Deployments(ns).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		_ = level.Error(logger).Log("k8sClient.Do.AppsV1.Deployments", "Get", "err", err.Error())
+		return encode.ErrDeploymentGetNotfound.Wrap(err)
+	}
+	for k, v := range get.Spec.Template.Spec.Containers {
+		if strings.EqualFold(v.Name, name) {
+			get.Spec.Template.Spec.Containers[k].Image = image
+			break
+		}
+	}
+
+	update, err := s.k8sClient.Do(ctx).AppsV1().Deployments(ns).Update(ctx, get, metav1.UpdateOptions{})
+	if err != nil {
+		return err
+	}
+	b, _ := json.Marshal(update)
+	fmt.Println(string(b))
+
+	return
 }
 
 func (s *service) Sync(ctx context.Context, clusterId int64, ns string) (err error) {
