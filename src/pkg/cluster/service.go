@@ -16,6 +16,10 @@ import (
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
+	"github.com/pkg/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/json"
+	"strings"
 )
 
 type Middleware func(Service) Service
@@ -23,6 +27,7 @@ type Middleware func(Service) Service
 type Service interface {
 	Add(ctx context.Context, name, alias, data string) (err error)
 	//List(ctx context.Context, name string, page, pageSize int) (res )
+	SyncRoles(ctx context.Context, clusterId int64) (err error)
 }
 
 type service struct {
@@ -30,6 +35,41 @@ type service struct {
 	logger     log.Logger
 	traceId    string
 	repository repository.Repository
+}
+
+func (s *service) SyncRoles(ctx context.Context, clusterId int64) (err error) {
+	//logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	list, err := s.k8sClient.Do(ctx).RbacV1().ClusterRoles().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		err = errors.Wrap(err, "k8sClient.Do.RbacV1.ClusterRoles.List")
+		return err
+	}
+	for _, v := range list.Items {
+		var rules []types.PolicyRule
+		for _, p := range v.Rules {
+			rules = append(rules, types.PolicyRule{
+				Kind:            v.Kind,
+				Verbs:           strings.Join(p.Verbs, ","),
+				APIGroups:       strings.Join(p.APIGroups, ","),
+				Resources:       strings.Join(p.Resources, ","),
+				ResourceNames:   strings.Join(p.ResourceNames, ","),
+				NonResourceURLs: strings.Join(p.NonResourceURLs, ","),
+			})
+		}
+		b, _ := json.Marshal(v)
+		clusterRule := &types.ClusterRole{
+			ClusterId: clusterId,
+			Name:      v.Name,
+			Data:      string(b),
+			Rules:     rules,
+		}
+		err := s.repository.Cluster(ctx).SaveRole(ctx, clusterRule, rules)
+		if err != nil {
+			return err
+		}
+	}
+	return
 }
 
 func (s *service) Add(ctx context.Context, name, alias, data string) (err error) {

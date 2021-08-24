@@ -28,6 +28,10 @@ type cache struct {
 	kitcache kitcache.Service
 }
 
+func (s *cache) SaveRole(ctx context.Context, clusterRole *types.ClusterRole, roles []types.PolicyRule) (err error) {
+	return s.next.SaveRole(ctx, clusterRole, roles)
+}
+
 func (s *cache) FindAll(ctx context.Context, status int) (res []types.Cluster, err error) {
 	return s.next.FindAll(ctx, status)
 }

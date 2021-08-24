@@ -1,4 +1,4 @@
- FROM golang:1.14.15-alpine3.11 as build-env
+FROM golang:1.14.15-alpine3.11 as build-env
 
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 RUN apk add --no-cache \
