@@ -21,6 +21,10 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) SyncRoles(ctx context.Context, clusterId int64) (err error) {
+	panic("implement me")
+}
+
 func (s *logging) Add(ctx context.Context, name, alias, data string) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

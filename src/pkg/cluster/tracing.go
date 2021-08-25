@@ -20,6 +20,10 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
+func (s *tracing) SyncRoles(ctx context.Context, clusterId int64) (err error) {
+	panic("implement me")
+}
+
 func (s *tracing) Add(ctx context.Context, name, alias, data string) (err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Add", stdopentracing.Tag{
 		Key:   string(ext.Component),

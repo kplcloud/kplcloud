@@ -26,7 +26,9 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 	ems = append(ems, dmw...)
 
 	eps := NewEndpoint(s, map[string][]endpoint.Middleware{
-		"Sync": ems,
+		"Sync":        ems,
+		"ImageSecret": ems,
+		"Delete":      ems,
 	})
 
 	r := mux.NewRouter()
@@ -37,8 +39,46 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodGet)
+	r.Handle("/{cluster}/image-secret/{namespace}", kithttp.NewServer(
+		eps.ImageSecretEndpoint,
+		decodeImageSecretRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodPost)
+	r.Handle("/{cluster}/delete/{namespace}/name/{name}", kithttp.NewServer(
+		eps.DeleteEndpoint,
+		decodeDeleteSecretRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodDelete)
 
 	return r
+}
+
+func decodeDeleteSecretRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req deleteRequest
+	vars := mux.Vars(r)
+	name, ok := vars["name"]
+	if !ok {
+		return nil, encode.InvalidParams.Error()
+	}
+	req.Name = name
+	return req, nil
+}
+
+func decodeImageSecretRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req imageSecret
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return req, encode.InvalidParams.Wrap(err)
+	}
+	validResult, err := valid.ValidateStruct(req)
+	if err != nil {
+		return nil, encode.InvalidParams.Wrap(err)
+	}
+	if !validResult {
+		return nil, encode.InvalidParams.Wrap(errors.New("valid false"))
+	}
+	return req, nil
 }
 
 func decodeSyncRequest(_ context.Context, r *http.Request) (interface{}, error) {

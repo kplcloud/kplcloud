@@ -9,16 +9,6 @@ package types
 
 import "time"
 
-type Kind string
-
-const (
-	KindClusterRole Kind = "ClusterRole"
-)
-
-func (s Kind) String() string {
-	return string(s)
-}
-
 type ClusterRole struct {
 	Id        int64      `json:"id"`
 	ClusterId int64      `json:"cluster_id"`

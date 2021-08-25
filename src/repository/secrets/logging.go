@@ -23,6 +23,21 @@ type logging struct {
 	traceId string
 }
 
+func (l *logging) Delete(ctx context.Context, clusterId int64, ns, name string) (err error) {
+	defer func(begin time.Time) {
+		_ = l.logger.Log(
+			l.traceId, ctx.Value(l.traceId),
+			"method", "Delete",
+			"clusterId", clusterId,
+			"ns", ns,
+			"name", name,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return l.next.Delete(ctx, clusterId, ns, name)
+}
+
 func (l *logging) FindBy(ctx context.Context, clusterId int64, ns, name string) (res types.Secret, err error) {
 	defer func(begin time.Time) {
 		_ = l.logger.Log(

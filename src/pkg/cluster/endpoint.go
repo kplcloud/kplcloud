@@ -15,9 +15,9 @@ import (
 
 type (
 	addRequest struct {
-		Name  string `json:"name"  valid:"required"`
-		Alias string `json:"alias"  valid:"required"`
-		Data  string `json:"data"  valid:"required"`
+		Name  string `json:"name" valid:"required"`
+		Alias string `json:"alias" valid:"required"`
+		Data  string `json:"data" valid:"required"`
 	}
 )
 

@@ -61,6 +61,10 @@ var ResponseMessage = map[ResStatus]int{
 	ErrStorageClassSync:     1100,
 	ErrStorageClassNotfound: 1101,
 	ErrStorageClassSyncPv:   1102,
+
+	ErrSecretMarshal:   1120,
+	ErrSecretImageSave: 1121,
+	ErrSecretDelete:    1122,
 }
 
 const (
@@ -82,6 +86,10 @@ const (
 	ErrClusterConnect  ResStatus = "集群链接错误"
 	ErrClusterNotfound ResStatus = "集群不存在"
 	ErrClusterParams   ResStatus = "集群参数错误"
+
+	ErrSecretMarshal   ResStatus = "转换错误"
+	ErrSecretImageSave ResStatus = "添加镜像Secret错误"
+	ErrSecretDelete    ResStatus = "Secret删除错误"
 
 	ErrNamespaceNotfound ResStatus = "空间不存在"
 	ErrNameNotfound      ResStatus = "名称不存在"
