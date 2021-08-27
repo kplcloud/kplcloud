@@ -24,9 +24,12 @@ import (
 
 type Middleware func(Service) Service
 
+// Service 集群模块
 type Service interface {
+	// Add 添加集群
 	Add(ctx context.Context, name, alias, data string) (err error)
-	//List(ctx context.Context, name string, page, pageSize int) (res )
+	// List 集群列表
+	List(ctx context.Context, name string, page, pageSize int) (res []listResult, total int, err error)
 	SyncRoles(ctx context.Context, clusterId int64) (err error)
 }
 
@@ -35,6 +38,25 @@ type service struct {
 	logger     log.Logger
 	traceId    string
 	repository repository.Repository
+}
+
+func (s *service) List(ctx context.Context, name string, page, pageSize int) (res []listResult, total int, err error) {
+	list, total, err := s.repository.Cluster(ctx).List(ctx, name, 0, page, pageSize)
+	if err != nil {
+		err = encode.ErrClusterNotfound.Wrap(errors.Wrap(err, "repository.Cluster.List"))
+		return
+	}
+	for _, v := range list {
+		res = append(res, listResult{
+			Name:    v.Name,
+			Alias:   v.Alias,
+			Remark:  v.Remark,
+			Status:  v.Status,
+			NodeNum: v.NodeNum,
+		})
+	}
+
+	return
 }
 
 func (s *service) SyncRoles(ctx context.Context, clusterId int64) (err error) {
@@ -78,7 +100,7 @@ func (s *service) Add(ctx context.Context, name, alias, data string) (err error)
 	cluster := types.Cluster{
 		Name:       name,
 		Alias:      alias,
-		Status:     1,
+		Status:     2,
 		ConfigData: data,
 	}
 

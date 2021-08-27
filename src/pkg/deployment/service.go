@@ -60,6 +60,15 @@ func (s *service) PutImage(ctx context.Context, clusterId int64, ns, name, image
 	b, _ := json.Marshal(update)
 	fmt.Println(string(b))
 
+	fmt.Println(update.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().AsInt64())
+	fmt.Println(update.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().String())
+	fmt.Println(update.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().AsInt64())
+	fmt.Println(update.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().String())
+	fmt.Println(update.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().AsInt64())
+	fmt.Println(update.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().String())
+	fmt.Println(update.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().AsInt64())
+	fmt.Println(update.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().String())
+
 	return
 }
 
@@ -77,6 +86,17 @@ func (s *service) Sync(ctx context.Context, clusterId int64, ns string) (err err
 	for _, v := range nss.Items {
 		b, _ := json.Marshal(v)
 		fmt.Println(string(b))
+		fmt.Println("request.Cpu", v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().Value())
+		fmt.Println("limit.Cpu", v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Value())
+		fmt.Println("request.Memory", v.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().Value())
+		fmt.Println("limit.Memory", v.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().Value())
+		fmt.Println("---")
+		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().AsInt64())
+		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().AsInt64())
+		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().Value())
+		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Value())
+		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().String())
+		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().String())
 	}
 
 	return

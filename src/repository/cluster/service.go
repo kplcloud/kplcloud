@@ -12,6 +12,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 type Call func(tx *gorm.DB) error
@@ -23,11 +24,28 @@ type Service interface {
 	FindByName(ctx context.Context, name string) (res types.Cluster, err error)
 	Save(ctx context.Context, data *types.Cluster, calls ...Call) (err error)
 	Delete(ctx context.Context, id int64, unscoped bool) (err error)
+	List(ctx context.Context, name string, status int, page, pageSize int) (res []types.Cluster, total int, err error)
 	SaveRole(ctx context.Context, clusterRole *types.ClusterRole, roles []types.PolicyRule) (err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) List(ctx context.Context, name string, status int, page, pageSize int) (res []types.Cluster, total int, err error) {
+	query := s.db.Model(&types.Cluster{})
+	if !strings.EqualFold(name, "") {
+		query = query.Where("name = ? OR alias = ?", name, name)
+	}
+	if status != 0 {
+		query = query.Where("status = ?", status)
+	}
+	err = query.Count(&total).
+		Order("created_at DESC").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		Find(&res).Error
+	return
 }
 
 func (s *service) SaveRole(ctx context.Context, clusterRole *types.ClusterRole, roles []types.PolicyRule) (err error) {
