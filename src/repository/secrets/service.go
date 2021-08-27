@@ -20,10 +20,39 @@ type Middleware func(Service) Service
 type Service interface {
 	FindBy(ctx context.Context, clusterId int64, ns, name string) (res types.Secret, err error)
 	Save(ctx context.Context, secret *types.Secret, data []types.Data) (err error)
+	Delete(ctx context.Context, clusterId int64, ns, name string) (err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) Delete(ctx context.Context, clusterId int64, ns, name string) (err error) {
+	tx := s.db.Begin()
+	var secret types.Secret
+	if err = tx.Model(&types.Secret{}).
+		Preload("Data", func(db *gorm.DB) *gorm.DB {
+			return db.Where("style = ?", types.DataStyleSecret)
+		}).
+		Where("cluster_id = ? AND namespace = ? AND name = ?", clusterId, ns, name).First(&secret).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	for _, v := range secret.Data {
+		if tx.Model(v).Unscoped().Delete(v, "id = ?", v.Id).Error != nil {
+			tx.Rollback()
+			return
+		}
+	}
+	err = tx.Model(&secret).Unscoped().
+		Where("id = ?", secret.Id).
+		Delete(&secret).Error
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit().Error
 }
 
 func (s *service) FindBy(ctx context.Context, clusterId int64, ns, name string) (res types.Secret, err error) {

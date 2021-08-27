@@ -21,6 +21,23 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) Delete(ctx context.Context, clusterId int64, ns, name string) (err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Delete", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "repository.Secrets",
+	})
+	defer func() {
+		span.LogKV(
+			"clusterId", clusterId,
+			"namespace", ns,
+			"name", name,
+			"error", err,
+		)
+		span.Finish()
+	}()
+	return s.next.Delete(ctx, clusterId, ns, name)
+}
+
 func (s *tracing) FindBy(ctx context.Context, clusterId int64, ns, name string) (res types.Secret, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "FindBy", opentracing.Tag{
 		Key:   string(ext.Component),

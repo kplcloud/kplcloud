@@ -9,20 +9,29 @@ package secret
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/json"
 )
 
 type Middleware func(Service) Service
 
 type Service interface {
+	// Sync 同步所有Secret
 	Sync(ctx context.Context, clusterId int64, ns string) (err error)
+	// ImageSecret 添加更新拉取镜像的Secret
+	ImageSecret(ctx context.Context, clusterId int64, ns, name, host, username, password string) (err error)
+	// Delete 删除Secret
+	Delete(ctx context.Context, clusterId int64, ns, name string) (err error)
 }
 
 type service struct {
@@ -30,6 +39,74 @@ type service struct {
 	logger     log.Logger
 	repository repository.Repository
 	k8sClient  kubernetes.K8sClient
+}
+
+func (s *service) Delete(ctx context.Context, clusterId int64, ns, name string) (err error) {
+	err = s.k8sClient.Do(ctx).CoreV1().Secrets(ns).Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		err = errors.Wrap(err, "k8s.Do.CoreV1.Secrets.Delete")
+		return encode.ErrSecretDelete.Wrap(err)
+	}
+
+	if err = s.repository.Secrets(ctx).Delete(ctx, clusterId, ns, name); err != nil {
+		err = errors.Wrap(err, "repository.Secrets.Delete")
+		return encode.ErrSecretDelete.Wrap(err)
+	}
+
+	return err
+}
+
+func (s *service) ImageSecret(ctx context.Context, clusterId int64, ns, name, host, username, password string) (err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	auth := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", username, password)))
+	marshal, err := json.Marshal(map[string]interface{}{
+		host: map[string]string{
+			"username": username,
+			"password": password,
+			"auth":     auth,
+		},
+	})
+	if err != nil {
+		return encode.ErrSecretMarshal.Wrap(err)
+	}
+
+	coreV1Secret, err := s.k8sClient.Do(ctx).CoreV1().Secrets(ns).Get(ctx, name, metav1.GetOptions{})
+	coreV1Secret.Namespace = ns
+	coreV1Secret.Name = name
+	coreV1Secret.Type = corev1.SecretTypeDockercfg
+	coreV1Secret.Data = map[string][]byte{
+		corev1.DockerConfigKey: marshal,
+	}
+	if err != nil {
+		_ = level.Warn(logger).Log("k8sClient.Do", "CoreV1", "Secrets", "Get", "err", err.Error())
+		coreV1Secret, err = s.k8sClient.Do(ctx).CoreV1().Secrets(ns).Create(ctx, coreV1Secret, metav1.CreateOptions{})
+		if err != nil {
+			return encode.ErrSecretImageSave.Wrap(err)
+		}
+	} else {
+		coreV1Secret, err = s.k8sClient.Do(ctx).CoreV1().Secrets(ns).Update(ctx, coreV1Secret, metav1.UpdateOptions{})
+		if err != nil {
+			return encode.ErrSecretImageSave.Wrap(err)
+		}
+	}
+
+	var secret types.Secret
+	secret.Namespace = ns
+	secret.Name = name
+	secret.ClusterId = clusterId
+	secret.ResourceVersion = coreV1Secret.ResourceVersion
+	data := types.Data{
+		Style: types.DataStyleSecret,
+		Key:   corev1.DockerConfigKey,
+		Value: string(marshal),
+	}
+
+	if err = s.repository.Secrets(ctx).Save(ctx, &secret, []types.Data{data}); err != nil {
+		return encode.ErrSecretImageSave.Wrap(err)
+	}
+
+	return nil
 }
 
 func (s *service) Sync(ctx context.Context, clusterId int64, ns string) (err error) {

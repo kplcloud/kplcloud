@@ -45,6 +45,7 @@ const (
 	ContextKeyClusterId     ASDContext = "ctx-cluster-id"     // 集群ID
 	ContextKeyNamespaceName ASDContext = "ctx-namespace-name" // 空间标识
 	ContextKeyNamespaceId   ASDContext = "ctx-namespace-id"   // 集群id
+	ContextKeyName          ASDContext = "ctx-name"           // 名称
 )
 
 var (

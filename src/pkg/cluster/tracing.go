@@ -20,6 +20,28 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
+func (s *tracing) List(ctx context.Context, name string, page, pageSize int) (res []listResult, total int, err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "package.Cluster",
+	})
+	defer func() {
+		span.LogKV(
+			"name", name,
+			"page", page,
+			"pageSize", pageSize,
+			"total", total,
+			"err", err,
+		)
+		span.Finish()
+	}()
+	return s.next.List(ctx, name, page, pageSize)
+}
+
+func (s *tracing) SyncRoles(ctx context.Context, clusterId int64) (err error) {
+	panic("implement me")
+}
+
 func (s *tracing) Add(ctx context.Context, name, alias, data string) (err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Add", stdopentracing.Tag{
 		Key:   string(ext.Component),

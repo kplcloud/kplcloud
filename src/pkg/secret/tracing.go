@@ -20,10 +20,47 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
+func (s *tracing) Delete(ctx context.Context, clusterId int64, ns, name string) (err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Delete", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "package.Secret",
+	})
+	defer func() {
+		span.LogKV(
+			"clusterId", clusterId,
+			"ns", ns,
+			"name", name,
+			"err", err,
+		)
+		span.Finish()
+	}()
+	return s.next.Delete(ctx, clusterId, ns, name)
+}
+
+func (s *tracing) ImageSecret(ctx context.Context, clusterId int64, ns, name, host, username, password string) (err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "ImageSecret", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "package.Secret",
+	})
+	defer func() {
+		span.LogKV(
+			"clusterId", clusterId,
+			"ns", ns,
+			"name", name,
+			"host", host,
+			"username", username,
+			"password", password,
+			"err", err,
+		)
+		span.Finish()
+	}()
+	return s.next.ImageSecret(ctx, clusterId, ns, name, host, username, password)
+}
+
 func (s *tracing) Sync(ctx context.Context, clusterId int64, ns string) (err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Sync", stdopentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "package.Deployment",
+		Value: "package.Secret",
 	})
 	defer func() {
 		span.LogKV(

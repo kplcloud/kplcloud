@@ -9,7 +9,6 @@ package nodes
 
 import (
 	"context"
-
 	stdopentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 )
@@ -18,6 +17,52 @@ import (
 type tracing struct {
 	next   Service
 	tracer stdopentracing.Tracer
+}
+
+func (s *tracing) Cordon(ctx context.Context, clusterId int64, nodeName string) (err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Cordon", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "package.Nodes",
+	})
+	defer func() {
+		span.LogKV(
+			"clusterId", clusterId,
+			"nodeName", nodeName,
+			"err", err)
+		span.Finish()
+	}()
+	return s.next.Cordon(ctx, clusterId, nodeName)
+}
+
+func (s *tracing) Drain(ctx context.Context, clusterId int64, nodeName string, force bool) (err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Drain", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "package.Nodes",
+	})
+	defer func() {
+		span.LogKV(
+			"clusterId", clusterId,
+			"nodeName", nodeName,
+			"force", force,
+			"err", err)
+		span.Finish()
+	}()
+	return s.next.Drain(ctx, clusterId, nodeName, force)
+}
+
+func (s *tracing) Info(ctx context.Context, clusterId int64, nodeName string) (res infoResult, err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Info", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "package.Nodes",
+	})
+	defer func() {
+		span.LogKV(
+			"clusterId", clusterId,
+			"nodeName", nodeName,
+			"err", err)
+		span.Finish()
+	}()
+	return s.next.Info(ctx, clusterId, nodeName)
 }
 
 func (s *tracing) List(ctx context.Context, clusterId int64, page, pageSize int) (res []nodeResult, total int, err error) {

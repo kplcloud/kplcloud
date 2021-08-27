@@ -21,6 +21,26 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) List(ctx context.Context, name string, page, pageSize int) (res []listResult, total int, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "List",
+			"name", name,
+			"page", page,
+			"pageSize", pageSize,
+			"total", total,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.List(ctx, name, page, pageSize)
+}
+
+func (s *logging) SyncRoles(ctx context.Context, clusterId int64) (err error) {
+	panic("implement me")
+}
+
 func (s *logging) Add(ctx context.Context, name, alias, data string) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

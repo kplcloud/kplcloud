@@ -29,6 +29,7 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 
 	eps := NewEndpoint(s, map[string][]endpoint.Middleware{
 		"Sync": ems,
+		"Info": ems,
 	})
 
 	r := mux.NewRouter()
@@ -45,8 +46,27 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodGet)
+	r.Handle("/{cluster}/info/{name}", kithttp.NewServer(
+		eps.InfoEndpoint,
+		decodeInfoRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodGet)
 
 	return r
+}
+
+func decodeInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req infoRequest
+
+	vars := mux.Vars(r)
+	name, ok := vars["name"]
+	if !ok {
+		return nil, encode.InvalidParams.Error()
+	}
+	req.Name = name
+
+	return req, nil
 }
 
 func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) {

@@ -23,6 +23,35 @@ type logging struct {
 	traceId string
 }
 
+func (l *logging) List(ctx context.Context, name string, status, page, pageSize int) (res []types.Cluster, total int, err error) {
+	defer func(begin time.Time) {
+		_ = l.logger.Log(
+			l.traceId, ctx.Value(l.traceId),
+			"method", "List",
+			"name", name,
+			"status", status,
+			"page", page,
+			"pageSize", pageSize,
+			"total", total,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return l.next.List(ctx, name, status, page, pageSize)
+}
+
+func (l *logging) SaveRole(ctx context.Context, clusterRole *types.ClusterRole, roles []types.PolicyRule) (err error) {
+	defer func(begin time.Time) {
+		_ = l.logger.Log(
+			l.traceId, ctx.Value(l.traceId),
+			"method", "SaveRole",
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return l.next.SaveRole(ctx, clusterRole, roles)
+}
+
 func (l *logging) FindAll(ctx context.Context, status int) (res []types.Cluster, err error) {
 	defer func(begin time.Time) {
 		_ = l.logger.Log(

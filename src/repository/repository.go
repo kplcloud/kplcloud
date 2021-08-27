@@ -9,6 +9,7 @@ package repository
 
 import (
 	"context"
+	"github.com/kplcloud/kplcloud/src/repository/k8stpl"
 	"github.com/kplcloud/kplcloud/src/repository/storageclass"
 
 	"github.com/go-kit/kit/log"
@@ -36,6 +37,7 @@ type Repository interface {
 	ConfigMap(ctx context.Context) configmap.Service
 	Secrets(ctx context.Context) secrets.Service
 	StorageClass(ctx context.Context) storageclass.Service
+	K8sTpl(ctx context.Context) k8stpl.Service
 
 	SysSetting() syssetting.Service
 	SysUser() sysuser.Service
@@ -56,12 +58,17 @@ type repository struct {
 	configMapSvc    configmap.Service
 	secretSvc       secrets.Service
 	storageClassSvc storageclass.Service
+	k8sTpl          k8stpl.Service
 
 	sysSetting    syssetting.Service
 	sysUser       sysuser.Service
 	sysNamespace  sysnamespace.Service
 	sysRole       sysrole.Service
 	sysPermission syspermission.Service
+}
+
+func (r *repository) K8sTpl(ctx context.Context) k8stpl.Service {
+	return r.k8sTpl
 }
 
 func (r *repository) StorageClass(ctx context.Context) storageclass.Service {
@@ -149,6 +156,7 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 	secretSvc = secrets.NewLogging(logger, traceId)(secretSvc)
 	storageClassSvc := storageclass.New(db)
 	storageClassSvc = storageclass.NewLogging(logger, traceId)(storageClassSvc)
+	k8sTplSvc := k8stpl.New(db)
 
 	if tracer != nil {
 		sysSetting = syssetting.NewTracing(tracer)(sysSetting)
@@ -170,17 +178,18 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 	}
 
 	return &repository{
-		sysSetting:      sysSetting,
-		sysUser:         sysUser,
-		sysNamespace:    sysNamespace,
-		sysRole:         sysRole,
-		sysPermission:   sysPermission,
-		storageClassSvc: storageClassSvc,
+		sysSetting:    sysSetting,
+		sysUser:       sysUser,
+		sysNamespace:  sysNamespace,
+		sysRole:       sysRole,
+		sysPermission: sysPermission,
 
-		clusterSvc:   clusterSvc,
-		nodesSvc:     nodesSvc,
-		namespaceSvc: namespaceSvc,
-		configMapSvc: configMapSvc,
-		secretSvc:    secretSvc,
+		storageClassSvc: storageClassSvc,
+		k8sTpl:          k8sTplSvc,
+		clusterSvc:      clusterSvc,
+		nodesSvc:        nodesSvc,
+		namespaceSvc:    namespaceSvc,
+		configMapSvc:    configMapSvc,
+		secretSvc:       secretSvc,
 	}
 }

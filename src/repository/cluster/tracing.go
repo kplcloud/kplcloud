@@ -21,6 +21,41 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) List(ctx context.Context, name string, status int, page, pageSize int) (res []types.Cluster, total int, err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "repository.Cluster",
+	})
+	defer func() {
+		span.LogKV(
+			"name", name,
+			"status", status,
+			"page", page,
+			"pageSize", pageSize,
+			"total", total,
+			"error", err,
+		)
+		span.Finish()
+	}()
+	return s.next.List(ctx, name, status, page, pageSize)
+}
+
+func (s *tracing) SaveRole(ctx context.Context, clusterRole *types.ClusterRole, roles []types.PolicyRule) (err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "SaveRole", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "repository.Cluster",
+	})
+	defer func() {
+		span.LogKV(
+			"clusterRole", clusterRole,
+			"roles", roles,
+			"error", err,
+		)
+		span.Finish()
+	}()
+	return s.next.SaveRole(ctx, clusterRole, roles)
+}
+
 func (s *tracing) FindAll(ctx context.Context, status int) (res []types.Cluster, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "FindAll", opentracing.Tag{
 		Key:   string(ext.Component),

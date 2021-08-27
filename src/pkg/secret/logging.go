@@ -21,6 +21,39 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) Delete(ctx context.Context, clusterId int64, ns, name string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Delete",
+			"clusterId", clusterId,
+			"ns", ns,
+			"name", name,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Delete(ctx, clusterId, ns, name)
+}
+
+func (s *logging) ImageSecret(ctx context.Context, clusterId int64, ns, name, host, username, password string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "ImageSecret",
+			"clusterId", clusterId,
+			"ns", ns,
+			"name", name,
+			"host", host,
+			"username", username,
+			"password", password,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.ImageSecret(ctx, clusterId, ns, name, host, username, password)
+}
+
 func (s *logging) Sync(ctx context.Context, clusterId int64, ns string) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

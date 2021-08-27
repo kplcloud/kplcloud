@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"github.com/pkg/errors"
 	"net/http"
+	"strconv"
 
 	valid "github.com/asaskevich/govalidator"
 	"github.com/go-kit/kit/endpoint"
@@ -28,6 +29,7 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 
 	eps := NewEndpoint(s, map[string][]endpoint.Middleware{
 		//"Add": ems,
+		//"List": ems,
 	})
 
 	r := mux.NewRouter()
@@ -38,8 +40,29 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodPost)
+	r.Handle("/list", kithttp.NewServer(
+		eps.ListEndpoint,
+		decodeListRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodGet)
 
 	return r
+}
+
+func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req listRequest
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 10
+	}
+	req.pageSize = pageSize
+	req.page = page
+	return req, nil
 }
 
 func decodeAddRequest(_ context.Context, r *http.Request) (interface{}, error) {

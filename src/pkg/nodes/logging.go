@@ -21,6 +21,49 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) Cordon(ctx context.Context, clusterId int64, nodeName string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Cordon",
+			"clusterId", clusterId,
+			"nodeName", nodeName,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Cordon(ctx, clusterId, nodeName)
+}
+
+func (s *logging) Drain(ctx context.Context, clusterId int64, nodeName string, force bool) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Drain",
+			"clusterId", clusterId,
+			"nodeName", nodeName,
+			"force", force,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Drain(ctx, clusterId, nodeName, force)
+}
+
+func (s *logging) Info(ctx context.Context, clusterId int64, nodeName string) (res infoResult, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Info",
+			"clusterId", clusterId,
+			"nodeName", nodeName,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Info(ctx, clusterId, nodeName)
+}
+
 func (s *logging) List(ctx context.Context, clusterId int64, page, pageSize int) (res []nodeResult, total int, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

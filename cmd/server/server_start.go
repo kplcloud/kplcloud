@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/kplcloud/kplcloud/src/pkg/configmap"
+	"github.com/kplcloud/kplcloud/src/pkg/cronjob"
 	"github.com/kplcloud/kplcloud/src/pkg/deployment"
 	"github.com/kplcloud/kplcloud/src/pkg/secret"
 	"github.com/kplcloud/kplcloud/src/pkg/storageclass"
@@ -85,6 +86,7 @@ kplcloud start -p :8080 -g :8082
 	configMapSvc    configmap.Service
 	secretSvc       secret.Service
 	storageClassSvc storageclass.Service
+	cronjobSvc      cronjob.Service
 )
 
 func start() (err error) {
@@ -144,6 +146,8 @@ func start() (err error) {
 	configMapSvc = configmap.NewLogging(logger, logging.TraceId)(configMapSvc)
 	secretSvc = secret.New(logger, logging.TraceId, store, k8sClient)
 	secretSvc = secret.NewLogging(logger, logging.TraceId)(secretSvc)
+	cronjobSvc = secret.New(logger, logging.TraceId, store, k8sClient)
+	cronjobSvc = cronjob.NewLogging(logger, logging.TraceId)(cronjobSvc)
 	storageClassSvc = storageclass.New(logger, logging.TraceId, store, k8sClient)
 	//storageClassSvc = storageclass.NewLogging(logger, logging.TraceId)(storageClassSvc)
 
@@ -157,6 +161,7 @@ func start() (err error) {
 		deploymentSvc = deployment.NewTracing(tracer)(deploymentSvc)
 		configMapSvc = configmap.NewTracing(tracer)(configMapSvc)
 		secretSvc = secret.NewTracing(tracer)(secretSvc)
+		cronjobSvc = cronjob.NewTracing(tracer)(cronjobSvc)
 	}
 
 	g := &group.Group{}
@@ -212,10 +217,15 @@ func initHttpHandler(g *group.Group) {
 			if !ok {
 				ns = request.Header.Get("Namespace")
 			}
+			name, ok := vars["name"]
+			if !ok {
+				name = request.Header.Get("Name")
+			}
 			ctx = context.WithValue(ctx, logging.TraceId, guid)
 			ctx = context.WithValue(ctx, "token-context", token)
 			ctx = context.WithValue(ctx, middleware.ContextKeyClusterName, clusterName)
 			ctx = context.WithValue(ctx, middleware.ContextKeyNamespaceName, ns)
+			ctx = context.WithValue(ctx, middleware.ContextKeyName, name)
 			return ctx
 		}),
 		kithttp.ServerBefore(middleware.TracingServerBefore(tracer)),
@@ -245,6 +255,7 @@ func initHttpHandler(g *group.Group) {
 	r.PathPrefix("/configmap").Handler(http.StripPrefix("/configmap", configmap.MakeHTTPHandler(configMapSvc, tokenEms, opts)))
 	r.PathPrefix("/secret").Handler(http.StripPrefix("/secret", secret.MakeHTTPHandler(secretSvc, tokenEms, opts)))
 	r.PathPrefix("/storage-class").Handler(http.StripPrefix("/storage-class", storageclass.MakeHTTPHandler(storageClassSvc, tokenEms, opts)))
+	r.PathPrefix("/cronjob").Handler(http.StripPrefix("/cronjob", cronjob.MakeHTTPHandler(cronjobSvc, tokenEms, opts)))
 
 	// 以下为系统模块
 	// 系统用户模块

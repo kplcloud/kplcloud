@@ -26,14 +26,14 @@ WORKDIR /go/src/${BUILDPATH}/cmd
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install -v
 
 # 前端打包基础镜像
-FROM node:12.13.0-alpine AS node-build-env
-
-RUN mkdir /opt/build
-COPY ./web/admin/ /opt/build
-WORKDIR /opt/build
-
-RUN yarn config set registry https://registry.npm.taobao.org
-RUN yarn build --registry https://registry.npm.taobao.org
+#FROM node:12.13.0-alpine AS node-build-env
+#
+#RUN mkdir /opt/build
+#COPY ./web/admin/ /opt/build
+#WORKDIR /opt/build
+#
+#RUN yarn config set registry https://registry.npm.taobao.org
+#RUN yarn build --registry https://registry.npm.taobao.org
 
 # 运行镜像
 FROM alpine:3.11
@@ -47,7 +47,7 @@ RUN apk add --no-cache \
 		&& rm -rf /var/cache/apk/*
 
 COPY --from=build-env /go/bin/cmd /usr/local/kplcloud/bin/kplcloud
-COPY --from=node-build-env /opt/build/dist/ /usr/local/kplcloud/web/admin
+#COPY --from=node-build-env /opt/build/dist/ /usr/local/kplcloud/web/admin
 
 WORKDIR /usr/local/kplcloud/
 ENV PATH=$PATH:/usr/local/kplcloud/bin/
