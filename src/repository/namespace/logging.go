@@ -23,6 +23,18 @@ type loggingServer struct {
 	traceId string
 }
 
+func (l *loggingServer) SaveCall(ctx context.Context, data *types.Namespace, call Call) (err error) {
+	defer func(begin time.Time) {
+		_ = l.logger.Log(
+			l.traceId, ctx.Value(l.traceId),
+			"method", "SaveCall",
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return l.next.SaveCall(ctx, data, call)
+}
+
 func (l *loggingServer) FindByName(ctx context.Context, clusterId int64, name string) (res types.Namespace, err error) {
 	defer func(begin time.Time) {
 		_ = l.logger.Log(

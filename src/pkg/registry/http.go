@@ -5,7 +5,7 @@
  * @Software: GoLand
  */
 
-package namespace
+package registry
 
 import (
 	"context"
@@ -26,19 +26,12 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 	ems = append(ems, dmw...)
 
 	eps := NewEndpoint(s, map[string][]endpoint.Middleware{
-		"Sync":   ems,
 		"Create": ems,
 	})
 
 	r := mux.NewRouter()
 
-	r.Handle("/{cluster}/sync", kithttp.NewServer(
-		eps.SyncEndpoint,
-		kithttp.NopRequestDecoder,
-		encode.JsonResponse,
-		opts...,
-	)).Methods(http.MethodGet)
-	r.Handle("/{cluster}/create", kithttp.NewServer(
+	r.Handle("/create", kithttp.NewServer(
 		eps.CreateEndpoint,
 		decodeCreateRequest,
 		encode.JsonResponse,

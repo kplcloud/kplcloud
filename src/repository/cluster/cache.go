@@ -71,7 +71,7 @@ func NewCache(logger log.Logger, traceId string, kitcache kitcache.Service) Midd
 			next:     next,
 			traceId:  traceId,
 			kitcache: kitcache,
-			pkgName:  "repository:cache",
+			pkgName:  "repository:cluster",
 		}
 	}
 }

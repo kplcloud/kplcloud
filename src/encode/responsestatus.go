@@ -53,6 +53,8 @@ var ResponseMessage = map[ResStatus]int{
 
 	ErrNamespaceNotfound: 940,
 	ErrNameNotfound:      941,
+	ErrNamespaceExists:   942,
+	ErrNamespaceCreate:   943,
 
 	ErrDeploymentSyncList:    960,
 	ErrDeploymentGetNotfound: 961,
@@ -99,6 +101,8 @@ const (
 
 	ErrNamespaceNotfound ResStatus = "空间不存在"
 	ErrNameNotfound      ResStatus = "名称不存在"
+	ErrNamespaceExists   ResStatus = "空间已存在"
+	ErrNamespaceCreate   ResStatus = "空间创建失败"
 
 	ErrDeploymentSyncList    ResStatus = "同步失败"
 	ErrDeploymentGetNotfound ResStatus = "项目不存在"

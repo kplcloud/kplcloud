@@ -21,6 +21,20 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) SaveCall(ctx context.Context, data *types.Namespace, call Call) (err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "SaveCall", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "repository.Namespace",
+	})
+	defer func() {
+		span.LogKV(
+			"error", err,
+		)
+		span.Finish()
+	}()
+	return s.next.SaveCall(ctx, data, call)
+}
+
 func (s *tracing) FindByName(ctx context.Context, clusterId int64, name string) (res types.Namespace, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "FindByName", opentracing.Tag{
 		Key:   string(ext.Component),

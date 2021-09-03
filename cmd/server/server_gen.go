@@ -118,5 +118,6 @@ func generateTable() (err error) {
 	_ = logger.Log("migrate", "table", "Secrets", db.AutoMigrate(types.Secret{}).Error)
 	_ = logger.Log("migrate", "table", "Data", db.AutoMigrate(types.Data{}).Error)
 	_ = logger.Log("migrate", "table", "StorageClass", db.AutoMigrate(types.StorageClass{}).Error)
+	_ = logger.Log("migrate", "table", "Registry", db.AutoMigrate(types.Registry{}).Error)
 	return
 }

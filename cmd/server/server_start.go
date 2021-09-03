@@ -13,6 +13,7 @@ import (
 	"github.com/kplcloud/kplcloud/src/pkg/configmap"
 	"github.com/kplcloud/kplcloud/src/pkg/cronjob"
 	"github.com/kplcloud/kplcloud/src/pkg/deployment"
+	"github.com/kplcloud/kplcloud/src/pkg/registry"
 	"github.com/kplcloud/kplcloud/src/pkg/secret"
 	"github.com/kplcloud/kplcloud/src/pkg/storageclass"
 	"net/http"
@@ -87,6 +88,7 @@ kplcloud start -p :8080 -g :8082
 	secretSvc       secret.Service
 	storageClassSvc storageclass.Service
 	cronjobSvc      cronjob.Service
+	registrySvc     registry.Service
 )
 
 func start() (err error) {
@@ -150,6 +152,8 @@ func start() (err error) {
 	cronjobSvc = cronjob.NewLogging(logger, logging.TraceId)(cronjobSvc)
 	storageClassSvc = storageclass.New(logger, logging.TraceId, store, k8sClient)
 	//storageClassSvc = storageclass.NewLogging(logger, logging.TraceId)(storageClassSvc)
+	registrySvc = registry.New(logger, logging.TraceId, store)
+	registrySvc = registry.NewLogging(logger, logging.TraceId)(registrySvc)
 
 	if tracer != nil {
 		//authSvc = auth.NewTracing(tracer)(authSvc)
@@ -162,6 +166,7 @@ func start() (err error) {
 		configMapSvc = configmap.NewTracing(tracer)(configMapSvc)
 		secretSvc = secret.NewTracing(tracer)(secretSvc)
 		cronjobSvc = cronjob.NewTracing(tracer)(cronjobSvc)
+		registrySvc = registry.NewTracing(tracer)(registrySvc)
 	}
 
 	g := &group.Group{}
@@ -232,12 +237,12 @@ func initHttpHandler(g *group.Group) {
 	}
 
 	ems := []endpoint.Middleware{
-		middleware.ClusterMiddleware(store),  //2
-		middleware.TracingMiddleware(tracer), // 1
+		middleware.TracingMiddleware(tracer),                                                      // 1
 		middleware.TokenBucketLimitter(rate.NewLimiter(rate.Every(time.Second*1), rateBucketNum)), // 0
 	}
 
 	tokenEms := []endpoint.Middleware{
+		middleware.ClusterMiddleware(store), //2
 		//middleware.CheckAuthMiddleware(logger, cacheSvc, tracer), // 3
 	}
 	tokenEms = append(tokenEms, ems...)
@@ -256,6 +261,7 @@ func initHttpHandler(g *group.Group) {
 	r.PathPrefix("/secret").Handler(http.StripPrefix("/secret", secret.MakeHTTPHandler(secretSvc, tokenEms, opts)))
 	r.PathPrefix("/storage-class").Handler(http.StripPrefix("/storage-class", storageclass.MakeHTTPHandler(storageClassSvc, tokenEms, opts)))
 	r.PathPrefix("/cronjob").Handler(http.StripPrefix("/cronjob", cronjob.MakeHTTPHandler(cronjobSvc, tokenEms, opts)))
+	r.PathPrefix("/registry").Handler(http.StripPrefix("/registry", registry.MakeHTTPHandler(registrySvc, ems, opts)))
 
 	// 以下为系统模块
 	// 系统用户模块

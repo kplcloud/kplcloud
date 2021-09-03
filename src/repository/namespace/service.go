@@ -9,22 +9,37 @@ package namespace
 
 import (
 	"context"
-
 	"github.com/jinzhu/gorm"
 	"github.com/kplcloud/kplcloud/src/repository/types"
 )
 
 type Middleware func(next Service) Service
 
+type Call func() error
+
 type Service interface {
 	// 保存过更新
 	Save(ctx context.Context, data *types.Namespace) (err error)
+	SaveCall(ctx context.Context, data *types.Namespace, call Call) (err error)
 	FindByIds(ctx context.Context, ids []int64) (res []types.Namespace, err error)
 	FindByName(ctx context.Context, clusterId int64, name string) (res types.Namespace, err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) SaveCall(ctx context.Context, data *types.Namespace, call Call) (err error) {
+	tx := s.db.Model(data).Begin()
+	if err = tx.Save(data).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err = call(); err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit().Error
 }
 
 func (s *service) FindByName(ctx context.Context, clusterId int64, name string) (res types.Namespace, err error) {

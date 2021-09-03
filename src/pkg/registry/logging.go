@@ -5,7 +5,7 @@
  * @Software: GoLand
  */
 
-package namespace
+package registry
 
 import (
 	"context"
@@ -21,37 +21,24 @@ type logging struct {
 	traceId string
 }
 
-func (s *logging) Create(ctx context.Context, clusterId int64, name, alias, remark string, imageSecrets []string) (err error) {
+func (s *logging) Create(ctx context.Context, name, host, username, password, remark string) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
 			s.traceId, ctx.Value(s.traceId),
-			"method", "Create",
-			"clusterId", clusterId,
 			"name", name,
-			"alias", alias,
+			"host", host,
+			"username", username,
+			"password", password,
 			"remark", remark,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return s.next.Create(ctx, clusterId, name, alias, remark, imageSecrets)
-}
-
-func (s *logging) Sync(ctx context.Context, clusterId int64) (err error) {
-	defer func(begin time.Time) {
-		_ = s.logger.Log(
-			s.traceId, ctx.Value(s.traceId),
-			"method", "Sync",
-			"clusterId", clusterId,
-			"took", time.Since(begin),
-			"err", err,
-		)
-	}(time.Now())
-	return s.next.Sync(ctx, clusterId)
+	return s.next.Create(ctx, name, host, username, password, remark)
 }
 
 func NewLogging(logger log.Logger, traceId string) Middleware {
-	logger = log.With(logger, "namespace", "logging")
+	logger = log.With(logger, "registry", "logging")
 	return func(next Service) Service {
 		return &logging{
 			logger:  level.Info(logger),
