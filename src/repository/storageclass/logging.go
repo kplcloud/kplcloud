@@ -62,7 +62,7 @@ func (l *logging) FirstInsert(ctx context.Context, data *types.StorageClass) (er
 	return l.next.FirstInsert(ctx, data)
 }
 
-func (l *logging) Save(ctx context.Context, data *types.StorageClass) (err error) {
+func (l *logging) Save(ctx context.Context, data *types.StorageClass, call Call) (err error) {
 	defer func(begin time.Time) {
 		_ = l.logger.Log(
 			l.traceId, ctx.Value(l.traceId),
@@ -71,7 +71,7 @@ func (l *logging) Save(ctx context.Context, data *types.StorageClass) (err error
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.Save(ctx, data)
+	return l.next.Save(ctx, data, call)
 }
 
 func NewLogging(logger log.Logger, traceId string) Middleware {

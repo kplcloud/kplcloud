@@ -9,6 +9,8 @@ package storageclass
 
 import (
 	"context"
+	v1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 
 	stdopentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -18,6 +20,29 @@ import (
 type tracing struct {
 	next   Service
 	tracer stdopentracing.Tracer
+}
+
+func (s *tracing) Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "SyncPv", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "package.StorageClass",
+	})
+	defer func() {
+		span.LogKV(
+			"clusterId", clusterId,
+			"ns", ns,
+			"name", name,
+			"provisioner", provisioner,
+			"reclaimPolicy", reclaimPolicy,
+			"volumeBindingMode", volumeBindingMode,
+			"err", err)
+		span.Finish()
+	}()
+	return s.next.Create(ctx, clusterId, ns, name, provisioner, reclaimPolicy, volumeBindingMode)
+}
+
+func (s *tracing) CreateProvisioner(ctx context.Context, clusterId int64) (err error) {
+	panic("implement me")
 }
 
 func (s *tracing) SyncPv(ctx context.Context, clusterId int64, storageName string) (err error) {

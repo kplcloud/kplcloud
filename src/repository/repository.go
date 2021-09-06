@@ -164,6 +164,7 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 	storageClassSvc := storageclass.New(db)
 	storageClassSvc = storageclass.NewLogging(logger, traceId)(storageClassSvc)
 	k8sTplSvc := k8stpl.New(db)
+	k8sTplSvc = k8stpl.NewLogging(logger, traceId)(k8sTplSvc)
 	registrySvc := registry.New(db)
 	registrySvc = registry.NewLogging(logger, traceId)(registrySvc)
 
@@ -181,6 +182,7 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 		secretSvc = secrets.NewTracing(tracer)(secretSvc)
 		storageClassSvc = storageclass.NewTracing(tracer)(storageClassSvc)
 		registrySvc = registry.NewTracing(tracer)(registrySvc)
+		k8sTplSvc = k8stpl.NewTracing(tracer)(k8sTplSvc)
 	}
 
 	if kcache != nil {

@@ -12,7 +12,9 @@ import (
 	"fmt"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/jinzhu/gorm"
 	coreV1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/json"
 
@@ -24,10 +26,15 @@ import (
 
 type Middleware func(Service) Service
 
+// Service StorageClass模块
 type Service interface {
 	Sync(ctx context.Context, clusterId int64) (err error)
 	SyncPv(ctx context.Context, clusterId int64, storageName string) (err error)
 	SyncPvc(ctx context.Context, clusterId int64, ns string, storageName string) (err error)
+	// Create 创建StorageClass
+	Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error)
+	// CreateProvisioner 创建供应者
+	CreateProvisioner(ctx context.Context, clusterId int64) (err error)
 }
 
 type service struct {
@@ -35,6 +42,50 @@ type service struct {
 	traceId    string
 	repository repository.Repository
 	k8sClient  kubernetes.K8sClient
+}
+
+func (s *service) CreateProvisioner(ctx context.Context, clusterId int64) (err error) {
+	panic("implement me")
+}
+
+func (s *service) Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+	_, err = s.repository.StorageClass(ctx).FindName(ctx, clusterId, name)
+	if err == nil {
+		return encode.ErrStorageClassExists.Error()
+	}
+	if !gorm.IsRecordNotFoundError(err) {
+		return encode.ErrStorageClassExists.Wrap(err)
+	}
+	storage := &types.StorageClass{}
+	storage.ClusterId = clusterId
+	storage.ReclaimPolicy = string(*reclaimPolicy)
+	storage.VolumeBindingMode = string(*volumeBindingMode)
+	storage.Provisioner = provisioner
+	storage.Name = name
+	if err = s.repository.StorageClass(ctx).Save(ctx, storage, func() error {
+		// TODO: 考虑使用模版
+		create, err := s.k8sClient.Do(ctx).StorageV1().StorageClasses().Create(ctx, &storagev1.StorageClass{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+			},
+			Provisioner:       provisioner,
+			ReclaimPolicy:     reclaimPolicy,
+			VolumeBindingMode: volumeBindingMode,
+		}, metav1.CreateOptions{})
+		if err != nil {
+			return encode.ErrStorageClassCreate.Wrap(err)
+		}
+		b, _ := json.Marshal(create)
+		storage.ResourceVersion = create.ResourceVersion
+		storage.Detail = string(b)
+		return nil
+	}); err != nil {
+		_ = level.Error(logger).Log("repository.StorageClass", "Save", "err", err.Error())
+		return encode.ErrStorageClassCreate.Wrap(err)
+	}
+
+	return nil
 }
 
 type persistentVolumeListChannel struct {
@@ -87,7 +138,6 @@ func (s *service) Sync(ctx context.Context, clusterId int64) (err error) {
 	}
 
 	for _, item := range list.Items {
-		//b, _ := yaml.Marshal(item)
 		b, _ := json.Marshal(item)
 		storage := &types.StorageClass{
 			ClusterId:         clusterId,
@@ -103,7 +153,7 @@ func (s *service) Sync(ctx context.Context, clusterId int64) (err error) {
 			_ = level.Error(logger).Log("repository.StorageClass", "FirstInsert", "err", err.Error())
 			continue
 		}
-		if err := s.repository.StorageClass(ctx).Save(ctx, storage); err != nil {
+		if err := s.repository.StorageClass(ctx).Save(ctx, storage, nil); err != nil {
 			_ = level.Error(logger).Log("repository.StorageClass", "Save", "err", err.Error())
 		}
 	}

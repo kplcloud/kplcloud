@@ -64,6 +64,8 @@ var ResponseMessage = map[ResStatus]int{
 	ErrStorageClassSync:     1100,
 	ErrStorageClassNotfound: 1101,
 	ErrStorageClassSyncPv:   1102,
+	ErrStorageClassExists:   1103,
+	ErrStorageClassCreate:   1104,
 
 	ErrSecretMarshal:   1120,
 	ErrSecretImageSave: 1121,
@@ -72,6 +74,9 @@ var ResponseMessage = map[ResStatus]int{
 	ErrNodeCordon:   1140,
 	ErrNodeNotfound: 1141,
 	ErrNodeDrain:    1142,
+
+	ErrPersistentVolumeClaimList:   1160,
+	ErrPersistentVolumeClaimCreate: 1161,
 }
 
 const (
@@ -112,6 +117,11 @@ const (
 	ErrStorageClassSync     ResStatus = "StorageClass同步失败"
 	ErrStorageClassNotfound ResStatus = "StorageClass不存在"
 	ErrStorageClassSyncPv   ResStatus = "StorageClass Pv同步失败"
+	ErrStorageClassExists   ResStatus = "StorageClass 已存在"
+	ErrStorageClassCreate   ResStatus = "StorageClass 创建失败"
+
+	ErrPersistentVolumeClaimList   ResStatus = "存储卷声明列表获取失败"
+	ErrPersistentVolumeClaimCreate ResStatus = "存储卷声明创建失败"
 
 	// 中间件错误信息
 	ErrSystem             ResStatus = "系统错误"

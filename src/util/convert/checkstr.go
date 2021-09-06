@@ -20,7 +20,7 @@ var (
 	egressNameRegexp  = regexp.MustCompile(egressName)
 )
 
-//校验egress名称是否合法
+// IsEngressName 校验egress名称是否合法
 func IsEngressName(str string) bool {
 	if str != "" {
 		return egressNameRegexp.MatchString(str)
@@ -28,7 +28,7 @@ func IsEngressName(str string) bool {
 	return false
 }
 
-// 检验是否为合法的昵称, 汉字
+// IsDisplayName 检验是否为合法的昵称, 汉字
 func IsDisplayName(b []byte) bool {
 	if len(b) == 0 {
 		return false
@@ -36,7 +36,7 @@ func IsDisplayName(b []byte) bool {
 	return displayNameRegexp.Match(b)
 }
 
-// 同 func IsNickname(b []byte) bool
+// IsDisplayNameString 同 func IsNickname(b []byte) bool
 func IsDisplayNameString(str string) bool {
 	if len(str) == 0 {
 		return false
@@ -44,7 +44,7 @@ func IsDisplayNameString(str string) bool {
 	return displayNameRegexp.MatchString(str)
 }
 
-// 检验是否为合法的用户名, 合法的字符有 0-9, A-Z, a-z,
+// IsEnName 检验是否为合法的用户名, 合法的字符有 0-9, A-Z, a-z,
 func IsEnName(b []byte) bool {
 	if len(b) == 0 {
 		return false
@@ -52,7 +52,7 @@ func IsEnName(b []byte) bool {
 	return nameEnRegexp.Match(b)
 }
 
-// 同 func IsName(b []byte) bool
+// IsEnNameString 同 func IsName(b []byte) bool
 func IsEnNameString(str string) bool {
 	if len(str) == 0 {
 		return false

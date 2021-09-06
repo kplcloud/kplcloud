@@ -1,5 +1,5 @@
 /**
- * @Time : 2019-06-26 14:58
+ * @Time : 8/11/21 4:21 PM
  * @Author : solacowa@gmail.com
  * @File : logging
  * @Software: GoLand
@@ -9,87 +9,72 @@ package persistentvolumeclaim
 
 import (
 	"context"
+	"time"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	kithttp "github.com/go-kit/kit/transport/http"
-	"time"
 )
 
-type loggingService struct {
-	logger log.Logger
-	Service
+type logging struct {
+	logger  log.Logger
+	next    Service
+	traceId string
 }
 
-func NewLoggingService(logger log.Logger, s Service) Service {
-	return &loggingService{level.Info(logger), s}
-}
-
-func (s *loggingService) Sync(ctx context.Context, ns string) (err error) {
+func (s *logging) Sync(ctx context.Context, clusterId int64, ns string) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
-			"uri", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "sync",
-			"namespace", ns,
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Sync",
+			"clusterId", clusterId,
+			"ns", ns,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return s.Service.Sync(ctx, ns)
+	return s.next.Sync(ctx, clusterId, ns)
 }
 
-func (s *loggingService) Get(ctx context.Context, ns, name string) (res interface{}, err error) {
+func (s *logging) Get(ctx context.Context, clusterId int64, ns, name string) (rs interface{}, err error) {
+	panic("implement me")
+}
+
+func (s *logging) Delete(ctx context.Context, clusterId int64, ns, name string) (err error) {
+	panic("implement me")
+}
+
+func (s *logging) Create(ctx context.Context, clusterId int64, ns, name, storage, storageClassName string, accessModes []string) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
-			"uri", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "sync",
-			"namespace", ns,
-			"name", name,
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Create",
+			"clusterId", clusterId,
+			"ns", ns,
+			"name", name, "storage", storage,
+			"storageClassName", storageClassName,
+			"accessModes", accessModes,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return s.Service.Get(ctx, ns, name)
+	return s.next.Create(ctx, clusterId, ns, name, storage, storageClassName, accessModes)
 }
 
-func (s *loggingService) List(ctx context.Context, ns string, page, limit int) (resp map[string]interface{}, err error) {
-	defer func(begin time.Time) {
-		_ = s.logger.Log(
-			"uri", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "list",
-			"namespace", ns,
-			"name", page,
-			"limit", limit,
-			"took", time.Since(begin),
-			"err", err,
-		)
-	}(time.Now())
-	return s.Service.List(ctx, ns, page, limit)
+func (s *logging) List(ctx context.Context, clusterId int64, ns string, page, pageSize int) (resp map[string]interface{}, err error) {
+	panic("implement me")
 }
 
-func (s *loggingService) Delete(ctx context.Context, ns, name string) (err error) {
-	defer func(begin time.Time) {
-		_ = s.logger.Log(
-			"uri", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "sync",
-			"namespace", ns,
-			"name", name,
-			"took", time.Since(begin),
-			"err", err,
-		)
-	}(time.Now())
-	return s.Service.Delete(ctx, ns, name)
+func (s *logging) All(ctx context.Context, clusterId int64) (resp map[string]interface{}, err error) {
+	panic("implement me")
 }
 
-func (s *loggingService) Post(ctx context.Context, ns, name, storage, storageClassName string, accessModes []string) (err error) {
-	defer func(begin time.Time) {
-		_ = s.logger.Log(
-			"uri", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "Post",
-			"namespace", ns,
-			"name", name,
-			"took", time.Since(begin),
-			"err", err,
-		)
-	}(time.Now())
-	return s.Service.Post(ctx, ns, name, storage, storageClassName, accessModes)
+func NewLogging(logger log.Logger, traceId string) Middleware {
+	logger = log.With(logger, "persistentvolumeclaim", "logging")
+	return func(next Service) Service {
+		return &logging{
+			logger:  level.Info(logger),
+			next:    next,
+			traceId: traceId,
+		}
+	}
 }
