@@ -48,7 +48,7 @@ func (s *service) EncodeTemplate(ctx context.Context, kind types.Kind, paramCont
 		return
 	}
 	paramContentJson, err := json.Marshal(paramContent)
-	p := make([]byte, (len(t.Content)*2)+(len(string(paramContentJson))*2))
+	var p = make([]byte, (len(t.Content)*2)+(len(string(paramContentJson))*2))
 	n, err := w.Read(p)
 	tpl = p[:n]
 	if data != nil {
