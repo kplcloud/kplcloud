@@ -9,22 +9,29 @@ package types
 
 import "time"
 
-// Audit is the operation recoder
+type AuditStatus string
+
+const (
+	AuditStatusSuccess AuditStatus = "SUCCESS"
+	AuditStatusFailed  AuditStatus = "FAILED"
+)
+
+// Audit 审计表
 type Audit struct {
-	Id        int64  `gorm:"column:id;primary_key" json:"id"`
-	ClusterId string `gorm:"column:cluster_id;comment:'集群ID'" json:"cluster_id"`
-	Namespace string `gorm:"column:namespace;null;comment:'空间'" json:"namespace"`
-	Name      string `gorm:"column:name;null;comment:'操作目标名称'" json:"name"`
-	Method    string `gorm:"column:method;null;comment:'Method'" json:"method"`
-	Action    string `gorm:"column:action;null;comment:'Action'" json:"action"`
-	UserId    int64  `gorm:"column:user_id;notnull;comment:'Action'" json:"user_id"`
-	TimeSince string `gorm:"column:time_since;null;comment:'用时'" json:"time_since"`
-	Status    int    `gorm:"column:status;null;comment:'状态'" json:"status"` //1 success 2 faild
-	Message   string `gorm:"column:message;null;comment:'消息'" json:"message"`
-	Request   string `gorm:"column:request;null;comment:'Request'" json:"request"`
-	Response  string `gorm:"column:response;null;comment:'Response'" json:"response"`
-	Headers   string `gorm:"column:headers;null;comment:'Headers'" json:"headers"`
-	Url       string `gorm:"column:url;null;comment:'URI'" json:"url"`
+	Id           int64       `gorm:"column:id;primary_key" json:"id"`
+	ClusterId    int64       `gorm:"column:cluster_id;null;comment:'集群ID'" json:"cluster_id"`
+	Namespace    string      `gorm:"column:namespace;null;comment:'空间'" json:"namespace"`
+	Name         string      `gorm:"column:name;null;comment:'操作目标名称'" json:"name"`
+	UserId       int64       `gorm:"column:user_id;notnull;index;comment:'Action'" json:"user_id"`
+	PermissionId int64       `gorm:"column:permission_id;notnull;comment:'权限ID'" json:"permission_id"`
+	Request      string      `gorm:"column:request;null;comment:'Request'" json:"request"`
+	Response     string      `gorm:"column:response;null;comment:'Response'" json:"response"`
+	Headers      string      `gorm:"column:headers;null;comment:'Headers'" json:"headers"`
+	TimeSince    string      `gorm:"column:time_since;null;comment:'用时'" json:"time_since"`
+	Status       AuditStatus `gorm:"column:status;null;comment:'状态'" json:"status"`
+	Remark       string      `gorm:"column:remark;null;comment:'备注'" json:"remark"`
+	Url          string      `gorm:"column:url;null;comment:'URI'" json:"url"`
+	TraceId      string      `gorm:"column:trace_id;null;comment:'TraceId'" json:"trace_id"`
 
 	CreatedAt time.Time  `gorm:"column:created_at" json:"created_at"` // 创建时间
 	UpdatedAt time.Time  `gorm:"column:updated_at" json:"updated_at"` // 更新时间

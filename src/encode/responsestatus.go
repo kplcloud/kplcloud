@@ -22,13 +22,16 @@ var ResponseMessage = map[ResStatus]int{
 	ErrNotfound:    404,
 	ErrLimiter:     429,
 
-	ErrAccountNotFound:    404,
-	ErrAccountLogin:       1002,
-	ErrAccountLoginIsNull: 1003,
-	ErrAccountNotLogin:    501,
-	ErrAccountASD:         1004,
-	ErrAccountLocked:      1005,
-	ErrAuthNotLogin:       501,
+	ErrAccountNotFound:         404,
+	ErrAccountLogin:            1002,
+	ErrAccountLoginIsNull:      1003,
+	ErrAccountNotLogin:         501,
+	ErrAccountASD:              1004,
+	ErrAccountLocked:           1005,
+	ErrAuthNotLogin:            501,
+	ErrAuthLogin:               1006,
+	ErrAuthCheckCaptchaCode:    1007,
+	ErrAuthCheckCaptchaNotnull: 1008,
 
 	// 系统API
 	ErrSysRoleNotfound:     2001,
@@ -124,14 +127,17 @@ const (
 	ErrPersistentVolumeClaimCreate ResStatus = "存储卷声明创建失败"
 
 	// 中间件错误信息
-	ErrSystem             ResStatus = "系统错误"
-	ErrAccountNotLogin    ResStatus = "用户没登录"
-	ErrAuthNotLogin       ResStatus = "请先登录"
-	ErrAccountLoginIsNull ResStatus = "用户名和密码不能为空"
-	ErrAccountLogin       ResStatus = "用户名或密码错误"
-	ErrAccountNotFound    ResStatus = "账号不存在"
-	ErrAccountASD         ResStatus = "权限验证失败"
-	ErrAccountLocked      ResStatus = "用户已被锁定"
+	ErrSystem                  ResStatus = "系统错误"
+	ErrAccountNotLogin         ResStatus = "用户没登录"
+	ErrAuthNotLogin            ResStatus = "请先登录"
+	ErrAccountLoginIsNull      ResStatus = "用户名和密码不能为空"
+	ErrAccountLogin            ResStatus = "用户名或密码错误"
+	ErrAccountNotFound         ResStatus = "账号不存在"
+	ErrAccountASD              ResStatus = "权限验证失败"
+	ErrAccountLocked           ResStatus = "用户已被锁定"
+	ErrAuthLogin               ResStatus = "登录失败"
+	ErrAuthCheckCaptchaCode    ResStatus = "图形验证码错误"
+	ErrAuthCheckCaptchaNotnull ResStatus = "图形验证码不能为空"
 
 	// 系统API
 	ErrSysRoleNotfound     ResStatus = "角色不存在"

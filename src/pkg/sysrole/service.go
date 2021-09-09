@@ -21,28 +21,22 @@ import (
 type Middleware func(next Service) Service
 
 type Service interface {
-	// 角色列表
+	// List 角色列表
 	List(ctx context.Context, page, pageSize int) (res []listResult, total int, err error)
-
-	// 添加角色
+	// Add 添加角色
 	Add(ctx context.Context, alias, name, description string, enabled bool) (err error)
-
-	// 角色所拥有的权限列表
+	// Permissions 角色所拥有的权限列表
 	Permissions(ctx context.Context, id int64, page, pageSize int) (res []listResult, total int, err error)
-
-	// 设置角色权限
+	// Permission 设置角色权限
 	Permission(ctx context.Context, id int64, permIds []int64) (err error)
-
 	// 角色下的用户
 	//Users(ctx context.Context, id int64, page, pageSize int) (res []listResult, total int, err error)
 
-	// 设置用户角色
+	// User 设置用户角色
 	User(ctx context.Context, id int64, userIds []int64) (err error)
-
-	// 更新角色信息
+	// Update 更新角色信息
 	Update(ctx context.Context, id int64, alias, name, description string, enabled bool) (err error)
-
-	// 删除角色
+	// Delete 删除角色
 	Delete(ctx context.Context, id int64) (err error)
 }
 

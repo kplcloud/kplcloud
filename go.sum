@@ -379,6 +379,8 @@ github.com/icowan/config v0.0.0-20200926110528-b95deb7acc31 h1:TXz1Zdeg4Scfid6kI
 github.com/icowan/config v0.0.0-20200926110528-b95deb7acc31/go.mod h1:ypFDJbS32hmK2RUMhi0R4D8Ez7UxK6014YlyVAjSQiQ=
 github.com/icowan/kit-cache v0.4.0 h1:DS53RQBYAwwMAynDzrZjBFkRVOBm8Hq51dUKMdGB0DM=
 github.com/icowan/kit-cache v0.4.0/go.mod h1:k2Ptyktcr8F2CopOs0MatzxckCeyxaJdQvQ/ioANyWc=
+github.com/icowan/kit-captcha v0.0.1 h1:c+tfPabQaip4rvUPHqU09OUw9XeCc04APZQxWU49K+U=
+github.com/icowan/kit-captcha v0.0.1/go.mod h1:tmzjvha1YgVqgme/uFB2xyIvlval2fy19Lht2/gy4Gc=
 github.com/icowan/mysql-client v0.1.0 h1:dJKpvR6QKEfYLm9cLmXunD0vct/9C9pNx1mMvoPIPTM=
 github.com/icowan/mysql-client v0.1.0/go.mod h1:34AMVF9r42qxkb8KDc6gmT9G4OAQ7OvtAUSKnfSnGV8=
 github.com/icowan/redis-client v0.2.0/go.mod h1:xY7n2Cv34MyHSXEBzA9Tjlcnq/t3exMQuzxgMY6v1YE=

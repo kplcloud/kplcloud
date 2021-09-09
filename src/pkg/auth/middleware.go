@@ -9,19 +9,35 @@ package auth
 
 import (
 	"context"
-	"errors"
 	"github.com/go-kit/kit/endpoint"
-	"golang.org/x/time/rate"
+	captcha "github.com/icowan/kit-captcha"
+	"github.com/kplcloud/kplcloud/src/encode"
 )
 
-var ErrLimitExceed = errors.New("Rate limit exceed!")
-
-func newTokenBucketLimitter(bkt *rate.Limiter) endpoint.Middleware {
+// 验证图形验证码
+func checkCaptchaMiddleware(captcha captcha.Service) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-			if !bkt.Allow() {
-				return nil, ErrLimitExceed
+			var captchaId, captchaCode string
+			switch request.(type) {
+			case authRequest:
+				req, ok := request.(authRequest)
+				if !ok {
+					return nil, encode.ErrSystem.Error()
+				}
+				captchaId = req.CaptchaId
+				captchaCode = req.CaptchaCode
+			default:
+				return next(ctx, request)
 			}
+
+			if captchaId == "" || captchaCode == "" {
+				return nil, encode.ErrAuthCheckCaptchaNotnull.Error()
+			}
+			if !captcha.VerifyCaptcha(ctx, captchaId, captchaCode) {
+				return nil, encode.ErrAuthCheckCaptchaCode.Error()
+			}
+
 			return next(ctx, request)
 		}
 	}

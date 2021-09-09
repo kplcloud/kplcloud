@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"github.com/jinzhu/gorm"
 	"github.com/kplcloud/kplcloud/src/repository/types"
-	"gopkg.in/guregu/null.v3"
 )
 
 type PvcRepository interface {
@@ -41,11 +40,11 @@ func (c *pvc) FirstOrCreate(ns, name, accessModes, storage, storageClassName, de
 	class := types.PersistentVolumeClaim{
 		Name:             name,
 		Namespace:        ns,
-		Detail:           null.StringFrom(detail),
-		Labels:           null.StringFrom(string(b)),
-		Selector:         null.StringFrom(selector),
+		Detail:           detail,
+		Labels:           string(b),
+		Selector:         selector,
 		Storage:          storage,
-		StorageClassName: null.StringFrom(storageClassName),
+		StorageClassName: storageClassName,
 		AccessModes:      accessModes,
 	}
 	return c.db.FirstOrCreate(&class, types.PersistentVolumeClaim{

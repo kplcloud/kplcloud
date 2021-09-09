@@ -21,20 +21,16 @@ import (
 type Middleware func(Service) Service
 
 type Service interface {
-	// 系统用户列表
+	// List 系统用户列表
 	List(ctx context.Context, email string, page, pageSize int) (res []listResult, total int, err error)
-
-	// 添加系统用户
+	// Add 添加系统用户
 	Add(ctx context.Context, username, email string, locked bool, namespaceIds, roleIds []int64) (err error)
-
-	// 锁定或解锁用户
+	// Locked 锁定或解锁用户
 	Locked(ctx context.Context, userId int64) (err error)
-
-	// 删除用户
+	// Delete 删除用户
 	// unscoped: 是否硬删除 默认: false
 	Delete(ctx context.Context, userId int64, unscoped bool) (err error)
-
-	// 更新用户
+	// Update 更新用户
 	Update(ctx context.Context, userId int64, username, email string, locked bool, namespaceIds, roleIds []int64) (err error)
 }
 

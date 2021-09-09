@@ -1,10 +1,3 @@
-/**
- * @Time : 2020/11/9 3:17 PM
- * @Author : solacowa@gmail.com
- * @File : password
- * @Software: GoLand
- */
-
 package util
 
 import (
@@ -12,7 +5,23 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"hash"
+	"math/rand"
 )
+
+// source: https://github.com/gogits/gogs/blob/9ee80e3e5426821f03a4e99fad34418f5c736413/modules/base/tool.go#L58
+func GetRandomString(n int, alphabets ...byte) string {
+	const alphanum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	var bytes = make([]byte, n)
+	rand.Read(bytes)
+	for i, b := range bytes {
+		if len(alphabets) == 0 {
+			bytes[i] = alphanum[b%byte(len(alphanum))]
+		} else {
+			bytes[i] = alphabets[b%byte(len(alphabets))]
+		}
+	}
+	return string(bytes)
+}
 
 func EncodePassword(password string, salt string) string {
 	return hex.EncodeToString(PBKDF2([]byte(password), []byte(salt), 10000, 50, sha256.New))
@@ -54,4 +63,11 @@ func PBKDF2(password, salt []byte, iter, keyLen int, h func() hash.Hash) []byte 
 		}
 	}
 	return dk[:keyLen]
+}
+
+func HashString(byte []byte) string {
+	h := sha256.New()
+	h.Write(byte)
+	bs := h.Sum(nil)
+	return hex.EncodeToString(bs)
 }

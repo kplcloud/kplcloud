@@ -25,6 +25,7 @@ require (
 	github.com/hashicorp/consul/api v1.9.1
 	github.com/icowan/config v0.0.0-20200926110528-b95deb7acc31
 	github.com/icowan/kit-cache v0.4.0
+	github.com/icowan/kit-captcha v0.0.1
 	github.com/icowan/mysql-client v0.1.0
 	github.com/icowan/redis-client v0.3.3
 	github.com/imdario/mergo v0.3.7 // indirect
