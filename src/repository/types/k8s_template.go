@@ -25,7 +25,7 @@ type K8sTemplate struct {
 	Id int64 `gorm:"column:id;primary_key" json:"id"`
 	//ClusterId int64      `gorm:"column:cluster_id;notnull;index;comment:'集群ID'" json:"cluster_id"`
 	Kind      Kind       `gorm:"column:kind;notnull;unique;index;size:32;comment:'资源类型'" json:"kind"`
-	Name      string     `gorm:"column:name;index;size:32;null;comment:'资源名称'" json:"name"`
+	Alias     string     `gorm:"column:alias;index;size:32;null;comment:'资源名称'" json:"alias"`
 	Rules     string     `gorm:"column:rules;null;comment:'规则'" json:"rules"`
 	Content   string     `gorm:"column:content;null;type:text;comment:'模版内容'" json:"content"`
 	CreatedAt time.Time  `gorm:"column:created_at" json:"created_at" form:"created_at"` // 创建时间

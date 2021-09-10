@@ -80,6 +80,8 @@ var ResponseMessage = map[ResStatus]int{
 
 	ErrPersistentVolumeClaimList:   1160,
 	ErrPersistentVolumeClaimCreate: 1161,
+
+	ErrTemplateSave: 1180,
 }
 
 const (
@@ -151,6 +153,8 @@ const (
 	ErrNodeCordon   ResStatus = "操作失败"
 	ErrNodeNotfound ResStatus = "节点不存在"
 	ErrNodeDrain    ResStatus = "驱逐失败"
+
+	ErrTemplateSave ResStatus = "模版保存失败"
 )
 
 func (c ResStatus) String() string {

@@ -22,10 +22,21 @@ type Middleware func(Service) Service
 type Service interface {
 	EncodeTemplate(ctx context.Context, kind types.Kind, paramContent map[string]interface{}, data interface{}) (tpl []byte, err error)
 	FindByKind(ctx context.Context, kind types.Kind) (tpl types.K8sTemplate, err error)
+	Save(ctx context.Context, tpl *types.K8sTemplate) (err error)
+	Delete(ctx context.Context, kind types.Kind) (err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) Delete(ctx context.Context, kind types.Kind) (err error) {
+
+	return
+}
+
+func (s *service) Save(ctx context.Context, tpl *types.K8sTemplate) (err error) {
+	return s.db.Model(tpl).Save(tpl).Error
 }
 
 func (s *service) FindByKind(ctx context.Context, kind types.Kind) (tpl types.K8sTemplate, err error) {

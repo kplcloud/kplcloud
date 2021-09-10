@@ -11,12 +11,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
-
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/kplcloud/kplcloud/src/repository/types"
 	appv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strings"
 
 	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
@@ -97,6 +97,21 @@ func (s *service) Sync(ctx context.Context, clusterId int64, ns string) (err err
 		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Value())
 		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().String())
 		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().String())
+		p := types.Project{
+			Alias:       v.Name,
+			Name:        v.Name,
+			Namespace:   v.Namespace,
+			Cpu:         0,
+			MaxCpu:      0,
+			Memory:      0,
+			MaxMemory:   0,
+			GitRepo:     "",
+			Version:     "",
+			Status:      "",
+			Remark:      "",
+			AuditStatus: 0,
+		}
+		fmt.Println(p)
 	}
 
 	return

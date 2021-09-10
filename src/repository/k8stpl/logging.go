@@ -23,6 +23,18 @@ type loggingServer struct {
 	traceId string
 }
 
+func (l *loggingServer) Save(ctx context.Context, tpl *types.K8sTemplate) (err error) {
+	defer func(begin time.Time) {
+		_ = l.logger.Log(
+			l.traceId, ctx.Value(l.traceId),
+			"method", "Save",
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return l.next.Save(ctx, tpl)
+}
+
 func (l *loggingServer) EncodeTemplate(ctx context.Context, kind types.Kind, paramContent map[string]interface{}, data interface{}) (tpl []byte, err error) {
 	defer func(begin time.Time) {
 		_ = l.logger.Log(

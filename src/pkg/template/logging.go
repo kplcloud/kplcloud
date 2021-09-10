@@ -1,6 +1,6 @@
 /**
- * @Time : 2019/6/25 4:07 PM
- * @Author : yuntinghu1003@gmail.com
+ * @Time : 3/9/21 5:58 PM
+ * @Author : solacowa@gmail.com
  * @File : logging
  * @Software: GoLand
  */
@@ -9,83 +9,64 @@ package template
 
 import (
 	"context"
+	"time"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	kithttp "github.com/go-kit/kit/transport/http"
-	"github.com/kplcloud/kplcloud/src/repository/types"
-	"time"
 )
 
-type loggingService struct {
-	logger log.Logger
-	Service
+type logging struct {
+	logger  log.Logger
+	next    Service
+	traceId string
 }
 
-func NewLoggingService(logger log.Logger, s Service) Service {
-	return &loggingService{level.Info(logger), s}
-}
-
-func (s loggingService) Get(ctx context.Context, id int) (resp *types.Template, err error) {
+func (s *logging) Add(ctx context.Context, kind, alias, rules, content string) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
-			"path", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "get",
-			"id", id,
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Add",
+			"kind", kind,
+			"alias", alias,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return s.Service.Get(ctx, id)
+	return s.next.Add(ctx, kind, alias, rules, content)
 }
 
-func (s loggingService) Post(ctx context.Context, req templateRequest) (err error) {
-	defer func(begin time.Time) {
-		_ = s.logger.Log(
-			"path", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "post",
-			"request", req,
-			"took", time.Since(begin),
-			"err", err,
-		)
-	}(time.Now())
-	return s.Service.Post(ctx, req)
+func (s *logging) Delete(ctx context.Context, kind string) (err error) {
+	panic("implement me")
 }
 
-func (s loggingService) Update(ctx context.Context, req templateRequest) (err error) {
-	defer func(begin time.Time) {
-		_ = s.logger.Log(
-			"path", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "update",
-			"request", req,
-			"took", time.Since(begin),
-			"err", err,
-		)
-	}(time.Now())
-	return s.Service.Update(ctx, req)
-}
-func (s loggingService) Delete(ctx context.Context, id int) (err error) {
-	defer func(begin time.Time) {
-		_ = s.logger.Log(
-			"path", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "delete",
-			"id", id,
-			"took", time.Since(begin),
-			"err", err,
-		)
-	}(time.Now())
-	return s.Service.Delete(ctx, id)
+func (s *logging) Update(ctx context.Context, kind, alias, rules, content string) (err error) {
+	panic("implement me")
 }
 
-func (s loggingService) List(ctx context.Context, name string, page, limit int) (res map[string]interface{}, err error) {
+func (s *logging) List(ctx context.Context, searchValue string, page, pageSize int64) (res []interface{}, total int, err error) {
+	panic("implement me")
+}
+
+func (s *logging) Info(ctx context.Context, kind string) (res interface{}, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
-			"path", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "delete",
-			"page", page,
-			"limit", limit,
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Info",
+			"kind", kind,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return s.Service.List(ctx, name, page, limit)
+	return s.next.Info(ctx, kind)
+}
+
+func NewLogging(logger log.Logger, traceId string) Middleware {
+	logger = log.With(logger, "template", "logging")
+	return func(next Service) Service {
+		return &logging{
+			logger:  level.Info(logger),
+			next:    next,
+			traceId: traceId,
+		}
+	}
 }

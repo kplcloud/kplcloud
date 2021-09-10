@@ -9,12 +9,6 @@ package types
 
 import "gopkg.in/guregu/null.v3"
 
-type Port struct {
-	Name     string `json:"name"`
-	Port     int    `json:"port"`
-	Protocol string `json:"protocol"`
-}
-
 type TemplateField struct {
 	Args         []string `json:"args"`
 	Command      []string `json:"command"`

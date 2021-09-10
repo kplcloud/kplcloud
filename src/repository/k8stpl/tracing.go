@@ -21,6 +21,20 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) Save(ctx context.Context, tpl *types.K8sTemplate) (err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Save", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "repository.Template",
+	})
+	defer func() {
+		span.LogKV(
+			"error", err,
+		)
+		span.Finish()
+	}()
+	return s.next.Save(ctx, tpl)
+}
+
 func (s *tracing) EncodeTemplate(ctx context.Context, kind types.Kind, paramContent map[string]interface{}, data interface{}) (tpl []byte, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "EncodeTemplate", opentracing.Tag{
 		Key:   string(ext.Component),
