@@ -2,9 +2,11 @@ package middleware
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"github.com/kplcloud/kplcloud/src/repository/types"
+	"github.com/pkg/errors"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -13,7 +15,6 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	kithttp "github.com/go-kit/kit/transport/http"
-	"github.com/icowan/config"
 	kitcache "github.com/icowan/kit-cache"
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
@@ -39,13 +40,14 @@ const (
 	GroupIdContext    ASDContext = "groupId"
 	IsAdmin           ASDContext = "isAdmin"
 	CronJobContext    ASDContext = "cronJob"
-	StartTime         ASDContext = "start-time"
 
 	ContextKeyClusterName   ASDContext = "ctx-cluster-name"   // 集群名称
 	ContextKeyClusterId     ASDContext = "ctx-cluster-id"     // 集群ID
 	ContextKeyNamespaceName ASDContext = "ctx-namespace-name" // 空间标识
-	ContextKeyNamespaceId   ASDContext = "ctx-namespace-id"   // 集群id
+	ContextKeyNamespaceId   ASDContext = "ctx-namespace-id"   // 空间ID
 	ContextKeyName          ASDContext = "ctx-name"           // 名称
+	ContextUserId           ASDContext = "ctx-user-id"        // 用户ID
+	ContextPermissionId     ASDContext = "ctx-permission-id"  // 权限ID
 )
 
 var (
@@ -98,78 +100,74 @@ func CheckAuthMiddleware(logger log.Logger, cache kitcache.Service, tracer opent
 				return
 			}
 
-			// TODO 获取用户信息
-			//if sysUser.Locked {
-			//	err = encode.ErrAccountLocked.Error()
-			//	_ = level.Error(logger).Log("sysUser", "Locked", "err", err)
-			//	return
-			//}
-
-			ctx = context.WithValue(ctx, UserIdContext, claim.UserId)
+			ctx = context.WithValue(ctx, ContextUserId, claim.UserId)
 			ctx = context.WithValue(ctx, "Authorization", token)
 			return next(ctx, request)
 		}
 	}
 }
 
-func CheckPermissionMiddleware(logger log.Logger, cfg *config.Config) endpoint.Middleware {
+func CheckPermissionMiddleware(logger log.Logger, cacheSvc kitcache.Service) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-			//	userId, ok := ctx.Value(UserIdContext).(int64)
-			//	if !ok {
-			//		err = encode.ErrAccountNotLogin.Error()
-			//		_ = level.Error(logger).Log("userIdContext", "is null")
-			//		return
-			//	}
-			//	var sysUser types.SysUser
-			//	_, err = cacheSvc.Get(ctx, cache.AccountLoginUserInfo.String(userId), &sysUser)
-			//	if err != nil {
-			//		err = encode.ErrAccountASD.Wrap(err)
-			//		_ = level.Error(logger).Log("cacheSvc", "Get", "err", err)
-			//		return
-			//	}
-			//
-			//	var roles []types.SysRole
-			//	// 超管标识,直接通过
-			//	for _, v := range sysUser.Roles {
-			//		if strings.EqualFold(cfg.GetString(config.SectionServer, "admin.tag"), v.Tag) {
-			//			return next(ctx, request)
-			//		}
-			//		roles = append(roles, v)
-			//	}
-			//
-			//	var requestPath, requestMethod = ctx.Value(kithttp.ContextKeyRequestPath).(string),
-			//		ctx.Value(kithttp.ContextKeyRequestMethod).(string)
-			//
-			//	// cache 查询权限可操作的资源
-			//	var perms []types.SysPermission
-			//	_, err = cacheSvc.Get(ctx, cache.AccountRolePermission.String(userId), &perms)
-			//	if err != nil {
-			//		err = encode.ErrAccountASD.Wrap(err)
-			//		_ = level.Error(logger).Log("cacheSvc", "Get", "err", err)
-			//		return
-			//	}
-			//
-			//	var pass bool
-			//P:
-			//	for _, v := range perms {
-			//		if !strings.EqualFold(v.Menu.Path, requestPath) && !keyMatch3(requestPath, v.Menu.Path) {
-			//			continue
-			//		}
-			//		for _, opt := range v.Operations {
-			//			if !strings.EqualFold(opt.Operation, requestMethod) {
-			//				continue
-			//			}
-			//			pass = true
-			//			break P
-			//		}
-			//	}
-			//
-			//	if !pass {
-			//		err = encode.ErrAccountASD.Error()
-			//		_ = level.Warn(logger).Log("userId", userId, "requestPath", requestPath, "method", requestMethod, "msg", "权限校验失败")
-			//		return
-			//	}
+			userId, ok := ctx.Value(ContextUserId).(int64)
+			if !ok {
+				err = encode.ErrAccountNotLogin.Error()
+				_ = level.Error(logger).Log("userIdContext", "is null")
+				return
+			}
+			var sysUser types.SysUser
+			_, err = cacheSvc.Get(ctx, fmt.Sprintf("user:%d:info", userId), &sysUser)
+			if err != nil {
+				err = encode.ErrAccountASD.Wrap(err)
+				_ = level.Error(logger).Log("cacheSvc", "Get", "err", err)
+				return
+			}
+
+			if sysUser.Locked {
+				err = encode.ErrAccountLocked.Error()
+				_ = level.Error(logger).Log("sysUser", "Locked", "err", err)
+				return
+			}
+
+			var roles []types.SysRole
+			// TODO: 超管标识,直接通过
+			for _, v := range sysUser.SysRoles {
+				roles = append(roles, v)
+			}
+
+			var requestPath, requestMethod = ctx.Value(kithttp.ContextKeyRequestPath).(string),
+				ctx.Value(kithttp.ContextKeyRequestMethod).(string)
+
+			u, _ := url.Parse(ctx.Value(kithttp.ContextKeyRequestURI).(string))
+			requestPath = u.Path
+
+			var perms []types.SysPermission
+			for _, v := range sysUser.SysRoles {
+				for _, p := range v.SysPermissions {
+					perms = append(perms, p)
+				}
+			}
+
+			var pass bool
+			var perm types.SysPermission
+			for _, v := range perms {
+				if !strings.EqualFold(v.Path, requestPath) && !keyMatch3(requestPath, v.Path) {
+					continue
+				}
+				if !strings.EqualFold(v.Method, requestMethod) {
+					continue
+				}
+				pass = true
+				break
+			}
+			if !pass {
+				err = encode.ErrAccountASD.Error()
+				_ = level.Warn(logger).Log("userId", userId, "requestPath", requestPath, "method", requestMethod, "msg", "权限校验失败")
+				return
+			}
+
+			ctx = context.WithValue(ctx, ContextPermissionId, perm.Id)
 
 			return next(ctx, request)
 		}

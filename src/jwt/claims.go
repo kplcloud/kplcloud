@@ -13,12 +13,8 @@ import (
 
 // ArithmeticCustomClaims 自定义声明
 type ArithmeticCustomClaims struct {
-	UserId     int64    `json:"userId"`
-	Name       string   `json:"name"`
-	Namespaces []string `json:"namespaces"`
-	Groups     []int64  `json:"groups"`
-	IsAdmin    bool     `json:"isAdmin"`
-	RoleIds    []int64  `json:"role_ids"`
+	UserId  int64 `json:"userId"`
+	IsAdmin bool  `json:"isAdmin"`
 	jwt.StandardClaims
 }
 

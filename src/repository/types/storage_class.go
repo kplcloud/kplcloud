@@ -20,7 +20,7 @@ type StorageClass struct {
 	VolumeBindingMode string     `gorm:"column:volume_binding_mode;notnull;comment:'卷绑定模式'" json:"volume_binding_mode"`
 	ResourceVersion   string     `gorm:"column:resource_version;null;comment:'版本'" json:"resource_version"`
 	Detail            string     `gorm:"column:detail;type:text;size(10000);comment:'详情'" json:"detail"`
-	Desc              string     `gorm:"column:desc;null;comment:'备注'" json:"desc"`
+	Remark            string     `gorm:"column:remark;null;comment:'备注'" json:"remark"`
 	CreatedAt         time.Time  `gorm:"column:created_at" json:"created_at"` // 创建时间
 	UpdatedAt         time.Time  `gorm:"column:updated_at" json:"updated_at"` // 更新时间
 	DeletedAt         *time.Time `gorm:"column:deleted_at" json:"deleted_at"`

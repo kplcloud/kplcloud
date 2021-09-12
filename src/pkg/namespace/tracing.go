@@ -20,10 +20,25 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
+func (s *tracing) Create(ctx context.Context, clusterId int64, name, alias, remark string, imageSecrets []string) (err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Create", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "package.Namespace",
+	})
+	defer func() {
+		span.LogKV(
+			"clusterId", clusterId,
+			"name", name, "alias", alias, "remark", remark,
+			"err", err)
+		span.Finish()
+	}()
+	return s.next.Create(ctx, clusterId, name, alias, remark, imageSecrets)
+}
+
 func (s *tracing) Sync(ctx context.Context, clusterId int64) (err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Sync", stdopentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "Namespace",
+		Value: "package.Namespace",
 	})
 	defer func() {
 		span.LogKV(

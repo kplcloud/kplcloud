@@ -21,6 +21,22 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) Create(ctx context.Context, clusterId int64, name, alias, remark string, imageSecrets []string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Create",
+			"clusterId", clusterId,
+			"name", name,
+			"alias", alias,
+			"remark", remark,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Create(ctx, clusterId, name, alias, remark, imageSecrets)
+}
+
 func (s *logging) Sync(ctx context.Context, clusterId int64) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

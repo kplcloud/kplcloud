@@ -9,6 +9,8 @@ package storageclass
 
 import (
 	"context"
+	v1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	"time"
 
 	"github.com/go-kit/kit/log"
@@ -19,6 +21,28 @@ type logging struct {
 	logger  log.Logger
 	next    Service
 	traceId string
+}
+
+func (s *logging) Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Create",
+			"clusterId", clusterId,
+			"ns", ns,
+			"name", name,
+			"provisioner", provisioner,
+			"reclaimPolicy", reclaimPolicy,
+			"volumeBindingMode", volumeBindingMode,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Create(ctx, clusterId, ns, name, provisioner, reclaimPolicy, volumeBindingMode)
+}
+
+func (s *logging) CreateProvisioner(ctx context.Context, clusterId int64) (err error) {
+	panic("implement me")
 }
 
 func (s *logging) SyncPv(ctx context.Context, clusterId int64, storageName string) (err error) {

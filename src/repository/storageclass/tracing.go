@@ -66,7 +66,7 @@ func (s *tracing) FirstInsert(ctx context.Context, data *types.StorageClass) (er
 	return s.next.FirstInsert(ctx, data)
 }
 
-func (s *tracing) Save(ctx context.Context, data *types.StorageClass) (err error) {
+func (s *tracing) Save(ctx context.Context, data *types.StorageClass, call Call) (err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Save", opentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "repository.StorageClass",
@@ -77,7 +77,7 @@ func (s *tracing) Save(ctx context.Context, data *types.StorageClass) (err error
 		)
 		span.Finish()
 	}()
-	return s.next.Save(ctx, data)
+	return s.next.Save(ctx, data, call)
 }
 
 func NewTracing(otTracer opentracing.Tracer) Middleware {

@@ -17,28 +17,21 @@ import (
 )
 
 type Service interface {
-	// 保存用户
+	// Save 保存用户
 	Save(ctx context.Context, user *types.SysUser) (err error)
-
-	// 根据邮箱查用户
+	// FindByEmail 根据邮箱查用户
 	FindByEmail(ctx context.Context, email string) (res types.SysUser, err error)
-
-	// 系统用户列表
+	// List 系统用户列表
 	List(ctx context.Context, namespaceIds []int64, email string, page, pageSize int) (res []types.SysUser, total int, err error)
-
-	// 查询用户详情
+	// Find 查询用户详情
 	Find(ctx context.Context, userId int64, preload ...string) (res types.SysUser, err error)
-
-	// 给用户添加角色
+	// AddRoles 给用户添加角色
 	AddRoles(ctx context.Context, user *types.SysUser, roles []types.SysRole) (err error)
-
-	// 根据ID查用户
+	// FindByIds 根据ID查用户
 	FindByIds(ctx context.Context, ids []int64, preload ...string) (res []types.SysUser, err error)
-
-	// 根据角色查询用户列表
+	// FindByRoleId 根据角色查询用户列表
 	FindByRoleId(ctx context.Context, roleId int64, page, pageSize int) (res []types.SysUser, total int, err error)
-
-	// 删除用户
+	// Delete 删除用户
 	Delete(ctx context.Context, userId int64, unscoped bool) (err error)
 }
 
@@ -132,7 +125,7 @@ func (s *service) List(ctx context.Context, namespaceIds []int64, email string, 
 
 func (s *service) FindByEmail(ctx context.Context, email string) (res types.SysUser, err error) {
 	query := s.db.Model(&types.SysUser{}).
-		Preload("SysRoles").
+		Preload("SysRoles.SysPermissions").
 		Preload("SysNamespaces")
 	if strings.Contains(email, "@") {
 		query = query.Where("email = ?", email)

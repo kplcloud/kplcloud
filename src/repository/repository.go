@@ -9,7 +9,9 @@ package repository
 
 import (
 	"context"
+	"github.com/kplcloud/kplcloud/src/repository/audit"
 	"github.com/kplcloud/kplcloud/src/repository/k8stpl"
+	"github.com/kplcloud/kplcloud/src/repository/registry"
 	"github.com/kplcloud/kplcloud/src/repository/storageclass"
 
 	"github.com/go-kit/kit/log"
@@ -38,6 +40,8 @@ type Repository interface {
 	Secrets(ctx context.Context) secrets.Service
 	StorageClass(ctx context.Context) storageclass.Service
 	K8sTpl(ctx context.Context) k8stpl.Service
+	Registry(ctx context.Context) registry.Service
+	Audit(ctx context.Context) audit.Service
 
 	SysSetting() syssetting.Service
 	SysUser() sysuser.Service
@@ -59,12 +63,22 @@ type repository struct {
 	secretSvc       secrets.Service
 	storageClassSvc storageclass.Service
 	k8sTpl          k8stpl.Service
+	registrySvc     registry.Service
+	auditSvc        audit.Service
 
 	sysSetting    syssetting.Service
 	sysUser       sysuser.Service
 	sysNamespace  sysnamespace.Service
 	sysRole       sysrole.Service
 	sysPermission syspermission.Service
+}
+
+func (r *repository) Audit(ctx context.Context) audit.Service {
+	return r.auditSvc
+}
+
+func (r *repository) Registry(ctx context.Context) registry.Service {
+	return r.registrySvc
 }
 
 func (r *repository) K8sTpl(ctx context.Context) k8stpl.Service {
@@ -157,6 +171,11 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 	storageClassSvc := storageclass.New(db)
 	storageClassSvc = storageclass.NewLogging(logger, traceId)(storageClassSvc)
 	k8sTplSvc := k8stpl.New(db)
+	k8sTplSvc = k8stpl.NewLogging(logger, traceId)(k8sTplSvc)
+	registrySvc := registry.New(db)
+	registrySvc = registry.NewLogging(logger, traceId)(registrySvc)
+	auditSvc := audit.New(db)
+	auditSvc = audit.NewLogging(logger, traceId)(auditSvc)
 
 	if tracer != nil {
 		sysSetting = syssetting.NewTracing(tracer)(sysSetting)
@@ -171,6 +190,9 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 		configMapSvc = configmap.NewTracing(tracer)(configMapSvc)
 		secretSvc = secrets.NewTracing(tracer)(secretSvc)
 		storageClassSvc = storageclass.NewTracing(tracer)(storageClassSvc)
+		registrySvc = registry.NewTracing(tracer)(registrySvc)
+		k8sTplSvc = k8stpl.NewTracing(tracer)(k8sTplSvc)
+		auditSvc = audit.NewTracing(tracer)(auditSvc)
 	}
 
 	if kcache != nil {
@@ -191,5 +213,7 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 		namespaceSvc:    namespaceSvc,
 		configMapSvc:    configMapSvc,
 		secretSvc:       secretSvc,
+		registrySvc:     registrySvc,
+		auditSvc:        auditSvc,
 	}
 }

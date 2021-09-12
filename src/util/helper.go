@@ -19,7 +19,46 @@ import (
 	"time"
 )
 
-//email verify
+const (
+	// 中文正则匹配，合法字符为中文
+	displayNamePattern = "[\u4e00-\u9fa5]*[a-z0-9A-Z-_]*$"
+	// 名称的正则匹配, 合法的字符有 0-9, A-Z, a-z,-,_
+	namePattern = `^[a-z0-9]([-a-z0-9])?([a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// 带点的名称的正则匹配, 合法的字符有 0-9, A-Z, a-z,-,_
+	namePointPattern = `^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+)
+
+var (
+	displayNameRegexp = regexp.MustCompile(displayNamePattern)
+	nameRegexp        = regexp.MustCompile(namePattern)
+	namePointRegexp   = regexp.MustCompile(namePointPattern)
+)
+
+// CheckDisplayNameByString 验证中文名
+func CheckDisplayNameByString(str string) bool {
+	if len(str) == 0 {
+		return false
+	}
+	return displayNameRegexp.MatchString(str)
+}
+
+// CheckNameByString 验证英文名称
+func CheckNameByString(str string) bool {
+	if len(str) == 0 {
+		return false
+	}
+	return nameRegexp.MatchString(str)
+}
+
+// CheckNamePointRegexp 验证带点的英文名称
+func CheckNamePointRegexp(str string) bool {
+	if len(str) == 0 {
+		return false
+	}
+	return namePointRegexp.MatchString(str)
+}
+
+// VerifyEmailFormat email verify
 func VerifyEmailFormat(email string) bool {
 	//pattern := `\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*` //匹配电子邮箱
 	pattern := `^[0-9a-z][_.0-9a-z-]{0,31}@([0-9a-z][0-9a-z-]{0,30}[0-9a-z]\.){1,4}[a-z]{2,4}$`
@@ -28,7 +67,7 @@ func VerifyEmailFormat(email string) bool {
 	return reg.MatchString(email)
 }
 
-//mobile verify
+// VerifyMobileFormat mobile verify
 func VerifyMobileFormat(mobileNum string) bool {
 	regular := "^((13[0-9])|(14[5,7])|(15[0-3,5-9])|(17[0,3,5-8])|(18[0-9])|166|198|199|(147))\\d{8}$"
 
@@ -131,7 +170,7 @@ func Decimal(value float64) float64 {
 	return math.Trunc(value*1e2+0.5) * 1e-2
 }
 
-// 去重 空间换时间
+// RemoveDuplicateElement 去重 空间换时间
 func RemoveDuplicateElement(args []string) []string {
 	result := make([]string, 0, len(args))
 	temp := map[string]struct{}{}

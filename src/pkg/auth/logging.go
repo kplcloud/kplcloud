@@ -1,29 +1,46 @@
+/**
+ * @Time : 8/11/21 4:21 PM
+ * @Author : solacowa@gmail.com
+ * @File : logging
+ * @Software: GoLand
+ */
+
 package auth
 
 import (
 	"context"
+	"time"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"time"
 )
 
-type loggingService struct {
-	logger log.Logger
-	Service
+type logging struct {
+	logger  log.Logger
+	next    Service
+	traceId string
 }
 
-func NewLoggingService(logger log.Logger, s Service) Service {
-	return &loggingService{level.Info(logger), s}
-}
-
-func (s *loggingService) Login(ctx context.Context, name, password string) (rs string, err error) {
+func (s *logging) Login(ctx context.Context, username, password string) (rs string, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
-			"method", "login",
-			"name", name,
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Login",
+			"username", username,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return s.Service.Login(ctx, name, password)
+	return s.next.Login(ctx, username, password)
+}
+
+func NewLogging(logger log.Logger, traceId string) Middleware {
+	logger = log.With(logger, "auth", "logging")
+	return func(next Service) Service {
+		return &logging{
+			logger:  level.Info(logger),
+			next:    next,
+			traceId: traceId,
+		}
+	}
 }

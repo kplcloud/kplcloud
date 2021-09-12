@@ -10,9 +10,12 @@ package server
 import (
 	"context"
 	"fmt"
+	"github.com/kplcloud/kplcloud/src/pkg/auth"
 	"github.com/kplcloud/kplcloud/src/pkg/configmap"
 	"github.com/kplcloud/kplcloud/src/pkg/cronjob"
 	"github.com/kplcloud/kplcloud/src/pkg/deployment"
+	"github.com/kplcloud/kplcloud/src/pkg/persistentvolumeclaim"
+	"github.com/kplcloud/kplcloud/src/pkg/registry"
 	"github.com/kplcloud/kplcloud/src/pkg/secret"
 	"github.com/kplcloud/kplcloud/src/pkg/storageclass"
 	"net/http"
@@ -78,6 +81,7 @@ kplcloud start -p :8080 -g :8082
 	sysUserSvc       sysuser.Service
 	sysRoleSvc       sysrole.Service
 	sysPermissionSvc syspermission.Service
+	authSvc          auth.Service
 
 	clusterSvc      cluster.Service
 	nodeSvc         nodes.Service
@@ -87,6 +91,8 @@ kplcloud start -p :8080 -g :8082
 	secretSvc       secret.Service
 	storageClassSvc storageclass.Service
 	cronjobSvc      cronjob.Service
+	registrySvc     registry.Service
+	pvcSvc          persistentvolumeclaim.Service
 )
 
 func start() (err error) {
@@ -149,7 +155,13 @@ func start() (err error) {
 	cronjobSvc = secret.New(logger, logging.TraceId, store, k8sClient)
 	cronjobSvc = cronjob.NewLogging(logger, logging.TraceId)(cronjobSvc)
 	storageClassSvc = storageclass.New(logger, logging.TraceId, store, k8sClient)
-	//storageClassSvc = storageclass.NewLogging(logger, logging.TraceId)(storageClassSvc)
+	storageClassSvc = storageclass.NewLogging(logger, logging.TraceId)(storageClassSvc)
+	registrySvc = registry.New(logger, logging.TraceId, store)
+	registrySvc = registry.NewLogging(logger, logging.TraceId)(registrySvc)
+	pvcSvc = persistentvolumeclaim.New(logger, logging.TraceId, k8sClient, store)
+	pvcSvc = persistentvolumeclaim.NewLogging(logger, logging.TraceId)(pvcSvc)
+	authSvc = auth.New(logger, logging.TraceId, store, cacheSvc, cf.GetString("server", "key"), int64(cf.GetInt("server", "session.timeout")))
+	authSvc = auth.NewLogging(logger, logging.TraceId)(authSvc)
 
 	if tracer != nil {
 		//authSvc = auth.NewTracing(tracer)(authSvc)
@@ -162,6 +174,10 @@ func start() (err error) {
 		configMapSvc = configmap.NewTracing(tracer)(configMapSvc)
 		secretSvc = secret.NewTracing(tracer)(secretSvc)
 		cronjobSvc = cronjob.NewTracing(tracer)(cronjobSvc)
+		registrySvc = registry.NewTracing(tracer)(registrySvc)
+		storageClassSvc = storageclass.NewTracing(tracer)(storageClassSvc)
+		pvcSvc = persistentvolumeclaim.NewTracing(tracer)(pvcSvc)
+		authSvc = auth.NewTracing(tracer)(authSvc)
 	}
 
 	g := &group.Group{}
@@ -228,24 +244,26 @@ func initHttpHandler(g *group.Group) {
 			ctx = context.WithValue(ctx, middleware.ContextKeyName, name)
 			return ctx
 		}),
-		kithttp.ServerBefore(middleware.TracingServerBefore(tracer)),
+		kithttp.ServerBefore(middleware.TracingServerBefore(tracer)), // 0
 	}
 
 	ems := []endpoint.Middleware{
-		middleware.ClusterMiddleware(store),  //2
-		middleware.TracingMiddleware(tracer), // 1
-		middleware.TokenBucketLimitter(rate.NewLimiter(rate.Every(time.Second*1), rateBucketNum)), // 0
+		middleware.TracingMiddleware(tracer),                                                      // 1
+		middleware.TokenBucketLimitter(rate.NewLimiter(rate.Every(time.Second*1), rateBucketNum)), // 0.5
 	}
 
-	tokenEms := []endpoint.Middleware{
-		//middleware.CheckAuthMiddleware(logger, cacheSvc, tracer), // 3
+	var tokenEms = []endpoint.Middleware{
+		middleware.AuditMiddleware(store, tracer),                // 5
+		middleware.ClusterMiddleware(store),                      // 4
+		middleware.CheckPermissionMiddleware(logger, cacheSvc),   // 3
+		middleware.CheckAuthMiddleware(logger, cacheSvc, tracer), // 2
 	}
 	tokenEms = append(tokenEms, ems...)
 
 	r := mux.NewRouter()
 
 	// 授权登录模块
-	//r.PathPrefix("/auth").Handler(http.StripPrefix("/auth", auth.MakeHTTPHandler(authSvc, ems, opts)))
+	r.PathPrefix("/auth").Handler(http.StripPrefix("/auth", auth.MakeHTTPHandler(authSvc, ems, opts)))
 	//r.PathPrefix("/account").Handler(http.StripPrefix("/account", account.MakeHTTPHandler(accountSvc, tokenEms, opts)))
 
 	r.PathPrefix("/cluster").Handler(http.StripPrefix("/cluster", cluster.MakeHTTPHandler(clusterSvc, tokenEms, opts)))
@@ -256,6 +274,8 @@ func initHttpHandler(g *group.Group) {
 	r.PathPrefix("/secret").Handler(http.StripPrefix("/secret", secret.MakeHTTPHandler(secretSvc, tokenEms, opts)))
 	r.PathPrefix("/storage-class").Handler(http.StripPrefix("/storage-class", storageclass.MakeHTTPHandler(storageClassSvc, tokenEms, opts)))
 	r.PathPrefix("/cronjob").Handler(http.StripPrefix("/cronjob", cronjob.MakeHTTPHandler(cronjobSvc, tokenEms, opts)))
+	r.PathPrefix("/persistent-volume-claim").Handler(http.StripPrefix("/persistent-volume-claim", persistentvolumeclaim.MakeHTTPHandler(pvcSvc, tokenEms, opts)))
+	r.PathPrefix("/registry").Handler(http.StripPrefix("/registry", registry.MakeHTTPHandler(registrySvc, ems, opts)))
 
 	// 以下为系统模块
 	// 系统用户模块
@@ -399,7 +419,7 @@ func prepare() error {
 	if err != nil {
 		_ = level.Error(logger).Log("redis", "connect", "err", err.Error())
 	}
-	_ = level.Info(logger).Log("rds", "connect", "success", true)
+	_ = level.Info(logger).Log("redis", "connect", "success", true)
 
 	// 实例化cache
 	cacheSvc = kitcache.New(logger, logging.TraceId, rds)

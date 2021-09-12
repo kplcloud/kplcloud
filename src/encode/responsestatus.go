@@ -22,13 +22,16 @@ var ResponseMessage = map[ResStatus]int{
 	ErrNotfound:    404,
 	ErrLimiter:     429,
 
-	ErrAccountNotFound:    404,
-	ErrAccountLogin:       1002,
-	ErrAccountLoginIsNull: 1003,
-	ErrAccountNotLogin:    501,
-	ErrAccountASD:         1004,
-	ErrAccountLocked:      1005,
-	ErrAuthNotLogin:       501,
+	ErrAccountNotFound:         404,
+	ErrAccountLogin:            1002,
+	ErrAccountLoginIsNull:      1003,
+	ErrAccountNotLogin:         501,
+	ErrAccountASD:              1004,
+	ErrAccountLocked:           1005,
+	ErrAuthNotLogin:            501,
+	ErrAuthLogin:               1006,
+	ErrAuthCheckCaptchaCode:    1007,
+	ErrAuthCheckCaptchaNotnull: 1008,
 
 	// 系统API
 	ErrSysRoleNotfound:     2001,
@@ -53,6 +56,8 @@ var ResponseMessage = map[ResStatus]int{
 
 	ErrNamespaceNotfound: 940,
 	ErrNameNotfound:      941,
+	ErrNamespaceExists:   942,
+	ErrNamespaceCreate:   943,
 
 	ErrDeploymentSyncList:    960,
 	ErrDeploymentGetNotfound: 961,
@@ -62,6 +67,8 @@ var ResponseMessage = map[ResStatus]int{
 	ErrStorageClassSync:     1100,
 	ErrStorageClassNotfound: 1101,
 	ErrStorageClassSyncPv:   1102,
+	ErrStorageClassExists:   1103,
+	ErrStorageClassCreate:   1104,
 
 	ErrSecretMarshal:   1120,
 	ErrSecretImageSave: 1121,
@@ -70,6 +77,11 @@ var ResponseMessage = map[ResStatus]int{
 	ErrNodeCordon:   1140,
 	ErrNodeNotfound: 1141,
 	ErrNodeDrain:    1142,
+
+	ErrPersistentVolumeClaimList:   1160,
+	ErrPersistentVolumeClaimCreate: 1161,
+
+	ErrTemplateSave: 1180,
 }
 
 const (
@@ -99,6 +111,8 @@ const (
 
 	ErrNamespaceNotfound ResStatus = "空间不存在"
 	ErrNameNotfound      ResStatus = "名称不存在"
+	ErrNamespaceExists   ResStatus = "空间已存在"
+	ErrNamespaceCreate   ResStatus = "空间创建失败"
 
 	ErrDeploymentSyncList    ResStatus = "同步失败"
 	ErrDeploymentGetNotfound ResStatus = "项目不存在"
@@ -108,16 +122,24 @@ const (
 	ErrStorageClassSync     ResStatus = "StorageClass同步失败"
 	ErrStorageClassNotfound ResStatus = "StorageClass不存在"
 	ErrStorageClassSyncPv   ResStatus = "StorageClass Pv同步失败"
+	ErrStorageClassExists   ResStatus = "StorageClass 已存在"
+	ErrStorageClassCreate   ResStatus = "StorageClass 创建失败"
+
+	ErrPersistentVolumeClaimList   ResStatus = "存储卷声明列表获取失败"
+	ErrPersistentVolumeClaimCreate ResStatus = "存储卷声明创建失败"
 
 	// 中间件错误信息
-	ErrSystem             ResStatus = "系统错误"
-	ErrAccountNotLogin    ResStatus = "用户没登录"
-	ErrAuthNotLogin       ResStatus = "请先登录"
-	ErrAccountLoginIsNull ResStatus = "用户名和密码不能为空"
-	ErrAccountLogin       ResStatus = "用户名或密码错误"
-	ErrAccountNotFound    ResStatus = "账号不存在"
-	ErrAccountASD         ResStatus = "权限验证失败"
-	ErrAccountLocked      ResStatus = "用户已被锁定"
+	ErrSystem                  ResStatus = "系统错误"
+	ErrAccountNotLogin         ResStatus = "用户没登录"
+	ErrAuthNotLogin            ResStatus = "请先登录"
+	ErrAccountLoginIsNull      ResStatus = "用户名和密码不能为空"
+	ErrAccountLogin            ResStatus = "用户名或密码错误"
+	ErrAccountNotFound         ResStatus = "账号不存在"
+	ErrAccountASD              ResStatus = "权限验证失败"
+	ErrAccountLocked           ResStatus = "用户已被锁定"
+	ErrAuthLogin               ResStatus = "登录失败"
+	ErrAuthCheckCaptchaCode    ResStatus = "图形验证码错误"
+	ErrAuthCheckCaptchaNotnull ResStatus = "图形验证码不能为空"
 
 	// 系统API
 	ErrSysRoleNotfound     ResStatus = "角色不存在"
@@ -131,6 +153,8 @@ const (
 	ErrNodeCordon   ResStatus = "操作失败"
 	ErrNodeNotfound ResStatus = "节点不存在"
 	ErrNodeDrain    ResStatus = "驱逐失败"
+
+	ErrTemplateSave ResStatus = "模版保存失败"
 )
 
 func (c ResStatus) String() string {

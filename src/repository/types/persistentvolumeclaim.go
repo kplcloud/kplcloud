@@ -7,24 +7,27 @@
 
 package types
 
-import "gopkg.in/guregu/null.v3"
+import (
+	"time"
+)
 
 type PersistentVolumeClaim struct {
-	AccessModes      string      `gorm:"column:access_modes" json:"access_modes"`
-	CreatedAt        null.Time   `gorm:"column:created_at" json:"created_at"`
-	Desc             null.String `gorm:"column:desc" json:"desc"`
-	Detail           null.String `gorm:"column:detail;type:text" json:"detail"`
-	ID               int64       `gorm:"column:id;primary_key" json:"id"`
-	Labels           null.String `gorm:"column:labels" json:"labels"`
-	Name             string      `gorm:"column:name" json:"name"`
-	Namespace        string      `gorm:"column:namespace" json:"namespace"`
-	Selector         null.String `gorm:"column:selector" json:"selector"`
-	Storage          string      `gorm:"column:storage" json:"storage"`
-	StorageClassName null.String `gorm:"column:storage_class_name" json:"storage_class_name"`
-	UpdatedAt        null.Time   `gorm:"column:updated_at" json:"updated_at"`
+	Id               int64      `gorm:"column:id;primary_key" json:"id"`
+	Name             string     `gorm:"column:name" json:"name"`
+	Namespace        string     `gorm:"column:namespace" json:"namespace"`
+	AccessModes      string     `gorm:"column:access_modes" json:"access_modes"`
+	Desc             string     `gorm:"column:desc" json:"desc"`
+	Detail           string     `gorm:"column:detail;type:text" json:"detail"`
+	Labels           string     `gorm:"column:labels" json:"labels"`
+	Selector         string     `gorm:"column:selector" json:"selector"`
+	Storage          string     `gorm:"column:storage" json:"storage"`
+	StorageClassName string     `gorm:"column:storage_class_name" json:"storage_class_name"`
+	CreatedAt        time.Time  `gorm:"column:created_at" json:"created_at"` // 创建时间
+	UpdatedAt        time.Time  `gorm:"column:updated_at" json:"updated_at"` // 更新时间
+	DeletedAt        *time.Time `gorm:"column:deleted_at" json:"deleted_at"`
 }
 
 // TableName sets the insert table name for this struct type
 func (p *PersistentVolumeClaim) TableName() string {
-	return "persistentvolumeclaim"
+	return "persistent_volume_claim"
 }
