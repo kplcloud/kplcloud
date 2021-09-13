@@ -43,11 +43,11 @@ func (s *tracing) Update(ctx context.Context, kind, alias, rules, content string
 	panic("implement me")
 }
 
-func (s *tracing) List(ctx context.Context, searchValue string, page, pageSize int64) (res []interface{}, total int, err error) {
+func (s *tracing) List(ctx context.Context, searchValue string, page, pageSize int) (res []infoResult, total int, err error) {
 	panic("implement me")
 }
 
-func (s *tracing) Info(ctx context.Context, kind string) (res interface{}, err error) {
+func (s *tracing) Info(ctx context.Context, kind string) (res infoResult, err error) {
 	panic("implement me")
 }
 

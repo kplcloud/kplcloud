@@ -25,7 +25,7 @@ type Service interface {
 	// Update 更新模版
 	Update(ctx context.Context, kind, alias, rules, content string) (err error)
 	// List 模版列表
-	List(ctx context.Context, searchValue string, page, pageSize int64) (res []infoResult, total int, err error)
+	List(ctx context.Context, searchValue string, page, pageSize int) (res []infoResult, total int, err error)
 	// Info 模版详情
 	Info(ctx context.Context, kind string) (res infoResult, err error)
 }
@@ -44,7 +44,7 @@ func (s *service) Update(ctx context.Context, kind, alias, rules, content string
 	panic("implement me")
 }
 
-func (s *service) List(ctx context.Context, searchValue string, page, pageSize int64) (res []infoResult, total int, err error) {
+func (s *service) List(ctx context.Context, searchValue string, page, pageSize int) (res []infoResult, total int, err error) {
 	panic("implement me")
 }
 

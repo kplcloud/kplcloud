@@ -10,6 +10,8 @@ package template
 import (
 	"context"
 	"encoding/json"
+	valid "github.com/asaskevich/govalidator"
+	"github.com/pkg/errors"
 	"net/http"
 	"strconv"
 
@@ -74,6 +76,12 @@ func decodeAddRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, encode.InvalidParams.Error()
 	}
-
+	validResult, err := valid.ValidateStruct(req)
+	if err != nil {
+		return nil, encode.InvalidParams.Wrap(err)
+	}
+	if !validResult {
+		return nil, encode.InvalidParams.Wrap(errors.New("valid false"))
+	}
 	return req, nil
 }
