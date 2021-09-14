@@ -21,6 +21,10 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) Delete(ctx context.Context, kind types.Kind) (err error) {
+	panic("implement me")
+}
+
 func (s *tracing) Save(ctx context.Context, tpl *types.K8sTemplate) (err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Save", opentracing.Tag{
 		Key:   string(ext.Component),

@@ -34,9 +34,9 @@ type (
 	}
 
 	addRequest struct {
-		Kind    string `json:"kind"`
-		Alias   string `json:"alias"`
-		Content string `json:"content"`
+		Kind    string `json:"kind" valid:"required"`
+		Alias   string `json:"alias" valid:"required"`
+		Content string `json:"content" valid:"required"`
 	}
 
 	infoResult struct {

@@ -18,6 +18,7 @@ import (
 	"github.com/kplcloud/kplcloud/src/pkg/registry"
 	"github.com/kplcloud/kplcloud/src/pkg/secret"
 	"github.com/kplcloud/kplcloud/src/pkg/storageclass"
+	"github.com/kplcloud/kplcloud/src/pkg/template"
 	"net/http"
 	"os"
 	"os/signal"
@@ -93,6 +94,7 @@ kplcloud start -p :8080 -g :8082
 	cronjobSvc      cronjob.Service
 	registrySvc     registry.Service
 	pvcSvc          persistentvolumeclaim.Service
+	templateSvc     template.Service
 )
 
 func start() (err error) {
@@ -162,6 +164,8 @@ func start() (err error) {
 	pvcSvc = persistentvolumeclaim.NewLogging(logger, logging.TraceId)(pvcSvc)
 	authSvc = auth.New(logger, logging.TraceId, store, cacheSvc, cf.GetString("server", "key"), int64(cf.GetInt("server", "session.timeout")))
 	authSvc = auth.NewLogging(logger, logging.TraceId)(authSvc)
+	templateSvc = template.New(logger, logging.TraceId, store)
+	templateSvc = template.NewLogging(logger, logging.TraceId)(templateSvc)
 
 	if tracer != nil {
 		//authSvc = auth.NewTracing(tracer)(authSvc)
@@ -178,6 +182,7 @@ func start() (err error) {
 		storageClassSvc = storageclass.NewTracing(tracer)(storageClassSvc)
 		pvcSvc = persistentvolumeclaim.NewTracing(tracer)(pvcSvc)
 		authSvc = auth.NewTracing(tracer)(authSvc)
+		templateSvc = template.NewTracing(tracer)(templateSvc)
 	}
 
 	g := &group.Group{}
@@ -276,6 +281,7 @@ func initHttpHandler(g *group.Group) {
 	r.PathPrefix("/cronjob").Handler(http.StripPrefix("/cronjob", cronjob.MakeHTTPHandler(cronjobSvc, tokenEms, opts)))
 	r.PathPrefix("/persistent-volume-claim").Handler(http.StripPrefix("/persistent-volume-claim", persistentvolumeclaim.MakeHTTPHandler(pvcSvc, tokenEms, opts)))
 	r.PathPrefix("/registry").Handler(http.StripPrefix("/registry", registry.MakeHTTPHandler(registrySvc, ems, opts)))
+	r.PathPrefix("/template").Handler(http.StripPrefix("/template", template.MakeHTTPHandler(templateSvc, ems, opts)))
 
 	// 以下为系统模块
 	// 系统用户模块
