@@ -15,7 +15,6 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	appv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
@@ -90,29 +89,22 @@ func (s *service) Sync(ctx context.Context, clusterId int64, ns string) (err err
 		fmt.Println(string(b))
 		fmt.Println("request.Cpu", v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().Value())
 		fmt.Println("limit.Cpu", v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Value())
-		fmt.Println("request.Memory", v.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().Value())
-		fmt.Println("limit.Memory", v.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().Value())
-		fmt.Println("limit.Memory", v.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().String())
-		v.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().SetScaled(4096, resource.Mega)
-		v.Spec.Template.Spec.Containers[0].Resources.Limits = v1.ResourceList{
-			v1.ResourceMemory: resource.MustParse(""),
-		}
-		fmt.Println("limit.Memory", v.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().String())
-		fmt.Println("---")
-		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().AsInt64())
-		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().AsInt64())
-		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().Value())
-		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Value())
-		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().String())
-		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().String())
+		fmt.Println("request.Cpu", v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().String())
+		fmt.Println("limit.Cpu", v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().String())
+		fmt.Println("request.Cpu", v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().AsApproximateFloat64())
+		fmt.Println("limit.Cpu", v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().AsApproximateFloat64())
+
+		parse := resource.NewQuantity(268435456, resource.BinarySI)
+		fmt.Println(parse.String())
+
 		p := types.Project{
 			Alias:       v.Name,
 			Name:        v.Name,
 			Namespace:   v.Namespace,
 			Cpu:         0,
 			MaxCpu:      0,
-			Memory:      0,
-			MaxMemory:   0,
+			Memory:      v.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().Value(),
+			MaxMemory:   v.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().Value(),
 			GitRepo:     "",
 			Version:     "",
 			Status:      "",
