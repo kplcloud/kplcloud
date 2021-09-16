@@ -10,6 +10,8 @@ type authRequest struct {
 	Username    string `json:"username" valid:"required"`
 	Password    string `json:"password" valid:"required"`
 	LoginType   string `json:"loginType,omitempty"`
+	Mobile      string `json:"mobile,omitempty"`
+	Remark      string `json:"remark,omitempty"`
 	CaptchaId   string `json:"captchaId,omitempty"`
 	CaptchaCode string `json:"captchaCode,omitempty"`
 }
@@ -19,17 +21,32 @@ type Endpoints struct {
 	GithubEndpoint        endpoint.Endpoint
 	GoogleEndpoint        endpoint.Endpoint
 	AuthLoginTypeEndpoint endpoint.Endpoint
+	RegisterEndpoint      endpoint.Endpoint
 }
 
 func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	eps := Endpoints{
-		LoginEndpoint: makeLoginEndpoint(s),
+		LoginEndpoint:    makeLoginEndpoint(s),
+		RegisterEndpoint: makeRegisterEndpoint(s),
 	}
 
 	for _, m := range dmw["Login"] {
 		eps.LoginEndpoint = m(eps.LoginEndpoint)
 	}
+	for _, m := range dmw["Register"] {
+		eps.RegisterEndpoint = m(eps.RegisterEndpoint)
+	}
 	return eps
+}
+
+func makeRegisterEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(authRequest)
+		err = s.Register(ctx, req.Username, req.Password, req.Mobile, req.Remark)
+		return encode.Response{
+			Error: err,
+		}, err
+	}
 }
 
 func makeLoginEndpoint(s Service) endpoint.Endpoint {

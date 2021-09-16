@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"fmt"
+	"github.com/go-kit/kit/log/level"
+	"github.com/jinzhu/gorm"
 	"strings"
 	"time"
 
@@ -24,6 +26,8 @@ type Middleware func(Service) Service
 type Service interface {
 	// Login 登陆
 	Login(ctx context.Context, username, password string) (rs string, err error)
+	// Register 注册用户
+	Register(ctx context.Context, username, password, mobile, remark string) (err error)
 	// AuthLoginGithub github 授权登陆跳转
 	//AuthLoginGithub(w http.ResponseWriter, r *http.Request)
 	//// AuthLoginGithubCallback github 授权登陆回调
@@ -39,6 +43,39 @@ type service struct {
 	sessionTimeout int64
 	cache          kitcache.Service
 	traceId        string
+}
+
+func (s *service) Register(ctx context.Context, username, password, mobile, remark string) (err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	_, err = s.repository.SysUser().FindByEmail(ctx, username)
+	if err != nil && !gorm.IsRecordNotFoundError(err) {
+		_ = level.Error(logger).Log("repository.SysUser", "FindByEmail", "err", err.Error())
+		return encode.ErrAuthRegisterExists.Error()
+	}
+	var email string
+	if strings.Contains(username, "@") {
+		email = username
+		username = strings.Split(username, "@")[0]
+	}
+	passwordHashed := util.EncodePassword(password, s.appKey)
+	exp := time.Now().AddDate(1, 0, 0)
+	err = s.repository.SysUser().Save(ctx, &types.SysUser{
+		Username:  username,
+		Mobile:    mobile,
+		LoginName: strings.ToLower(username),
+		Email:     email,
+		Password:  passwordHashed,
+		Locked:    false,
+		Remark:    remark,
+		ExpiresAt: &exp,
+	})
+	if err != nil {
+		_ = level.Error(logger).Log("repository.SysUser", "Save", "err", err.Error())
+		return encode.ErrAuthRegisterExists.Error()
+	}
+
+	return
 }
 
 func (s *service) Login(ctx context.Context, username, password string) (rs string, err error) {

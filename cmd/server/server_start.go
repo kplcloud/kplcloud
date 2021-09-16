@@ -10,6 +10,7 @@ package server
 import (
 	"context"
 	"fmt"
+	captcha "github.com/icowan/kit-captcha"
 	"github.com/kplcloud/kplcloud/src/pkg/auth"
 	"github.com/kplcloud/kplcloud/src/pkg/configmap"
 	"github.com/kplcloud/kplcloud/src/pkg/cronjob"
@@ -95,6 +96,7 @@ kplcloud start -p :8080 -g :8082
 	registrySvc     registry.Service
 	pvcSvc          persistentvolumeclaim.Service
 	templateSvc     template.Service
+	captchaSvc      captcha.Service
 )
 
 func start() (err error) {
@@ -124,9 +126,12 @@ func start() (err error) {
 
 	// 以下是各个服务的初始化
 	// 授权登录
-	//authSvc = auth.New(logger, logging.TraceId, cf, store, cacheSvc, apiSvc, cf.GetBool("server", "debug"))
-	//authSvc = auth.NewLogging(logger, logging.TraceId)(authSvc)
-	//
+	authSvc = auth.New(logger, logging.TraceId, store, cacheSvc,
+		cf.GetString("server", "key"),
+		int64(cf.GetInt("server", "session.timeout")),
+	)
+	authSvc = auth.NewLogging(logger, logging.TraceId)(authSvc)
+
 	//// 用户信息模块
 	//accountSvc = account.New(logger, logging.TraceId, store)
 	//accountSvc = account.NewLogging(logger, logging.TraceId)(accountSvc)
@@ -162,10 +167,9 @@ func start() (err error) {
 	registrySvc = registry.NewLogging(logger, logging.TraceId)(registrySvc)
 	pvcSvc = persistentvolumeclaim.New(logger, logging.TraceId, k8sClient, store)
 	pvcSvc = persistentvolumeclaim.NewLogging(logger, logging.TraceId)(pvcSvc)
-	authSvc = auth.New(logger, logging.TraceId, store, cacheSvc, cf.GetString("server", "key"), int64(cf.GetInt("server", "session.timeout")))
-	authSvc = auth.NewLogging(logger, logging.TraceId)(authSvc)
 	templateSvc = template.New(logger, logging.TraceId, store)
 	templateSvc = template.NewLogging(logger, logging.TraceId)(templateSvc)
+	captchaSvc = captcha.New(logger, NewCaptchaStore(cacheSvc, logger, time.Second*5), logging.TraceId)
 
 	if tracer != nil {
 		//authSvc = auth.NewTracing(tracer)(authSvc)
@@ -268,7 +272,21 @@ func initHttpHandler(g *group.Group) {
 	r := mux.NewRouter()
 
 	// 授权登录模块
-	r.PathPrefix("/auth").Handler(http.StripPrefix("/auth", auth.MakeHTTPHandler(authSvc, ems, opts)))
+	r.PathPrefix("/auth").Handler(http.StripPrefix("/auth", auth.MakeHTTPHandler(authSvc, ems, opts, captchaSvc)))
+	r.PathPrefix("/captcha").Handler(captcha.MakeHTTPHandler(logger, captchaSvc, opts, ems, "/captcha/", func(ctx context.Context, w http.ResponseWriter, response interface{}) (err error) {
+		resp, ok := response.(captcha.GenerateResponse)
+		if !ok {
+			return nil
+		}
+		resp.CaptchaUrl = cf.GetString(config.SectionServer, "domain") + resp.CaptchaUrl
+		w.Header().Set("X-Captcha-Id", resp.CaptchaId)
+		return encode.JsonResponse(ctx, w, encode.Response{
+			Success: true,
+			Code:    200,
+			Data:    resp,
+			Error:   nil,
+		})
+	}))
 	//r.PathPrefix("/account").Handler(http.StripPrefix("/account", account.MakeHTTPHandler(accountSvc, tokenEms, opts)))
 
 	r.PathPrefix("/cluster").Handler(http.StripPrefix("/cluster", cluster.MakeHTTPHandler(clusterSvc, tokenEms, opts)))

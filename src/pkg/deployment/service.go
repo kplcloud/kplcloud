@@ -87,7 +87,6 @@ func (s *service) Sync(ctx context.Context, clusterId int64, ns string) (err err
 		b, _ := yaml.Marshal(v)
 		fmt.Println(string(b))
 
-		//v.Spec.Template.Spec.Containers[0].Lifecycle
 		p := types.Project{
 			Alias:        v.Name,
 			Name:         v.Name,
