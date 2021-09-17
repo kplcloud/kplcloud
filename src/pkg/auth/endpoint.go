@@ -7,7 +7,8 @@ import (
 )
 
 type authRequest struct {
-	Username    string `json:"username" valid:"required"`
+	Username    string `json:"name" valid:"required"`
+	Email       string `json:"email" valid:"required,email"`
 	Password    string `json:"password" valid:"required"`
 	LoginType   string `json:"loginType,omitempty"`
 	Mobile      string `json:"mobile,omitempty"`
@@ -42,7 +43,7 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 func makeRegisterEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(authRequest)
-		err = s.Register(ctx, req.Username, req.Password, req.Mobile, req.Remark)
+		err = s.Register(ctx, req.Username, req.Email, req.Password, req.Mobile, req.Remark)
 		return encode.Response{
 			Error: err,
 		}, err
@@ -52,9 +53,12 @@ func makeRegisterEndpoint(s Service) endpoint.Endpoint {
 func makeLoginEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(authRequest)
-		tk, err := s.Login(ctx, req.Username, req.Password)
+		tk, sessionTimeout, err := s.Login(ctx, req.Email, req.Password)
 		return encode.Response{
-			Data:  tk,
+			Data: map[string]interface{}{
+				"sessionTimeout": sessionTimeout,
+				"token":          tk,
+			},
 			Error: err,
 		}, err
 	}

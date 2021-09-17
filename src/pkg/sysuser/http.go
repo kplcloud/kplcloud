@@ -10,6 +10,8 @@ package sysuser
 import (
 	"context"
 	"encoding/json"
+	valid "github.com/asaskevich/govalidator"
+	"github.com/pkg/errors"
 	"net/http"
 	"strconv"
 
@@ -47,6 +49,12 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodPost)
+	r.Handle("/update/{userId:[0-9]+}", kithttp.NewServer(
+		eps.UpdateEndpoint,
+		decodeUpdateRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodPut)
 
 	return r
 }
@@ -73,6 +81,32 @@ func decodeAddRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req addRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, encode.InvalidParams.Error()
+	}
+
+	return req, nil
+}
+
+func decodeUpdateRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req updateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return nil, encode.InvalidParams.Error()
+	}
+	vars := mux.Vars(r)
+	id, ok := vars["userId"]
+	if !ok {
+		return nil, encode.InvalidParams.Error()
+	}
+	userId, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return nil, encode.InvalidParams.Wrap(err)
+	}
+	req.UserId = userId
+	validResult, err := valid.ValidateStruct(req)
+	if err != nil {
+		return nil, encode.InvalidParams.Wrap(err)
+	}
+	if !validResult {
+		return nil, encode.InvalidParams.Wrap(errors.New("valid false"))
 	}
 
 	return req, nil

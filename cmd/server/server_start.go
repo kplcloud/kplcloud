@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	captcha "github.com/icowan/kit-captcha"
+	"github.com/kplcloud/kplcloud/src/pkg/account"
 	"github.com/kplcloud/kplcloud/src/pkg/auth"
 	"github.com/kplcloud/kplcloud/src/pkg/configmap"
 	"github.com/kplcloud/kplcloud/src/pkg/cronjob"
@@ -77,9 +78,6 @@ kplcloud start -p :8080 -g :8082
 
 	tracer stdopentracing.Tracer
 
-	//authSvc          auth.Service
-	//accountSvc       account.Service
-
 	sysUserSvc       sysuser.Service
 	sysRoleSvc       sysrole.Service
 	sysPermissionSvc syspermission.Service
@@ -97,6 +95,7 @@ kplcloud start -p :8080 -g :8082
 	pvcSvc          persistentvolumeclaim.Service
 	templateSvc     template.Service
 	captchaSvc      captcha.Service
+	accountSvc      account.Service
 )
 
 func start() (err error) {
@@ -147,6 +146,9 @@ func start() (err error) {
 	sysPermissionSvc = syspermission.New(logger, logging.TraceId, store)
 	sysPermissionSvc = syspermission.NewLogging(logger, logging.TraceId)(sysPermissionSvc)
 
+	accountSvc = account.New(logger, logging.TraceId, store)
+	accountSvc = account.NewLogging(logger, logging.TraceId)(accountSvc)
+
 	clusterSvc = cluster.New(logger, logging.TraceId, store, k8sClient)
 	clusterSvc = cluster.NewLogging(logger, logging.TraceId)(clusterSvc)
 	nodeSvc = nodes.New(logger, logging.TraceId, k8sClient, store)
@@ -169,7 +171,7 @@ func start() (err error) {
 	pvcSvc = persistentvolumeclaim.NewLogging(logger, logging.TraceId)(pvcSvc)
 	templateSvc = template.New(logger, logging.TraceId, store)
 	templateSvc = template.NewLogging(logger, logging.TraceId)(templateSvc)
-	captchaSvc = captcha.New(logger, NewCaptchaStore(cacheSvc, logger, time.Second*5), logging.TraceId)
+	captchaSvc = captcha.New(logger, NewCaptchaStore(cacheSvc, logger, time.Minute*5), logging.TraceId)
 
 	if tracer != nil {
 		//authSvc = auth.NewTracing(tracer)(authSvc)
@@ -187,6 +189,7 @@ func start() (err error) {
 		pvcSvc = persistentvolumeclaim.NewTracing(tracer)(pvcSvc)
 		authSvc = auth.NewTracing(tracer)(authSvc)
 		templateSvc = template.NewTracing(tracer)(templateSvc)
+		accountSvc = account.NewTracing(tracer)(accountSvc)
 	}
 
 	g := &group.Group{}
@@ -262,10 +265,15 @@ func initHttpHandler(g *group.Group) {
 	}
 
 	var tokenEms = []endpoint.Middleware{
-		middleware.AuditMiddleware(store, tracer),                // 5
-		middleware.ClusterMiddleware(store),                      // 4
-		middleware.CheckPermissionMiddleware(logger, cacheSvc),   // 3
-		middleware.CheckAuthMiddleware(logger, cacheSvc, tracer), // 2
+		middleware.AuditMiddleware(store, tracer),                      // 5
+		middleware.ClusterMiddleware(store, cacheSvc, tracer),          // 4
+		middleware.CheckPermissionMiddleware(logger, cacheSvc, tracer), // 3
+		middleware.CheckAuthMiddleware(logger, cacheSvc, tracer),       // 2
+	}
+	var systemEms = []endpoint.Middleware{
+		middleware.AuditMiddleware(store, tracer),                      // 5
+		middleware.CheckPermissionMiddleware(logger, cacheSvc, tracer), // 3
+		middleware.CheckAuthMiddleware(logger, cacheSvc, tracer),       // 2
 	}
 	tokenEms = append(tokenEms, ems...)
 
@@ -289,7 +297,7 @@ func initHttpHandler(g *group.Group) {
 	}))
 	//r.PathPrefix("/account").Handler(http.StripPrefix("/account", account.MakeHTTPHandler(accountSvc, tokenEms, opts)))
 
-	r.PathPrefix("/cluster").Handler(http.StripPrefix("/cluster", cluster.MakeHTTPHandler(clusterSvc, tokenEms, opts)))
+	r.PathPrefix("/cluster").Handler(http.StripPrefix("/cluster", cluster.MakeHTTPHandler(clusterSvc, append(systemEms, ems...), opts)))
 	r.PathPrefix("/node").Handler(http.StripPrefix("/node", nodes.MakeHTTPHandler(nodeSvc, tokenEms, opts)))
 	r.PathPrefix("/namespace").Handler(http.StripPrefix("/namespace", pkgNs.MakeHTTPHandler(namespaceSvc, tokenEms, opts)))
 	r.PathPrefix("/deployment").Handler(http.StripPrefix("/deployment", deployment.MakeHTTPHandler(deploymentSvc, tokenEms, opts)))
@@ -298,15 +306,16 @@ func initHttpHandler(g *group.Group) {
 	r.PathPrefix("/storage-class").Handler(http.StripPrefix("/storage-class", storageclass.MakeHTTPHandler(storageClassSvc, tokenEms, opts)))
 	r.PathPrefix("/cronjob").Handler(http.StripPrefix("/cronjob", cronjob.MakeHTTPHandler(cronjobSvc, tokenEms, opts)))
 	r.PathPrefix("/persistent-volume-claim").Handler(http.StripPrefix("/persistent-volume-claim", persistentvolumeclaim.MakeHTTPHandler(pvcSvc, tokenEms, opts)))
-	r.PathPrefix("/registry").Handler(http.StripPrefix("/registry", registry.MakeHTTPHandler(registrySvc, ems, opts)))
+	r.PathPrefix("/registry").Handler(http.StripPrefix("/registry", registry.MakeHTTPHandler(registrySvc, append(systemEms, ems...), opts)))
 	r.PathPrefix("/template").Handler(http.StripPrefix("/template", template.MakeHTTPHandler(templateSvc, ems, opts)))
 
 	// 以下为系统模块
 	// 系统用户模块
-	r.PathPrefix("/system/user").Handler(http.StripPrefix("/system/user", sysuser.MakeHTTPHandler(sysUserSvc, tokenEms, opts)))
+	r.PathPrefix("/system/user").Handler(http.StripPrefix("/system/user", sysuser.MakeHTTPHandler(sysUserSvc, append(systemEms, ems...), opts)))
 	// 系统角色、权限
-	r.PathPrefix("/system/role").Handler(http.StripPrefix("/system/role", sysrole.MakeHTTPHandler(sysRoleSvc, tokenEms, opts)))
-	r.PathPrefix("/system/permission").Handler(http.StripPrefix("/system/permission", syspermission.MakeHTTPHandler(sysPermissionSvc, tokenEms, opts)))
+	r.PathPrefix("/system/role").Handler(http.StripPrefix("/system/role", sysrole.MakeHTTPHandler(sysRoleSvc, append(systemEms, ems...), opts)))
+	r.PathPrefix("/system/permission").Handler(http.StripPrefix("/system/permission", syspermission.MakeHTTPHandler(sysPermissionSvc, append(systemEms, ems...), opts)))
+	r.PathPrefix("/account").Handler(http.StripPrefix("/account", account.MakeHTTPHandler(accountSvc, append(systemEms, ems...), opts)))
 
 	// 以下为业务模块
 

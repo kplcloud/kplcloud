@@ -3,11 +3,13 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	valid "github.com/asaskevich/govalidator"
 	"github.com/go-kit/kit/endpoint"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 	captcha "github.com/icowan/kit-captcha"
 	"github.com/kplcloud/kplcloud/src/encode"
+	"github.com/pkg/errors"
 	"net/http"
 )
 
@@ -45,7 +47,13 @@ func decodeRegisterRequest(_ context.Context, r *http.Request) (interface{}, err
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return nil, encode.InvalidParams.Wrap(err)
 	}
-
+	validResult, err := valid.ValidateStruct(req)
+	if err != nil {
+		return nil, encode.InvalidParams.Wrap(err)
+	}
+	if !validResult {
+		return nil, encode.InvalidParams.Wrap(errors.New("valid false"))
+	}
 	return req, nil
 }
 

@@ -48,6 +48,7 @@ const (
 	ContextKeyName          ASDContext = "ctx-name"           // 名称
 	ContextUserId           ASDContext = "ctx-user-id"        // 用户ID
 	ContextPermissionId     ASDContext = "ctx-permission-id"  // 权限ID
+	ContextClusters         ASDContext = "ctx-clusters"       // 集群列表
 )
 
 var (
@@ -107,9 +108,24 @@ func CheckAuthMiddleware(logger log.Logger, cache kitcache.Service, tracer opent
 	}
 }
 
-func CheckPermissionMiddleware(logger log.Logger, cacheSvc kitcache.Service) endpoint.Middleware {
+func CheckPermissionMiddleware(logger log.Logger, cacheSvc kitcache.Service, tracer opentracing.Tracer) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+			if tracer != nil {
+				var span opentracing.Span
+				span, ctx = opentracing.StartSpanFromContextWithTracer(ctx, tracer, "CheckPermissionMiddleware", opentracing.Tag{
+					Key:   string(ext.Component),
+					Value: "Middleware",
+				}, opentracing.Tag{
+					Key:   "userId",
+					Value: ctx.Value(ContextUserId),
+				})
+				defer func() {
+					span.LogKV("err", err)
+					span.Finish()
+				}()
+			}
+
 			userId, ok := ctx.Value(ContextUserId).(int64)
 			if !ok {
 				err = encode.ErrAccountNotLogin.Error()

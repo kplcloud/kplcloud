@@ -31,7 +31,7 @@ type Service interface {
 	// unscoped: 是否硬删除 默认: false
 	Delete(ctx context.Context, userId int64, unscoped bool) (err error)
 	// Update 更新用户
-	Update(ctx context.Context, userId int64, username, email string, locked bool, namespaceIds, roleIds []int64) (err error)
+	Update(ctx context.Context, userId int64, username, email string, locked bool, clusterIds, roleIds []int64) (err error)
 }
 
 type service struct {
@@ -66,7 +66,7 @@ func (s *service) Delete(ctx context.Context, userId int64, unscoped bool) (err 
 	return
 }
 
-func (s *service) Update(ctx context.Context, userId int64, username, email string, locked bool, namespaceIds, roleIds []int64) (err error) {
+func (s *service) Update(ctx context.Context, userId int64, username, email string, locked bool, clusterIds, roleIds []int64) (err error) {
 	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId), "method", "Locked")
 	sysUser, err := s.repository.SysUser().Find(ctx, userId)
 	if err != nil {
@@ -75,14 +75,15 @@ func (s *service) Update(ctx context.Context, userId int64, username, email stri
 		return
 	}
 	var roles []types.SysRole
-	var ns []types.SysNamespace
+	var clusters []types.Cluster
+	//var ns []types.SysNamespace
 	if roles, err = s.repository.SysRole().FindByIds(ctx, roleIds); err != nil {
 		_ = level.Error(logger).Log("repository.SysRole", "FindByIds", "err", err.Error())
 		return err
 	}
 
-	if ns, err = s.repository.SysNamespace().FindByIds(ctx, namespaceIds); err != nil {
-		_ = level.Error(logger).Log("repository.SysNamespace", "FindByIds", "err", err.Error())
+	if clusters, err = s.repository.Cluster(ctx).FindByIds(ctx, clusterIds); err != nil {
+		_ = level.Error(logger).Log("repository.Cluster", "FindByIds", "err", err.Error())
 		return err
 	}
 
@@ -90,7 +91,7 @@ func (s *service) Update(ctx context.Context, userId int64, username, email stri
 	sysUser.Username = username
 	sysUser.Email = email
 	sysUser.SysRoles = roles
-	sysUser.SysNamespaces = ns
+	sysUser.Clusters = clusters
 	return s.repository.SysUser().Save(ctx, &sysUser)
 }
 
@@ -101,19 +102,19 @@ func (s *service) Add(ctx context.Context, username, email string, locked bool, 
 		_ = level.Error(logger).Log("repository.SysRole", "FindByIds", "err", err.Error())
 		return
 	}
-	namespaces, err := s.repository.SysNamespace().FindByIds(ctx, namespaceIds)
-	if err != nil {
-		_ = level.Error(logger).Log("repository.SysRole", "FindByIds", "err", err.Error())
-		return
-	}
+	//namespaces, err := s.repository.SysNamespace().FindByIds(ctx, namespaceIds)
+	//if err != nil {
+	//	_ = level.Error(logger).Log("repository.SysRole", "FindByIds", "err", err.Error())
+	//	return
+	//}
 
 	if err = s.repository.SysUser().Save(ctx, &types.SysUser{
-		Username:      username,
-		LoginName:     username,
-		Email:         email,
-		Locked:        locked,
-		SysRoles:      roles,
-		SysNamespaces: namespaces,
+		Username:  username,
+		LoginName: username,
+		Email:     email,
+		Locked:    locked,
+		SysRoles:  roles,
+		//SysNamespaces: namespaces,
 	}); err != nil {
 		_ = level.Error(logger).Log("repository.SysUser", "Save", "err", err.Error())
 		return err

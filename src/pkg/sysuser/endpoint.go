@@ -39,6 +39,15 @@ type (
 		Locked        bool    `json:"locked"`
 		NamespacesIds []int64 `json:"namespaces"`
 		RoleIds       []int64 `json:"roles"`
+		ClusterIds    []int64 `json:"clusterIds" valid:"required"`
+	}
+	updateRequest struct {
+		UserId     int64   `json:"userId" valid:"required"`
+		Username   string  `json:"username" valid:"required"`
+		Email      string  `json:"email" valid:"required"`
+		Locked     bool    `json:"locked"`
+		ClusterIds []int64 `json:"clusters" valid:"required"`
+		RoleIds    []int64 `json:"roles" valid:"required"`
 	}
 )
 
@@ -55,7 +64,7 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 		ListEndpoint:   makeListEndpoint(s),
 		AddEndpoint:    makeAddEndpoint(s),
 		DeleteEndpoint: nil,
-		UpdateEndpoint: nil,
+		UpdateEndpoint: makeUpdateEndpoint(s),
 		LockedEndpoint: nil,
 	}
 
@@ -78,10 +87,20 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	return eps
 }
 
+func makeUpdateEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(updateRequest)
+		err = s.Update(ctx, req.UserId, req.Username, req.Email, req.Locked, req.ClusterIds, req.RoleIds)
+		return encode.Response{
+			Error: err,
+		}, err
+	}
+}
+
 func makeAddEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(addRequest)
-		err = s.Add(ctx, req.Username, req.Email, req.Locked, req.NamespacesIds, req.RoleIds)
+		err = s.Add(ctx, req.Username, req.Email, req.Locked, req.ClusterIds, req.RoleIds)
 		return encode.Response{
 			Error: err,
 		}, err

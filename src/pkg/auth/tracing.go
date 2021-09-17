@@ -20,7 +20,7 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
-func (s *tracing) Register(ctx context.Context, username, password, mobile, remark string) (err error) {
+func (s *tracing) Register(ctx context.Context, username, email, password, mobile, remark string) (err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Register", stdopentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "package.Auth",
@@ -30,14 +30,15 @@ func (s *tracing) Register(ctx context.Context, username, password, mobile, rema
 			"username", username,
 			"mobile", mobile,
 			"remark", remark,
+			"email", email,
 			"err", err,
 		)
 		span.Finish()
 	}()
-	return s.next.Register(ctx, username, password, mobile, remark)
+	return s.next.Register(ctx, username, email, password, mobile, remark)
 }
 
-func (s *tracing) Login(ctx context.Context, username, password string) (rs string, err error) {
+func (s *tracing) Login(ctx context.Context, username, password string) (rs string, sessionTimeout int64, err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Login", stdopentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "package.Auth",

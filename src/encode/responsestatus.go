@@ -50,11 +50,12 @@ var ResponseMessage = map[ResStatus]int{
 	ErrInstallWebPath:    904,
 	ErrInstallUpload:     905,
 
-	ErrClusterAdd:      920,
-	ErrClusterConnect:  921,
-	ErrClusterNotfound: 922,
-	ErrClusterParams:   923,
-	ErrClusterList:     924,
+	ErrClusterAdd:           920,
+	ErrClusterConnect:       921,
+	ErrClusterNotfound:      922,
+	ErrClusterParams:        923,
+	ErrClusterList:          924,
+	ErrClusterNotPermission: 925,
 
 	ErrNamespaceNotfound: 940,
 	ErrNameNotfound:      941,
@@ -101,11 +102,12 @@ const (
 	ErrInstallWebPath    ResStatus = "Web目录未配置"
 	ErrInstallUpload     ResStatus = "上传文件失败"
 
-	ErrClusterAdd      ResStatus = "集群添加错误"
-	ErrClusterConnect  ResStatus = "集群链接错误"
-	ErrClusterNotfound ResStatus = "集群不存在"
-	ErrClusterParams   ResStatus = "集群参数错误"
-	ErrClusterList     ResStatus = "集群列表错误"
+	ErrClusterAdd           ResStatus = "集群添加错误"
+	ErrClusterConnect       ResStatus = "集群链接错误"
+	ErrClusterNotfound      ResStatus = "集群不存在"
+	ErrClusterParams        ResStatus = "集群参数错误"
+	ErrClusterList          ResStatus = "集群列表错误"
+	ErrClusterNotPermission ResStatus = "无权访问该集群"
 
 	ErrSecretMarshal   ResStatus = "转换错误"
 	ErrSecretImageSave ResStatus = "添加镜像Secret错误"

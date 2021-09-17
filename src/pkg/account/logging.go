@@ -1,78 +1,46 @@
+/**
+ * @Time : 2021/9/17 3:28 PM
+ * @Author : solacowa@gmail.com
+ * @File : logging
+ * @Software: GoLand
+ */
+
 package account
 
 import (
 	"context"
+	"time"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	kithttp "github.com/go-kit/kit/transport/http"
-	"time"
 )
 
-type loggingService struct {
-	logger log.Logger
-	Service
+type logging struct {
+	logger  log.Logger
+	next    Service
+	traceId string
 }
 
-func NewLoggingService(logger log.Logger, s Service) Service {
-	return &loggingService{level.Info(logger), s}
-}
-
-func (s loggingService) Detail(ctx context.Context) (res map[string]interface{}, err error) {
+func (s *logging) UserInfo(ctx context.Context, userId int64) (res userInfoResult, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
-			"path", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "get",
+			s.traceId, ctx.Value(s.traceId),
+			"method", "UserInfo",
+			"userId", userId,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return s.Service.Detail(ctx)
+	return s.next.UserInfo(ctx, userId)
 }
 
-func (s loggingService) GetReceive(ctx context.Context) (res interface{}, err error) {
-	defer func(begin time.Time) {
-		_ = s.logger.Log(
-			"path", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "get",
-			"took", time.Since(begin),
-			"err", err,
-		)
-	}(time.Now())
-	return s.Service.GetReceive(ctx)
-}
-
-func (s loggingService) UpdateReceive(ctx context.Context, req accountReceiveRequest) (err error) {
-	defer func(begin time.Time) {
-		_ = s.logger.Log(
-			"path", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "get",
-			"took", time.Since(begin),
-			"err", err,
-		)
-	}(time.Now())
-	return s.Service.UpdateReceive(ctx, req)
-}
-
-func (s loggingService) UnWechatBind(ctx context.Context) (err error) {
-	defer func(begin time.Time) {
-		_ = s.logger.Log(
-			"path", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "get",
-			"took", time.Since(begin),
-			"err", err,
-		)
-	}(time.Now())
-	return s.Service.UnWechatBind(ctx)
-}
-
-func (s loggingService) GetProject(ctx context.Context) (res map[string]interface{}, err error) {
-	defer func(begin time.Time) {
-		_ = s.logger.Log(
-			"path", ctx.Value(kithttp.ContextKeyRequestURI),
-			"method", "get",
-			"took", time.Since(begin),
-			"err", err,
-		)
-	}(time.Now())
-	return s.Service.GetProject(ctx)
+func NewLogging(logger log.Logger, traceId string) Middleware {
+	logger = log.With(logger, "account", "logging")
+	return func(next Service) Service {
+		return &logging{
+			logger:  level.Info(logger),
+			next:    next,
+			traceId: traceId,
+		}
+	}
 }
