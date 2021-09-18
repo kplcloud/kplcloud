@@ -10,6 +10,7 @@ package syssetting
 import (
 	"context"
 	"github.com/go-kit/kit/endpoint"
+	"time"
 
 	"github.com/kplcloud/kplcloud/src/encode"
 )
@@ -20,7 +21,14 @@ type (
 		page, pageSize int
 	}
 	listResult struct {
-		Key string `json:"key"`
+		Section   string    `json:"section"`
+		Key       string    `json:"key"`
+		Value     string    `json:"value"`
+		Id        int64     `json:"id"`
+		Remark    string    `json:"remark"`
+		Enable    bool      `json:"enable"`
+		CreatedAt time.Time `json:"createdAt"`
+		UpdatedAt time.Time `json:"updatedAt"`
 	}
 
 	addRequest struct {

@@ -21,6 +21,19 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) Menus(ctx context.Context, userId int64) (res []userMenuResult, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Menus",
+			"userId", userId,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Menus(ctx, userId)
+}
+
 func (s *logging) UserInfo(ctx context.Context, userId int64) (res userInfoResult, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

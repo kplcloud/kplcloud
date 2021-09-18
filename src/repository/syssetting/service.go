@@ -9,6 +9,7 @@ package syssetting
 
 import (
 	"context"
+	"strings"
 
 	"github.com/jinzhu/gorm"
 
@@ -21,10 +22,25 @@ type Service interface {
 	Update(ctx context.Context, data *types.SysSetting) (err error)
 	Find(ctx context.Context, section, key string) (res types.SysSetting, err error)
 	FindAll(ctx context.Context) (res []types.SysSetting, err error)
+	List(ctx context.Context, key string, page, pageSize int) (res []types.SysSetting, total int, err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) List(ctx context.Context, key string, page, pageSize int) (res []types.SysSetting, total int, err error) {
+	query := s.db.Model(&types.SysSetting{})
+	if !strings.EqualFold(key, "") {
+		query = query.Where("key = ?", key)
+	}
+	err = query.Count(&total).
+		Order("id,section DESC").
+		Count(&total).
+		Offset((page - 1) * pageSize).
+		Limit(total).
+		Find(&res).Error
+	return
 }
 
 func (s *service) FindAll(ctx context.Context) (res []types.SysSetting, err error) {

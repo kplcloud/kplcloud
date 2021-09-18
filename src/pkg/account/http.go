@@ -23,12 +23,19 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 
 	eps := NewEndpoint(s, map[string][]endpoint.Middleware{
 		"UserInfo": ems,
+		"Menus":    ems,
 	})
 
 	r := mux.NewRouter()
 
 	r.Handle("/user-info", kithttp.NewServer(
 		eps.UserInfoEndpoint,
+		kithttp.NopRequestDecoder,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodGet)
+	r.Handle("/menus", kithttp.NewServer(
+		eps.MenusEndpoint,
 		kithttp.NopRequestDecoder,
 		encode.JsonResponse,
 		opts...,

@@ -20,6 +20,20 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
+func (s *tracing) Menus(ctx context.Context, userId int64) (res []userMenuResult, err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Menus", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "package.Account",
+	})
+	defer func() {
+		span.LogKV(
+			"userId", userId,
+			"err", err)
+		span.Finish()
+	}()
+	return s.next.Menus(ctx, userId)
+}
+
 func (s *tracing) UserInfo(ctx context.Context, userId int64) (res userInfoResult, err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "UserInfo", stdopentracing.Tag{
 		Key:   string(ext.Component),

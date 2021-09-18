@@ -20,6 +20,7 @@ import (
 	"github.com/kplcloud/kplcloud/src/pkg/registry"
 	"github.com/kplcloud/kplcloud/src/pkg/secret"
 	"github.com/kplcloud/kplcloud/src/pkg/storageclass"
+	"github.com/kplcloud/kplcloud/src/pkg/syssetting"
 	"github.com/kplcloud/kplcloud/src/pkg/template"
 	"net/http"
 	"os"
@@ -82,6 +83,7 @@ kplcloud start -p :8080 -g :8082
 	sysRoleSvc       sysrole.Service
 	sysPermissionSvc syspermission.Service
 	authSvc          auth.Service
+	sysSettingSvc    syssetting.Service
 
 	clusterSvc      cluster.Service
 	nodeSvc         nodes.Service
@@ -145,6 +147,8 @@ func start() (err error) {
 	// 用户信息模块
 	sysPermissionSvc = syspermission.New(logger, logging.TraceId, store)
 	sysPermissionSvc = syspermission.NewLogging(logger, logging.TraceId)(sysPermissionSvc)
+	sysSettingSvc = syssetting.New(logger, logging.TraceId, store)
+	sysSettingSvc = syssetting.NewLogging(logger, logging.TraceId)(sysSettingSvc)
 
 	accountSvc = account.New(logger, logging.TraceId, store)
 	accountSvc = account.NewLogging(logger, logging.TraceId)(accountSvc)
@@ -190,6 +194,7 @@ func start() (err error) {
 		authSvc = auth.NewTracing(tracer)(authSvc)
 		templateSvc = template.NewTracing(tracer)(templateSvc)
 		accountSvc = account.NewTracing(tracer)(accountSvc)
+		sysSettingSvc = syssetting.NewTracing(tracer)(sysSettingSvc)
 	}
 
 	g := &group.Group{}
@@ -315,6 +320,7 @@ func initHttpHandler(g *group.Group) {
 	// 系统角色、权限
 	r.PathPrefix("/system/role").Handler(http.StripPrefix("/system/role", sysrole.MakeHTTPHandler(sysRoleSvc, append(systemEms, ems...), opts)))
 	r.PathPrefix("/system/permission").Handler(http.StripPrefix("/system/permission", syspermission.MakeHTTPHandler(sysPermissionSvc, append(systemEms, ems...), opts)))
+	r.PathPrefix("/system/setting").Handler(http.StripPrefix("/system/setting", syssetting.MakeHTTPHandler(sysSettingSvc, append(systemEms, ems...), opts)))
 	r.PathPrefix("/account").Handler(http.StripPrefix("/account", account.MakeHTTPHandler(accountSvc, append(systemEms, ems...), opts)))
 
 	// 以下为业务模块
