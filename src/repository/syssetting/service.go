@@ -36,9 +36,8 @@ func (s *service) List(ctx context.Context, key string, page, pageSize int) (res
 	}
 	err = query.Count(&total).
 		Order("id,section DESC").
-		Count(&total).
 		Offset((page - 1) * pageSize).
-		Limit(total).
+		Limit(pageSize).
 		Find(&res).Error
 	return
 }
