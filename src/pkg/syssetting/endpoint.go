@@ -35,22 +35,40 @@ type (
 		Key   string `json:"key"`
 		Value string `json:"value"`
 	}
+	getRequest struct {
+		Id int64
+	}
 )
 
 type Endpoints struct {
-	ListEndpoint endpoint.Endpoint
+	ListEndpoint   endpoint.Endpoint
+	DeleteEndpoint endpoint.Endpoint
 }
 
 func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	eps := Endpoints{
-		ListEndpoint: makeListEndpoint(s),
+		ListEndpoint:   makeListEndpoint(s),
+		DeleteEndpoint: makeDeleteEndpoint(s),
 	}
 
 	for _, m := range dmw["List"] {
 		eps.ListEndpoint = m(eps.ListEndpoint)
 	}
+	for _, m := range dmw["Delete"] {
+		eps.DeleteEndpoint = m(eps.DeleteEndpoint)
+	}
 
 	return eps
+}
+
+func makeDeleteEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(getRequest)
+		err = s.Delete(ctx, req.Id)
+		return encode.Response{
+			Error: err,
+		}, err
+	}
 }
 
 func makeListEndpoint(s Service) endpoint.Endpoint {

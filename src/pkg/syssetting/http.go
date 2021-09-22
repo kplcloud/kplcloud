@@ -25,7 +25,8 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 	ems = append(ems, dmw...)
 
 	eps := NewEndpoint(s, map[string][]endpoint.Middleware{
-		"List": ems,
+		"List":   ems,
+		"Delete": ems,
 	})
 
 	r := mux.NewRouter()
@@ -36,13 +37,35 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodGet)
+	r.Handle("/delete/{id:[0-9]+}", kithttp.NewServer(
+		eps.DeleteEndpoint,
+		decodeDeleteRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodDelete)
 
 	return r
 }
 
+func decodeDeleteRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req getRequest
+	vars := mux.Vars(r)
+	id, ok := vars["id"]
+	if !ok {
+		return nil, encode.InvalidParams.Error()
+	}
+	settingId, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return nil, encode.InvalidParams.Wrap(err)
+	}
+	req.Id = settingId
+
+	return req, nil
+}
+
 func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req listRequest
-	req.key = r.URL.Query().Get("key")
+	req.key = r.URL.Query().Get("query")
 
 	if p, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil {
 		req.page = p

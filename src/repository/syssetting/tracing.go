@@ -23,6 +23,21 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) FindById(ctx context.Context, id int64) (res types.SysSetting, err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "FindById", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "repository.Setting",
+	})
+	defer func() {
+		span.LogKV(
+			"id", id,
+			"error", err,
+		)
+		span.Finish()
+	}()
+	return s.next.FindById(ctx, id)
+}
+
 func (s *tracing) List(ctx context.Context, key string, page, pageSize int) (res []types.SysSetting, total int, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", opentracing.Tag{
 		Key:   string(ext.Component),

@@ -23,19 +23,26 @@ type Service interface {
 	Find(ctx context.Context, section, key string) (res types.SysSetting, err error)
 	FindAll(ctx context.Context) (res []types.SysSetting, err error)
 	List(ctx context.Context, key string, page, pageSize int) (res []types.SysSetting, total int, err error)
+	FindById(ctx context.Context, id int64) (res types.SysSetting, err error)
 }
 
 type service struct {
 	db *gorm.DB
 }
 
+func (s *service) FindById(ctx context.Context, id int64) (res types.SysSetting, err error) {
+	err = s.db.Model(&res).Where("id = ?", id).First(&res).Error
+	return
+}
+
 func (s *service) List(ctx context.Context, key string, page, pageSize int) (res []types.SysSetting, total int, err error) {
 	query := s.db.Model(&types.SysSetting{})
 	if !strings.EqualFold(key, "") {
-		query = query.Where("key = ?", key)
+		query = query.Where("`key` = ?", key).
+			Or("section = ?", key)
 	}
 	err = query.Count(&total).
-		Order("id,section DESC").
+		Order("section,id DESC").
 		Offset((page - 1) * pageSize).
 		Limit(pageSize).
 		Find(&res).Error
@@ -48,7 +55,7 @@ func (s *service) FindAll(ctx context.Context) (res []types.SysSetting, err erro
 }
 
 func (s *service) Delete(_ context.Context, section, key string) (err error) {
-	return s.db.Model(&types.SysSetting{}).Where("key = ?", key).Delete(&types.SysSetting{}).Error
+	return s.db.Model(&types.SysSetting{}).Where("section = ? AND `key` = ?", section, key).Delete(&types.SysSetting{}).Error
 }
 
 func (s *service) Update(_ context.Context, data *types.SysSetting) (err error) {

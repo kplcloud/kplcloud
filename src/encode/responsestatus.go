@@ -44,6 +44,8 @@ var ResponseMessage = map[ResStatus]int{
 	ErrSysRoleUserDelete:   2006,
 	ErrSysUserNotfound:     2007,
 
+	ErrSysSettingNotfound: 2020,
+
 	ErrInstallDbConnect:  901,
 	ErrInstallDbDrive:    902,
 	ErrInstallUploadPath: 903,
@@ -155,6 +157,9 @@ const (
 	ErrSysRoleUserLen      ResStatus = "请选择用户"
 	ErrSysRoleUserDelete   ResStatus = "角色删除失败"
 	ErrSysUserNotfound     ResStatus = "用户不存在"
+
+	ErrSysSettingNotfound ResStatus = "设置不存在"
+	ErrSysSettingDelete   ResStatus = "删除失败"
 
 	ErrNodeCordon   ResStatus = "操作失败"
 	ErrNodeNotfound ResStatus = "节点不存在"

@@ -21,6 +21,19 @@ type loggingServer struct {
 	traceId string
 }
 
+func (s *loggingServer) Delete(ctx context.Context, id int64) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Delete",
+			"id", id,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Delete(ctx, id)
+}
+
 func (s *loggingServer) List(ctx context.Context, key string, page, pageSize int) (res []listResult, total int, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
