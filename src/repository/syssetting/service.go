@@ -38,8 +38,8 @@ func (s *service) FindById(ctx context.Context, id int64) (res types.SysSetting,
 func (s *service) List(ctx context.Context, key string, page, pageSize int) (res []types.SysSetting, total int, err error) {
 	query := s.db.Model(&types.SysSetting{})
 	if !strings.EqualFold(key, "") {
-		query = query.Where("`key` = ?", key).
-			Or("section = ?", key)
+		query = query.Where("`key` LIKE ?", "%"+key+"%").
+			Or("section LIKE ?", "%"+key+"%")
 	}
 	err = query.Count(&total).
 		Order("section,id DESC").
