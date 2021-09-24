@@ -45,6 +45,9 @@ var ResponseMessage = map[ResStatus]int{
 	ErrSysUserNotfound:     2007,
 
 	ErrSysSettingNotfound: 2020,
+	ErrSysSettingExists:   2021,
+	ErrSysSettingDelete:   2022,
+	ErrSysSettingSave:     2023,
 
 	ErrInstallDbConnect:  901,
 	ErrInstallDbDrive:    902,
@@ -158,8 +161,10 @@ const (
 	ErrSysRoleUserDelete   ResStatus = "角色删除失败"
 	ErrSysUserNotfound     ResStatus = "用户不存在"
 
-	ErrSysSettingNotfound ResStatus = "设置不存在"
+	ErrSysSettingNotfound ResStatus = "配置不存在"
 	ErrSysSettingDelete   ResStatus = "删除失败"
+	ErrSysSettingExists   ResStatus = "配置已存在"
+	ErrSysSettingSave     ResStatus = "配置保存失败"
 
 	ErrNodeCordon   ResStatus = "操作失败"
 	ErrNodeNotfound ResStatus = "节点不存在"

@@ -11,6 +11,7 @@ import (
 	"context"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/kplcloud/kplcloud/src/encode"
+	"time"
 )
 
 type (
@@ -25,12 +26,14 @@ type (
 		page, pageSize int
 	}
 	listResult struct {
-		Name    string `json:"name"`
-		Alias   string `json:"alias"`
-		Remark  string `json:"remark"` // 备注
-		Label   string `json:"label"`  // 标签
-		Status  int    `json:"status"` // 状态
-		NodeNum int    `json:"node_num"`
+		Name      string    `json:"name"`
+		Alias     string    `json:"alias"`
+		Remark    string    `json:"remark"` // 备注
+		Label     string    `json:"label"`  // 标签
+		Status    int       `json:"status"` // 状态
+		NodeNum   int       `json:"nodeNum"`
+		CreatedAt time.Time `json:"createdAt"`
+		UpdatedAt time.Time `json:"updatedAt"`
 	}
 )
 

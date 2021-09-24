@@ -48,11 +48,13 @@ func (s *service) List(ctx context.Context, name string, page, pageSize int) (re
 	}
 	for _, v := range list {
 		res = append(res, listResult{
-			Name:    v.Name,
-			Alias:   v.Alias,
-			Remark:  v.Remark,
-			Status:  v.Status,
-			NodeNum: v.NodeNum,
+			Name:      v.Name,
+			Alias:     v.Alias,
+			Remark:    v.Remark,
+			Status:    v.Status,
+			NodeNum:   v.NodeNum,
+			CreatedAt: v.CreatedAt,
+			UpdatedAt: v.UpdatedAt,
 		})
 	}
 

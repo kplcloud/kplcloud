@@ -9,6 +9,7 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/go-kit/kit/endpoint"
 	kitcache "github.com/icowan/kit-cache"
@@ -43,12 +44,15 @@ func ClusterMiddleware(store repository.Repository, cache kitcache.Service, trac
 			}
 
 			var clusters []string
-			_, err = cache.Get(ctx, fmt.Sprintf("user:%d:clusters", ctx.Value(ContextUserId).(int64)), clusters)
+			rs, err := cache.Get(ctx, fmt.Sprintf("user:%d:clusters", ctx.Value(ContextUserId).(int64)), clusters)
 			if err != nil {
 				return nil, encode.ErrClusterNotfound.Wrap(err)
 			}
 			// 判断用户是否有权限访问该集群
 			var pass bool
+			if err = json.Unmarshal([]byte(rs), &clusters); err != nil {
+				return nil, encode.ErrClusterNotfound.Wrap(err)
+			}
 			for _, v := range clusters {
 				if strings.EqualFold(v, clusterName) {
 					pass = true

@@ -21,6 +21,39 @@ type loggingServer struct {
 	traceId string
 }
 
+func (s *loggingServer) Add(ctx context.Context, section, key, value, remark string, enable bool) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Add",
+			"section", section,
+			"key", key, "value", value,
+			"remark", remark,
+			"enable", enable,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Add(ctx, section, key, value, remark, enable)
+}
+
+func (s *loggingServer) Update(ctx context.Context, id int64, section, key, value, remark string, enable bool) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Update",
+			"id", id,
+			"section", section,
+			"key", key, "value", value,
+			"remark", remark,
+			"enable", enable,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Update(ctx, id, section, key, value, remark, enable)
+}
+
 func (s *loggingServer) Delete(ctx context.Context, id int64) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
