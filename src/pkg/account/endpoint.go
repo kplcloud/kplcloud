@@ -38,12 +38,14 @@ type (
 type Endpoints struct {
 	UserInfoEndpoint endpoint.Endpoint
 	MenusEndpoint    endpoint.Endpoint
+	LogoutEndpoint   endpoint.Endpoint
 }
 
 func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	eps := Endpoints{
 		UserInfoEndpoint: makeUserInfoEndpoint(s),
 		MenusEndpoint:    makeMenusEndpoint(s),
+		LogoutEndpoint:   makeLogoutEndpoint(s),
 	}
 
 	for _, m := range dmw["UserInfo"] {
@@ -52,7 +54,23 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	for _, m := range dmw["Menus"] {
 		eps.MenusEndpoint = m(eps.MenusEndpoint)
 	}
+	for _, m := range dmw["Logout"] {
+		eps.LogoutEndpoint = m(eps.LogoutEndpoint)
+	}
 	return eps
+}
+
+func makeLogoutEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		userId, ok := ctx.Value(middleware.ContextUserId).(int64)
+		if !ok {
+			return nil, encode.ErrAccountNotLogin.Error()
+		}
+		err = s.Logout(ctx, userId)
+		return encode.Response{
+			Error: err,
+		}, err
+	}
 }
 
 func makeMenusEndpoint(s Service) endpoint.Endpoint {

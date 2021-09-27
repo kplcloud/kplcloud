@@ -21,6 +21,19 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) Logout(ctx context.Context, userId int64) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Logout",
+			"userId", userId,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Logout(ctx, userId)
+}
+
 func (s *logging) Menus(ctx context.Context, userId int64) (res []userMenuResult, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

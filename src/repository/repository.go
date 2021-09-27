@@ -9,10 +9,6 @@ package repository
 
 import (
 	"context"
-	"github.com/kplcloud/kplcloud/src/repository/audit"
-	"github.com/kplcloud/kplcloud/src/repository/k8stpl"
-	"github.com/kplcloud/kplcloud/src/repository/registry"
-	"github.com/kplcloud/kplcloud/src/repository/storageclass"
 
 	"github.com/go-kit/kit/log"
 	kitcache "github.com/icowan/kit-cache"
@@ -20,11 +16,15 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/opentracing/opentracing-go"
 
+	"github.com/kplcloud/kplcloud/src/repository/audit"
 	"github.com/kplcloud/kplcloud/src/repository/cluster"
 	"github.com/kplcloud/kplcloud/src/repository/configmap"
+	"github.com/kplcloud/kplcloud/src/repository/k8stpl"
 	"github.com/kplcloud/kplcloud/src/repository/namespace"
 	"github.com/kplcloud/kplcloud/src/repository/nodes"
+	"github.com/kplcloud/kplcloud/src/repository/registry"
 	"github.com/kplcloud/kplcloud/src/repository/secrets"
+	"github.com/kplcloud/kplcloud/src/repository/storageclass"
 	"github.com/kplcloud/kplcloud/src/repository/sysnamespace"
 	"github.com/kplcloud/kplcloud/src/repository/syspermission"
 	"github.com/kplcloud/kplcloud/src/repository/sysrole"

@@ -9,10 +9,13 @@ package account
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	kitcache "github.com/icowan/kit-cache"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
+	"sync"
 )
 
 type Middleware func(Service) Service
@@ -22,12 +25,43 @@ type Service interface {
 	UserInfo(ctx context.Context, userId int64) (res userInfoResult, err error)
 	// Menus 返回用户菜单
 	Menus(ctx context.Context, userId int64) (res []userMenuResult, err error)
+	// Logout 退出登录
+	Logout(ctx context.Context, userId int64) (err error)
 }
 
 type service struct {
 	traceId    string
 	logger     log.Logger
 	repository repository.Repository
+	cache      kitcache.Service
+}
+
+func (s *service) Logout(ctx context.Context, userId int64) (err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+	// 删除该用户所有的登陆cache
+
+	keys := []string{
+		fmt.Sprintf("user:%d:info", userId),
+		fmt.Sprintf("user:%d:permissions", userId),
+		fmt.Sprintf("user:%d:clusters", userId),
+		fmt.Sprintf("user:%d:namespaces", userId),
+		fmt.Sprintf("login:%d:token", userId),
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(keys))
+	for _, v := range keys {
+		go func(key string) {
+			if err = s.cache.Del(ctx, key); err != nil {
+				_ = level.Error(logger).Log("cache", "Del", "err", err.Error())
+			}
+			wg.Done()
+		}(v)
+	}
+
+	wg.Wait()
+
+	return
 }
 
 func (s *service) Menus(ctx context.Context, userId int64) (res []userMenuResult, err error) {
