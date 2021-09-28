@@ -150,7 +150,7 @@ func start() (err error) {
 	sysSettingSvc = syssetting.New(logger, logging.TraceId, store)
 	sysSettingSvc = syssetting.NewLogging(logger, logging.TraceId)(sysSettingSvc)
 
-	accountSvc = account.New(logger, logging.TraceId, store)
+	accountSvc = account.New(logger, logging.TraceId, store, cacheSvc)
 	accountSvc = account.NewLogging(logger, logging.TraceId)(accountSvc)
 
 	clusterSvc = cluster.New(logger, logging.TraceId, store, k8sClient)

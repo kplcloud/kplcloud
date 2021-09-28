@@ -53,7 +53,7 @@ func (s *service) Logout(ctx context.Context, userId int64) (err error) {
 	for _, v := range keys {
 		go func(key string) {
 			if err = s.cache.Del(ctx, key); err != nil {
-				_ = level.Error(logger).Log("cache", "Del", "err", err.Error())
+				_ = level.Error(logger).Log("cache", "Del", "err", err)
 			}
 			wg.Done()
 		}(v)
@@ -145,11 +145,12 @@ func (s *service) UserInfo(ctx context.Context, userId int64) (res userInfoResul
 	return
 }
 
-func New(logger log.Logger, traceId string, repository repository.Repository) Service {
+func New(logger log.Logger, traceId string, repository repository.Repository, cache kitcache.Service) Service {
 	logger = log.With(logger, "account", "service")
 	return &service{
 		traceId:    traceId,
 		logger:     logger,
 		repository: repository,
+		cache:      cache,
 	}
 }

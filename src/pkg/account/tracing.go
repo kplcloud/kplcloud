@@ -29,6 +29,7 @@ func (s *tracing) Logout(ctx context.Context, userId int64) (err error) {
 		span.LogKV(
 			"userId", userId,
 			"err", err)
+		span.SetTag(string(ext.Error), err != nil)
 		span.Finish()
 	}()
 	return s.next.Logout(ctx, userId)
@@ -43,6 +44,7 @@ func (s *tracing) Menus(ctx context.Context, userId int64) (res []userMenuResult
 		span.LogKV(
 			"userId", userId,
 			"err", err)
+		span.SetTag(string(ext.Error), err != nil)
 		span.Finish()
 	}()
 	return s.next.Menus(ctx, userId)
@@ -57,6 +59,7 @@ func (s *tracing) UserInfo(ctx context.Context, userId int64) (res userInfoResul
 		span.LogKV(
 			"userId", userId,
 			"err", err)
+		span.SetTag(string(ext.Error), err != nil)
 		span.Finish()
 	}()
 	return s.next.UserInfo(ctx, userId)
