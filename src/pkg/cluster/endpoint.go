@@ -38,14 +38,16 @@ type (
 )
 
 type Endpoints struct {
-	AddEndpoint  endpoint.Endpoint
-	ListEndpoint endpoint.Endpoint
+	AddEndpoint    endpoint.Endpoint
+	ListEndpoint   endpoint.Endpoint
+	DeleteEndpoint endpoint.Endpoint
 }
 
 func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	eps := Endpoints{
-		AddEndpoint:  makeAddEndpoint(s),
-		ListEndpoint: makeListEndpoint(s),
+		AddEndpoint:    makeAddEndpoint(s),
+		ListEndpoint:   makeListEndpoint(s),
+		DeleteEndpoint: makeDeleteEndpoint(s),
 	}
 
 	for _, m := range dmw["Add"] {
@@ -53,6 +55,9 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	}
 	for _, m := range dmw["List"] {
 		eps.ListEndpoint = m(eps.ListEndpoint)
+	}
+	for _, m := range dmw["Delete"] {
+		eps.DeleteEndpoint = m(eps.DeleteEndpoint)
 	}
 	return eps
 }
@@ -75,6 +80,16 @@ func makeAddEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(addRequest)
 		err = s.Add(ctx, req.Name, req.Alias, req.Data)
+		return encode.Response{
+			Error: err,
+		}, err
+	}
+}
+
+func makeDeleteEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(addRequest)
+		err = s.Delete(ctx, req.Name)
 		return encode.Response{
 			Error: err,
 		}, err

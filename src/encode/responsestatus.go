@@ -113,6 +113,7 @@ const (
 	ErrClusterParams        ResStatus = "集群参数错误"
 	ErrClusterList          ResStatus = "集群列表错误"
 	ErrClusterNotPermission ResStatus = "无权访问该集群"
+	ErrClusterDelete        ResStatus = "集群删除失败"
 
 	ErrSecretMarshal   ResStatus = "转换错误"
 	ErrSecretImageSave ResStatus = "添加镜像Secret错误"

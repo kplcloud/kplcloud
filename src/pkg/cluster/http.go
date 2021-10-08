@@ -28,8 +28,9 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 	ems = append(ems, dmw...)
 
 	eps := NewEndpoint(s, map[string][]endpoint.Middleware{
-		//"Add": ems,
-		//"List": ems,
+		"Add":    ems,
+		"List":   ems,
+		"Delete": ems,
 	})
 
 	r := mux.NewRouter()
@@ -46,8 +47,26 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodGet)
+	r.Handle("/{name}/delete", kithttp.NewServer(
+		eps.DeleteEndpoint,
+		decodeDeleteRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodDelete)
 
 	return r
+}
+
+func decodeDeleteRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req addRequest
+
+	vars := mux.Vars(r)
+	name, ok := vars["name"]
+	if !ok {
+		return nil, encode.Invalid.Error()
+	}
+	req.Name = name
+	return req, nil
 }
 
 func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) {

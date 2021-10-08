@@ -1,0 +1,61 @@
+metadata:
+  labels:
+    k8s-app: {{.name}}
+    qcloud-app: {{.name}}
+  name: {{.name}}
+  namespace: {{.namespace}}
+spec:
+  replicas: {{.replicas}}
+  selector:
+    matchLabels:
+      k8s-app: {{.name}}
+      qcloud-app: {{.name}}{{if .strategy}}
+  strategy:
+    rollingUpdate:
+      maxSurge: {{.strategy.maxSurge}}
+      maxUnavailable: {{.strategy.maxUnavailable}}
+    type: {{.strategy.strategyType}}{{end}}
+  template:
+    metadata:
+      labels:
+        k8s-app: {{.name}}
+        qcloud-app: {{.name}}
+    spec:
+      containers:
+        - image: {{.image}}{{if .ports}}
+          ports: {{range .ports}}
+            - name: {{.name}}
+              containerPort: {{.port}}
+              protocol: {{.protocol}}{{end}}{{if .commands}}
+          command:
+            - {{range .commands}}{{.}}{{end}}{{if .args}}
+          args:
+            - {{range .args}}{{.}}{{end}}{{if .lifecycle}}
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - nginx{{end}}
+          name: {{.name}}
+          resources:
+            limits:
+              cpu: {{.maxCpu}}
+              memory: {{.maxMemory}}
+            requests:
+              cpu: {{.cpu}}
+              memory: {{.memory}}
+          volumeMounts:
+            - mountPath: /var/www/html/.env
+              name: ft-erp
+              subPath: env
+      {{if .imagePullSecrets}}imagePullSecrets: {{range .imagePullSecrets}}
+        - name: {{.}{{end}}
+      volumes:
+        - configMap:
+            defaultMode: 420
+            items:
+              - key: env
+                mode: 420
+                path: env
+            name: ft-erp
+          name: ft-erp

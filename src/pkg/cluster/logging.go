@@ -21,6 +21,33 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) Update(ctx context.Context, name, alias, data string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Update",
+			"name", name,
+			"alias", alias,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Update(ctx, name, alias, data)
+}
+
+func (s *logging) Delete(ctx context.Context, name string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Delete",
+			"name", name,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Delete(ctx, name)
+}
+
 func (s *logging) List(ctx context.Context, name string, page, pageSize int) (res []listResult, total int, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
