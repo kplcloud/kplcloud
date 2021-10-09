@@ -20,7 +20,23 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
-func (s *tracing) Update(ctx context.Context, name, alias, data string) (err error) {
+func (s *tracing) Info(ctx context.Context, name string) (res infoResult, err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Info", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "package.Cluster",
+	})
+	defer func() {
+		span.LogKV(
+			"name", name,
+			"err", err,
+		)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.Info(ctx, name)
+}
+
+func (s *tracing) Update(ctx context.Context, name, alias, data, remark string) (err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Update", stdopentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "package.Cluster",
@@ -29,12 +45,13 @@ func (s *tracing) Update(ctx context.Context, name, alias, data string) (err err
 		span.LogKV(
 			"name", name,
 			"alias", alias,
+			"remark", remark,
 			"err", err,
 		)
 		span.SetTag(string(ext.Error), err != nil)
 		span.Finish()
 	}()
-	return s.next.Update(ctx, name, alias, data)
+	return s.next.Update(ctx, name, alias, data, remark)
 }
 
 func (s *tracing) Delete(ctx context.Context, name string) (err error) {
@@ -76,7 +93,7 @@ func (s *tracing) SyncRoles(ctx context.Context, clusterId int64) (err error) {
 	panic("implement me")
 }
 
-func (s *tracing) Add(ctx context.Context, name, alias, data string) (err error) {
+func (s *tracing) Add(ctx context.Context, name, alias, data, remark string) (err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Add", stdopentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "package.Cluster",
@@ -85,11 +102,12 @@ func (s *tracing) Add(ctx context.Context, name, alias, data string) (err error)
 		span.LogKV(
 			"name", name,
 			"alias", alias,
+			"remark", remark,
 			"err", err)
 		span.SetTag(string(ext.Error), err != nil)
 		span.Finish()
 	}()
-	return s.next.Add(ctx, name, alias, data)
+	return s.next.Add(ctx, name, alias, data, remark)
 }
 
 func NewTracing(otTracer stdopentracing.Tracer) Middleware {

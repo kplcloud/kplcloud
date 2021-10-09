@@ -31,6 +31,8 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		"Add":    ems,
 		"List":   ems,
 		"Delete": ems,
+		"Update": ems,
+		"Info":   ems,
 	})
 
 	r := mux.NewRouter()
@@ -53,13 +55,35 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodDelete)
+	r.Handle("/{name}/update", kithttp.NewServer(
+		eps.UpdateEndpoint,
+		decodeAddRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodPut)
+	r.Handle("/{name}/info", kithttp.NewServer(
+		eps.InfoEndpoint,
+		decodeInfoRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodGet)
 
 	return r
 }
 
+func decodeInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req infoRequest
+	vars := mux.Vars(r)
+	name, ok := vars["name"]
+	if !ok {
+		return nil, encode.Invalid.Error()
+	}
+	req.Name = name
+	return req, nil
+}
+
 func decodeDeleteRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req addRequest
-
 	vars := mux.Vars(r)
 	name, ok := vars["name"]
 	if !ok {
@@ -73,6 +97,7 @@ func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) 
 	var req listRequest
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	query := r.URL.Query().Get("query")
 	if page < 1 {
 		page = 1
 	}
@@ -81,6 +106,7 @@ func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) 
 	}
 	req.pageSize = pageSize
 	req.page = page
+	req.name = query
 	return req, nil
 }
 
