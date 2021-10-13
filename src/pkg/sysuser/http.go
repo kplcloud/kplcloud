@@ -49,7 +49,7 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodPost)
-	r.Handle("/update/{userId:[0-9]+}", kithttp.NewServer(
+	r.Handle("/{userId:[0-9]+}/update", kithttp.NewServer(
 		eps.UpdateEndpoint,
 		decodeUpdateRequest,
 		encode.JsonResponse,

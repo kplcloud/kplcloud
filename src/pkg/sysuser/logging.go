@@ -46,7 +46,7 @@ func (s *loggingServer) Delete(ctx context.Context, userId int64, unscoped bool)
 	return s.next.Delete(ctx, userId, unscoped)
 }
 
-func (s *loggingServer) Update(ctx context.Context, userId int64, username, email string, locked bool, clusterIds, roleIds []int64) (err error) {
+func (s *loggingServer) Update(ctx context.Context, userId int64, username, email, remark string, locked bool, clusterIds, roleIds []int64) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
 			s.traceId, ctx.Value(s.traceId),
@@ -54,6 +54,7 @@ func (s *loggingServer) Update(ctx context.Context, userId int64, username, emai
 			"userId", userId,
 			"username", username,
 			"email", email,
+			"remark", remark,
 			"locked", locked,
 			"clusterIds", clusterIds,
 			"roleIds", roleIds,
@@ -61,16 +62,17 @@ func (s *loggingServer) Update(ctx context.Context, userId int64, username, emai
 			"err", err,
 		)
 	}(time.Now())
-	return s.next.Update(ctx, userId, username, email, locked, clusterIds, roleIds)
+	return s.next.Update(ctx, userId, username, email, remark, locked, clusterIds, roleIds)
 }
 
-func (s *loggingServer) Add(ctx context.Context, username, email string, locked bool, clusterIds, roleIds []int64) (err error) {
+func (s *loggingServer) Add(ctx context.Context, username, email, remark string, locked bool, clusterIds, roleIds []int64) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
 			s.traceId, ctx.Value(s.traceId),
 			"method", "Add",
 			"username", username,
 			"email", email,
+			"remark", remark,
 			"locked", locked,
 			"clusterIds", clusterIds,
 			"roleIds", roleIds,
@@ -78,7 +80,7 @@ func (s *loggingServer) Add(ctx context.Context, username, email string, locked 
 			"err", err,
 		)
 	}(time.Now())
-	return s.next.Add(ctx, username, email, locked, clusterIds, roleIds)
+	return s.next.Add(ctx, username, email, remark, locked, clusterIds, roleIds)
 }
 
 func (s *loggingServer) List(ctx context.Context, email string, page, pageSize int) (res []listResult, total int, err error) {

@@ -64,6 +64,7 @@ type Project struct {
 	Remark       string       `gorm:"column:remark;null;comment:'备注'" json:"remark"`
 	AuditStatus  AuditStatus  `gorm:"column:audit_status;null;comment:'审核状态'" json:"audit_status"`
 	DeployMethod DeployMethod `gorm:"column:deploy_method;null;default:'git';comment:'部署方式'" json:"deploy_method"`
+	GitHash      string       // 构建的时候获取有多少个项目使用的是这个创建，让勾选要更新的项目
 
 	CreatedAt time.Time  `gorm:"column:created_at" json:"created_at" form:"created_at"` // 创建时间
 	UpdatedAt time.Time  `gorm:"column:updated_at" json:"updated_at" form:"updated_at"` // 更新时间

@@ -29,23 +29,28 @@ type (
 		LastLogin    *time.Time `json:"lastLogin"`
 		CreatedAt    time.Time  `json:"createdAt"`
 		UpdatedAt    time.Time  `json:"updatedAt"`
+		ExpiresAt    *time.Time `json:"expiresAt"`
+		Remark       string     `json:"remark"`
 		Roles        []string   `json:"roles"`
 		Namespaces   []string   `json:"namespaces"`
 	}
 
 	addRequest struct {
-		Username      string  `json:"username"`
-		Email         string  `json:"email"`
-		Locked        bool    `json:"locked"`
-		NamespacesIds []int64 `json:"namespaces"`
-		RoleIds       []int64 `json:"roles"`
-		ClusterIds    []int64 `json:"clusterIds" valid:"required"`
+		Username      string     `json:"username" valid:"required"`
+		Email         string     `json:"email" valid:"required"`
+		Locked        bool       `json:"locked"`
+		Remark        string     `json:"remark"`
+		ExpiresAt     *time.Time `json:"expiresAt"`
+		NamespacesIds []int64    `json:"namespaces"`
+		RoleIds       []int64    `json:"roles"`
+		ClusterIds    []int64    `json:"clusterIds" valid:"required"`
 	}
 	updateRequest struct {
 		UserId     int64   `json:"userId" valid:"required"`
 		Username   string  `json:"username" valid:"required"`
 		Email      string  `json:"email" valid:"required"`
 		Locked     bool    `json:"locked"`
+		Remark     string  `json:"remark"`
 		ClusterIds []int64 `json:"clusters" valid:"required"`
 		RoleIds    []int64 `json:"roles" valid:"required"`
 	}
@@ -90,7 +95,7 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 func makeUpdateEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(updateRequest)
-		err = s.Update(ctx, req.UserId, req.Username, req.Email, req.Locked, req.ClusterIds, req.RoleIds)
+		err = s.Update(ctx, req.UserId, req.Username, req.Email, req.Remark, req.Locked, req.ClusterIds, req.RoleIds)
 		return encode.Response{
 			Error: err,
 		}, err
@@ -100,7 +105,7 @@ func makeUpdateEndpoint(s Service) endpoint.Endpoint {
 func makeAddEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(addRequest)
-		err = s.Add(ctx, req.Username, req.Email, req.Locked, req.ClusterIds, req.RoleIds)
+		err = s.Add(ctx, req.Username, req.Email, req.Remark, req.Locked, req.ClusterIds, req.RoleIds)
 		return encode.Response{
 			Error: err,
 		}, err
