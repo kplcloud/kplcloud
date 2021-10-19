@@ -23,6 +23,10 @@ type loggingServer struct {
 	traceId string
 }
 
+func (l *loggingServer) Delete(ctx context.Context, kind types.Kind) (err error) {
+	panic("implement me")
+}
+
 func (l *loggingServer) Save(ctx context.Context, tpl *types.K8sTemplate) (err error) {
 	defer func(begin time.Time) {
 		_ = l.logger.Log(

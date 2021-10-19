@@ -34,11 +34,9 @@ type (
 	}
 
 	addRequest struct {
-		Username      string  `json:"username"`
-		Email         string  `json:"email"`
-		Locked        bool    `json:"locked"`
-		NamespacesIds []int64 `json:"namespaces"`
-		RoleIds       []int64 `json:"roles"`
+		Kind    string `json:"kind" valid:"required"`
+		Alias   string `json:"alias" valid:"required"`
+		Content string `json:"content" valid:"required"`
 	}
 
 	infoResult struct {
@@ -80,7 +78,7 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 func makeAddEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(addRequest)
-		err = s.Add(ctx, req.Username, req.Email, req.Locked, req.NamespacesIds, req.RoleIds)
+		err = s.Add(ctx, req.Kind, req.Alias, "", req.Content)
 		return encode.Response{
 			Error: err,
 		}, err

@@ -43,11 +43,11 @@ func (s *logging) Update(ctx context.Context, kind, alias, rules, content string
 	panic("implement me")
 }
 
-func (s *logging) List(ctx context.Context, searchValue string, page, pageSize int64) (res []interface{}, total int, err error) {
+func (s *logging) List(ctx context.Context, searchValue string, page, pageSize int) (res []infoResult, total int, err error) {
 	panic("implement me")
 }
 
-func (s *logging) Info(ctx context.Context, kind string) (res interface{}, err error) {
+func (s *logging) Info(ctx context.Context, kind string) (res infoResult, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
 			s.traceId, ctx.Value(s.traceId),
