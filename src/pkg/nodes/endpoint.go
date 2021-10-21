@@ -20,9 +20,19 @@ type (
 	}
 
 	nodeResult struct {
-		Name   string `json:"name"`
-		Memory int64  `json:"memory"`
-		Cpu    int64  `json:"cpu"`
+		Name             string `json:"name"`
+		Memory           string `json:"memory"`
+		Cpu              int64  `json:"cpu"`
+		EphemeralStorage string `json:"ephemeralStorage"` // 临时存储单位字节
+		InternalIp       string `json:"internalIp"`       // 节点内部IP
+		ExternalIp       string `json:"externalIp"`       // 节点外部IP
+		KubeletVersion   string `json:"kubeletVersion"`   // kubelet版本
+		KubeProxyVersion string `json:"kubeProxyVersion"` // kubeproxy版本
+		ContainerVersion string `json:"containerVersion"` // 容器版本
+		OsImage          string `json:"osImage"`          // 系统镜像
+		Status           string `json:"status"`           // 状态
+		Scheduled        bool   `json:"scheduled"`        // 是否调度
+		Remark           string `json:"remark"`           // 备注
 	}
 
 	listRequest struct {
@@ -64,6 +74,7 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	eps := Endpoints{
 		SyncEndpoint: makeSyncEndpoint(s),
 		InfoEndpoint: makeInfoEndpoint(s),
+		ListEndpoint: makeListEndpoint(s),
 	}
 
 	for _, m := range dmw["Sync"] {
@@ -72,7 +83,28 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	for _, m := range dmw["Info"] {
 		eps.InfoEndpoint = m(eps.InfoEndpoint)
 	}
+	for _, m := range dmw["List"] {
+		eps.ListEndpoint = m(eps.ListEndpoint)
+	}
 	return eps
+}
+
+func makeListEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		clusterId, ok := ctx.Value(middleware.ContextKeyClusterId).(int64)
+		if !ok {
+			return nil, encode.ErrClusterNotfound.Error()
+		}
+		req := request.(listRequest)
+		res, total, err := s.List(ctx, clusterId, req.page, req.pageSize)
+		return encode.Response{
+			Data: map[string]interface{}{
+				"list":  res,
+				"total": total,
+			},
+			Error: err,
+		}, err
+	}
 }
 
 func makeInfoEndpoint(s Service) endpoint.Endpoint {

@@ -10,7 +10,6 @@ package nodes
 import (
 	"context"
 	"fmt"
-
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/jinzhu/gorm"
@@ -154,9 +153,19 @@ func (s *service) List(ctx context.Context, clusterId int64, page, pageSize int)
 
 	for _, v := range list {
 		res = append(res, nodeResult{
-			Name:   v.Name,
-			Memory: v.Memory,
-			Cpu:    v.Cpu,
+			Name:             v.Name,
+			Memory:           fmt.Sprintf("%dGi", apiresource.NewQuantity(v.Memory, apiresource.BinarySI).ScaledValue(apiresource.Giga)),
+			Cpu:              v.Cpu,
+			EphemeralStorage: apiresource.NewQuantity(v.EphemeralStorage, apiresource.BinarySI).String(),
+			InternalIp:       v.InternalIp,
+			ExternalIp:       v.ExternalIp,
+			KubeletVersion:   v.KubeletVersion,
+			KubeProxyVersion: v.KubeProxyVersion,
+			ContainerVersion: v.ContainerVersion,
+			OsImage:          v.OsImage,
+			Status:           v.Status,
+			Scheduled:        v.Scheduled,
+			Remark:           v.Remark,
 		})
 	}
 

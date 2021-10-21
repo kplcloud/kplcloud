@@ -30,6 +30,7 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 	eps := NewEndpoint(s, map[string][]endpoint.Middleware{
 		"Sync": ems,
 		"Info": ems,
+		"List": ems,
 	})
 
 	r := mux.NewRouter()
