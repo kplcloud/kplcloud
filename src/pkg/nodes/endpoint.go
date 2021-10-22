@@ -37,10 +37,15 @@ type (
 
 	listRequest struct {
 		page, pageSize int
+		query          string
 	}
 
 	infoRequest struct {
 		Name string
+	}
+	drainRequest struct {
+		Name  string
+		Force bool
 	}
 	infoResult struct {
 		Name             string            `json:"name"`
@@ -65,16 +70,20 @@ type (
 )
 
 type Endpoints struct {
-	SyncEndpoint endpoint.Endpoint
-	ListEndpoint endpoint.Endpoint
-	InfoEndpoint endpoint.Endpoint
+	SyncEndpoint   endpoint.Endpoint
+	ListEndpoint   endpoint.Endpoint
+	InfoEndpoint   endpoint.Endpoint
+	CordonEndpoint endpoint.Endpoint
+	DrainEndpoint  endpoint.Endpoint
 }
 
 func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	eps := Endpoints{
-		SyncEndpoint: makeSyncEndpoint(s),
-		InfoEndpoint: makeInfoEndpoint(s),
-		ListEndpoint: makeListEndpoint(s),
+		SyncEndpoint:   makeSyncEndpoint(s),
+		InfoEndpoint:   makeInfoEndpoint(s),
+		ListEndpoint:   makeListEndpoint(s),
+		CordonEndpoint: makeCordonEndpoint(s),
+		DrainEndpoint:  makeDrainEndpoint(s),
 	}
 
 	for _, m := range dmw["Sync"] {
@@ -86,7 +95,41 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	for _, m := range dmw["List"] {
 		eps.ListEndpoint = m(eps.ListEndpoint)
 	}
+	for _, m := range dmw["Cordon"] {
+		eps.CordonEndpoint = m(eps.CordonEndpoint)
+	}
+	for _, m := range dmw["Drain"] {
+		eps.DrainEndpoint = m(eps.DrainEndpoint)
+	}
 	return eps
+}
+
+func makeDrainEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		clusterId, ok := ctx.Value(middleware.ContextKeyClusterId).(int64)
+		if !ok {
+			return nil, encode.ErrClusterNotfound.Error()
+		}
+		req := request.(drainRequest)
+		err = s.Drain(ctx, clusterId, req.Name, req.Force)
+		return encode.Response{
+			Error: err,
+		}, err
+	}
+}
+
+func makeCordonEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		clusterId, ok := ctx.Value(middleware.ContextKeyClusterId).(int64)
+		if !ok {
+			return nil, encode.ErrClusterNotfound.Error()
+		}
+		req := request.(infoRequest)
+		err = s.Cordon(ctx, clusterId, req.Name)
+		return encode.Response{
+			Error: err,
+		}, err
+	}
 }
 
 func makeListEndpoint(s Service) endpoint.Endpoint {
@@ -96,7 +139,7 @@ func makeListEndpoint(s Service) endpoint.Endpoint {
 			return nil, encode.ErrClusterNotfound.Error()
 		}
 		req := request.(listRequest)
-		res, total, err := s.List(ctx, clusterId, req.page, req.pageSize)
+		res, total, err := s.List(ctx, clusterId, req.query, req.page, req.pageSize)
 		return encode.Response{
 			Data: map[string]interface{}{
 				"list":  res,

@@ -32,7 +32,7 @@ type Service interface {
 	// Sync 同步节点信息
 	Sync(ctx context.Context, clusterName string) (err error)
 	// List 节点列表
-	List(ctx context.Context, clusterId int64, page, pageSize int) (res []nodeResult, total int, err error)
+	List(ctx context.Context, clusterId int64, query string, page, pageSize int) (res []nodeResult, total int, err error)
 	// Cordon 将节点设置为可调度或不可调度
 	Cordon(ctx context.Context, clusterId int64, nodeName string) (err error)
 	// Drain 驱逐节点上有pods nodeName 节点名称 force 强制
@@ -142,10 +142,10 @@ func (s *service) UnCordon(ctx context.Context, clusterId int64, nodeName string
 	panic("implement me")
 }
 
-func (s *service) List(ctx context.Context, clusterId int64, page, pageSize int) (res []nodeResult, total int, err error) {
+func (s *service) List(ctx context.Context, clusterId int64, query string, page, pageSize int) (res []nodeResult, total int, err error) {
 	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
 
-	list, total, err := s.repository.Nodes(ctx).List(ctx, clusterId, page, pageSize)
+	list, total, err := s.repository.Nodes(ctx).List(ctx, clusterId, query, page, pageSize)
 	if err != nil {
 		_ = level.Error(logger).Log("repository.Nodes", "List", "err", err.Error())
 		return

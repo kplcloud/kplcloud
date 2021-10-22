@@ -11,6 +11,7 @@ import (
 	"context"
 	"github.com/jinzhu/gorm"
 	"github.com/kplcloud/kplcloud/src/repository/types"
+	"strings"
 )
 
 type Middleware func(Service) Service
@@ -18,16 +19,22 @@ type Middleware func(Service) Service
 type Service interface {
 	Save(ctx context.Context, data *types.Nodes) (err error)
 	FindByName(ctx context.Context, clusterId int64, name string) (res types.Nodes, err error)
-	List(ctx context.Context, clusterId int64, page, pageSize int) (res []types.Nodes, total int, err error)
+	List(ctx context.Context, clusterId int64, query string, page, pageSize int) (res []types.Nodes, total int, err error)
 }
 
 type service struct {
 	db *gorm.DB
 }
 
-func (s *service) List(ctx context.Context, clusterId int64, page, pageSize int) (res []types.Nodes, total int, err error) {
-	err = s.db.Model(&types.Nodes{}).Where("cluster_id = ?", clusterId).
-		Count(&total).
+func (s *service) List(ctx context.Context, clusterId int64, query string, page, pageSize int) (res []types.Nodes, total int, err error) {
+	q := s.db.Model(&types.Nodes{}).Where("cluster_id = ?", clusterId)
+	if !strings.EqualFold(query, "") {
+		q = q.Where("name LIKE ?", "%"+query+"%")
+	}
+	err = q.Count(&total).
+		Order("created_at DESC").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
 		Find(&res).Error
 	return
 }
