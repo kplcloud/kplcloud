@@ -21,6 +21,20 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) List(ctx context.Context, query string, page, pageSize int) (res []result, total int, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"query", query,
+			"page", page,
+			"pageSize", pageSize,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.List(ctx, query, page, pageSize)
+}
+
 func (s *logging) Create(ctx context.Context, name, host, username, password, remark string) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

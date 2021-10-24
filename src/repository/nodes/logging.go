@@ -23,6 +23,20 @@ type logging struct {
 	traceId string
 }
 
+func (l *logging) Delete(ctx context.Context, clusterId int64, nodeName string, callback Callback) (err error) {
+	defer func(begin time.Time) {
+		_ = l.logger.Log(
+			l.traceId, ctx.Value(l.traceId),
+			"method", "Delete",
+			"clusterId", clusterId,
+			"nodeName", nodeName,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return l.next.Delete(ctx, clusterId, nodeName, callback)
+}
+
 func (l *logging) Save(ctx context.Context, data *types.Nodes) (err error) {
 	defer func(begin time.Time) {
 		_ = l.logger.Log(

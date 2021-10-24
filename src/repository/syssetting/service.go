@@ -63,7 +63,7 @@ func (s *service) Update(_ context.Context, data *types.SysSetting) (err error) 
 }
 
 func (s *service) Find(_ context.Context, section, key string) (res types.SysSetting, err error) {
-	err = s.db.Model(&types.SysSetting{}).Where("`key` = ?", key).First(&res).Error
+	err = s.db.Model(&types.SysSetting{}).Where("section = ? AND `key` = ?", section, key).First(&res).Error
 	return
 }
 

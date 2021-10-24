@@ -21,6 +21,20 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) Delete(ctx context.Context, clusterId int64, nodeName string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Delete",
+			"clusterId", clusterId,
+			"nodeName", nodeName,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Delete(ctx, clusterId, nodeName)
+}
+
 func (s *logging) Cordon(ctx context.Context, clusterId int64, nodeName string) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

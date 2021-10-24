@@ -158,7 +158,7 @@ func (s *service) jwtToken(ctx context.Context, sysUser types.SysUser) (tk strin
 	var clusters []string
 	var permissions []types.SysPermission
 
-	for _, ns := range sysUser.SysNamespaces {
+	for _, ns := range sysUser.Namespaces {
 		namespaces = append(namespaces, ns.Name)
 	}
 	for _, role := range sysUser.SysRoles {
@@ -182,8 +182,12 @@ func (s *service) jwtToken(ctx context.Context, sysUser types.SysUser) (tk strin
 		err = encode.ErrAuthLogin.Wrap(errors.Wrap(err, "clusters"))
 		return tk, err
 	}
-	if err = s.cache.Set(ctx, fmt.Sprintf("user:%d:namespaces", sysUser.Id), roleIds, timeout); err != nil {
+	if err = s.cache.Set(ctx, fmt.Sprintf("user:%d:namespaces", sysUser.Id), namespaces, timeout); err != nil {
 		err = encode.ErrAuthLogin.Wrap(errors.Wrap(err, "namespaces"))
+		return tk, err
+	}
+	if err = s.cache.Set(ctx, fmt.Sprintf("user:%d:roles", sysUser.Id), roleIds, timeout); err != nil {
+		err = encode.ErrAuthLogin.Wrap(errors.Wrap(err, "roles"))
 		return tk, err
 	}
 	if err = s.cache.Set(ctx, fmt.Sprintf("login:%d:token", sysUser.Id), tk, timeout); err != nil {

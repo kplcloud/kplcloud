@@ -67,6 +67,12 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodPut)
+	r.Handle("/{cluster}/delete/{name}", kithttp.NewServer(
+		eps.DrainEndpoint,
+		decodeDrainRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodDelete)
 
 	return r
 }

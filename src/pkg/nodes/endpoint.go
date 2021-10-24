@@ -75,6 +75,7 @@ type Endpoints struct {
 	InfoEndpoint   endpoint.Endpoint
 	CordonEndpoint endpoint.Endpoint
 	DrainEndpoint  endpoint.Endpoint
+	DeleteEndpoint endpoint.Endpoint
 }
 
 func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
@@ -84,6 +85,7 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 		ListEndpoint:   makeListEndpoint(s),
 		CordonEndpoint: makeCordonEndpoint(s),
 		DrainEndpoint:  makeDrainEndpoint(s),
+		DeleteEndpoint: makeDeleteEndpoint(s),
 	}
 
 	for _, m := range dmw["Sync"] {
@@ -97,11 +99,24 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	}
 	for _, m := range dmw["Cordon"] {
 		eps.CordonEndpoint = m(eps.CordonEndpoint)
-	}
-	for _, m := range dmw["Drain"] {
 		eps.DrainEndpoint = m(eps.DrainEndpoint)
+		eps.DeleteEndpoint = m(eps.DeleteEndpoint)
 	}
 	return eps
+}
+
+func makeDeleteEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		clusterId, ok := ctx.Value(middleware.ContextKeyClusterId).(int64)
+		if !ok {
+			return nil, encode.ErrClusterNotfound.Error()
+		}
+		req := request.(infoRequest)
+		err = s.Delete(ctx, clusterId, req.Name)
+		return encode.Response{
+			Error: err,
+		}, err
+	}
 }
 
 func makeDrainEndpoint(s Service) endpoint.Endpoint {

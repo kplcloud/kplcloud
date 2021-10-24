@@ -21,6 +21,22 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) Delete(ctx context.Context, clusterId int64, nodeName string, callback Callback) (err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Delete", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "repository.Nodes",
+	})
+	defer func() {
+		span.LogKV(
+			"error", err,
+			"clusterId", clusterId,
+			"nodeName", nodeName,
+		)
+		span.Finish()
+	}()
+	return s.next.Delete(ctx, clusterId, nodeName, callback)
+}
+
 func (s *tracing) Save(ctx context.Context, data *types.Nodes) (err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Save", opentracing.Tag{
 		Key:   string(ext.Component),

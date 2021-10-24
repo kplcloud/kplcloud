@@ -18,11 +18,27 @@ import (
 
 type Middleware func(Service) Service
 
+// Service 项目空间模块
+// 目前该模块设计为所有成员都可以查看
+// TODO: 考虑实现 同步空间下的Deployment、CronJob ConfigMap Service Ingress 或直接写一下Sync模块处理所有相关同步？
+// TODO: 以上想法待考虑
 type Service interface {
-	// Sync 同步namespace
+	// Sync 同步集群的namespace
 	Sync(ctx context.Context, clusterId int64) error
-	// Create 创建空间 如果有 imageSecrets 则下发
+	// Create 创建空间 如果有 imageSecrets 则下发,imageSecrets可以传多个
 	Create(ctx context.Context, clusterId int64, name, alias, remark string, imageSecrets []string) (err error)
+	// List 空间列表
+	// names从中间件取得该用户有多少个空间的权限
+	List(ctx context.Context, clusterId int64, names []string, query string, page, pageSize int) (res []result, total int, err error)
+	// Delete 删除空间
+	// 需要判断该空间下是否还有各个类型的资源，如果有并且force为false的话不给操作
+	// 如果force为true的话,强制清理所有项目？这风险会不会太大了？待定
+	// 直接中间件判定是否有该中间件的操作权限
+	Delete(ctx context.Context, clusterId int64, name string, force bool) (err error)
+	// Update 更新空间
+	// 只允许更新别名和备注，其他的无法操作
+	// 直接中间件判定是否有该中间件的操作权限
+	Update(ctx context.Context, clusterId int64, name string, alias, remark, status string, imageSecrets []string) (err error)
 }
 
 type service struct {
@@ -30,6 +46,58 @@ type service struct {
 	logger     log.Logger
 	k8sClient  kubernetes.K8sClient
 	repository repository.Repository
+}
+
+func (s *service) Delete(ctx context.Context, clusterId int64, name string, force bool) (err error) {
+	panic("implement me")
+}
+
+func (s *service) Update(ctx context.Context, clusterId int64, name string, alias, remark, status string, imageSecrets []string) (err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+	ns, err := s.repository.Namespace(ctx).FindByName(ctx, clusterId, name)
+	if err != nil {
+		_ = level.Error(logger).Log("repository.Namespace", "FindByName", "err", err.Error())
+		err = encode.ErrNamespaceNotfound.Error()
+		return
+	}
+
+	ns.Alias = alias
+	ns.Remark = remark
+
+	err = s.repository.Namespace(ctx).Save(ctx, &ns)
+	if err != nil {
+		_ = level.Error(logger).Log("repository.Namespace", "Save", "err", err.Error())
+		err = encode.ErrNamespaceSave.Wrap(err)
+		return
+	}
+	return
+}
+
+func (s *service) List(ctx context.Context, clusterId int64, names []string, query string, page, pageSize int) (res []result, total int, err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	list, total, err := s.repository.Namespace(ctx).List(ctx, clusterId, names, query, page, pageSize)
+	if err != nil {
+		_ = level.Error(logger).Log("repository.Namespace", "List", "err", err.Error())
+		err = encode.ErrNamespaceList.Wrap(err)
+		return
+	}
+
+	// 获取所有的registry
+	// 根据registryName和namespaces 获取secrets的 TODO: 似乎是太麻烦了
+
+	for _, v := range list {
+		res = append(res, result{
+			Name:      v.Name,
+			Alias:     v.Alias,
+			Remark:    v.Remark,
+			Status:    v.Status,
+			CreatedAt: v.CreatedAt,
+			UpdatedAt: v.UpdatedAt,
+		})
+	}
+
+	return
 }
 
 func (s *service) Create(ctx context.Context, clusterId int64, name, alias, remark string, imageSecrets []string) (err error) {
@@ -54,12 +122,12 @@ func (s *service) Create(ctx context.Context, clusterId int64, name, alias, rema
 		}, metav1.CreateOptions{})
 		if err != nil {
 			_ = level.Error(logger).Log("k8sClient.Do.CoreV1.Namespaces", "Create", "err", err.Error())
-			return encode.ErrNamespaceCreate.Wrap(err)
+			return encode.ErrNamespaceSave.Wrap(err)
 		}
 		return nil
 	}); err != nil {
 		_ = level.Error(logger).Log("k8sClient.Do.CoreV1.Namespaces", "Create", "err", err.Error())
-		return encode.ErrNamespaceCreate.Wrap(err)
+		return encode.ErrNamespaceSave.Wrap(err)
 	}
 	if len(imageSecrets) < 1 {
 		return nil

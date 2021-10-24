@@ -27,9 +27,9 @@ type SysUser struct {
 	UpdatedAt         time.Time  `gorm:"column:updated_at" json:"updated_at" form:"updated_at"` // 更新时间
 	DeletedAt         *time.Time `gorm:"column:deleted_at" json:"deleted_at"`                   // 删除时间
 
-	SysRoles      []SysRole      `gorm:"many2many:sys_user_roles;foreignkey:id;association_foreignkey:id;association_jointable_foreignkey:role_id;jointable_foreignkey:sys_user_id;" json:"sys_roles"`
-	SysNamespaces []SysNamespace `gorm:"many2many:sys_user_namespaces;foreignkey:id;association_foreignkey:id;association_jointable_foreignkey:namespace_id;jointable_foreignkey:sys_user_id;" json:"sys_namespaces"`
-	Clusters      []Cluster      `gorm:"many2many:sys_user_cluster;foreignkey:id;association_foreignkey:id;association_jointable_foreignkey:cluster_id;jointable_foreignkey:user_id;" json:"clusters"`
+	SysRoles   []SysRole   `gorm:"many2many:sys_user_roles;foreignkey:id;association_foreignkey:id;association_jointable_foreignkey:role_id;jointable_foreignkey:sys_user_id;" json:"sys_roles"`
+	Namespaces []Namespace `gorm:"many2many:sys_user_namespaces;foreignkey:id;association_foreignkey:id;association_jointable_foreignkey:namespace_id;jointable_foreignkey:sys_user_id;" json:"sys_namespaces"`
+	Clusters   []Cluster   `gorm:"many2many:sys_user_cluster;foreignkey:id;association_foreignkey:id;association_jointable_foreignkey:cluster_id;jointable_foreignkey:user_id;" json:"clusters"`
 }
 
 // TableName set table

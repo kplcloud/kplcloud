@@ -39,6 +39,8 @@ type Service interface {
 	Drain(ctx context.Context, clusterId int64, nodeName string, force bool) (err error)
 	// Info 节点详情
 	Info(ctx context.Context, clusterId int64, nodeName string) (res infoResult, err error)
+	// Delete 删除集群节点
+	Delete(ctx context.Context, clusterId int64, nodeName string) (err error)
 }
 
 type service struct {
@@ -46,6 +48,31 @@ type service struct {
 	traceId    string
 	k8sClient  kubernetes.K8sClient
 	repository repository.Repository
+}
+
+func (s *service) Delete(ctx context.Context, clusterId int64, nodeName string) (err error) {
+	//logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+	resNode, err := s.repository.Nodes(ctx).FindByName(ctx, clusterId, nodeName)
+	if err != nil {
+		err = errors.Wrap(err, "repository.Nodes.FindByName")
+		return encode.ErrNodeNotfound.Wrap(err)
+	}
+
+	if resNode.Scheduled {
+		// 请先设置为不可调度
+		return encode.ErrNodeScheduled.Error()
+	}
+	// TODO: 请把该节点pods驱逐完 不一定能驱逐掉
+
+	err = s.repository.Nodes(ctx).Delete(ctx, clusterId, resNode.Name, func() error {
+		if err = s.k8sClient.Do(ctx).CoreV1().Nodes().Delete(ctx, nodeName, metav1.DeleteOptions{}); err != nil {
+			err = errors.Wrap(err, "pkg.nodes.Delete.k8sClient.Do.CoreV2.Nodes.Delete")
+			return encode.ErrNodeDelete.Wrap(err)
+		}
+		return nil
+	})
+
+	return
 }
 
 func (s *service) Info(ctx context.Context, clusterId int64, nodeName string) (res infoResult, err error) {
@@ -92,6 +119,10 @@ func (s *service) Drain(ctx context.Context, clusterId int64, nodeName string, f
 	//if err != nil {
 	//	return encode.ErrNodeDrain.Wrap(errors.Wrap(err, "labels.Parse"))
 	//}
+	if resNode.Scheduled {
+		// 请先设置为不可调度
+		return encode.ErrNodeScheduled.Error()
+	}
 	pods, err := s.k8sClient.Do(ctx).CoreV1().Pods(metav1.NamespaceAll).List(ctx, metav1.ListOptions{
 		//LabelSelector: labelSelector.String(),
 		FieldSelector: fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName}).String(),
@@ -134,7 +165,7 @@ func (s *service) Cordon(ctx context.Context, clusterId int64, nodeName string) 
 		err = errors.Wrap(err, "k8sClient.Do.CoreV1.Nodes.Update")
 		return encode.ErrNodeCordon.Wrap(err)
 	}
-	resNode.Scheduled = node.Spec.Unschedulable
+	resNode.Scheduled = !node.Spec.Unschedulable
 	return s.repository.Nodes(ctx).Save(ctx, &resNode)
 }
 

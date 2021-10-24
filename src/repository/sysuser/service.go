@@ -110,7 +110,7 @@ func (s *service) List(ctx context.Context, namespaceIds []int64, email string, 
 	query := s.db.Model(&types.SysUser{}).Preload("SysRoles")
 
 	if namespaceIds != nil {
-		query = query.Preload("SysNamespaces", func(db *gorm.DB) *gorm.DB {
+		query = query.Preload("Namespaces", func(db *gorm.DB) *gorm.DB {
 			return db.Where("id IN (?)", namespaceIds)
 		})
 	}
@@ -126,7 +126,8 @@ func (s *service) List(ctx context.Context, namespaceIds []int64, email string, 
 func (s *service) FindByEmail(ctx context.Context, email string) (res types.SysUser, err error) {
 	query := s.db.Model(&types.SysUser{}).
 		Preload("SysRoles.SysPermissions").
-		Preload("Clusters")
+		Preload("Clusters").
+		Preload("Namespaces")
 	if strings.Contains(email, "@") {
 		query = query.Where("email = ?", email)
 	} else {

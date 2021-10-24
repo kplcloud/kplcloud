@@ -21,6 +21,24 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) List(ctx context.Context, query string, page, pageSize int) (res []types.Registry, total int, err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "repository.Registry",
+	})
+	defer func() {
+		span.LogKV(
+			"query", query,
+			"page", page,
+			"pageSize", pageSize,
+			"error", err,
+		)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.List(ctx, query, page, pageSize)
+}
+
 func (s *tracing) FindByNames(ctx context.Context, names []string) (res []types.Registry, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "FindByNames", opentracing.Tag{
 		Key:   string(ext.Component),
@@ -30,6 +48,7 @@ func (s *tracing) FindByNames(ctx context.Context, names []string) (res []types.
 		span.LogKV(
 			"error", err,
 		)
+		span.SetTag(string(ext.Error), err != nil)
 		span.Finish()
 	}()
 	return s.next.FindByNames(ctx, names)
@@ -44,6 +63,7 @@ func (s *tracing) Save(ctx context.Context, reg *types.Registry) (err error) {
 		span.LogKV(
 			"error", err,
 		)
+		span.SetTag(string(ext.Error), err != nil)
 		span.Finish()
 	}()
 	return s.next.Save(ctx, reg)
@@ -59,6 +79,7 @@ func (s *tracing) FindByName(ctx context.Context, name string) (res types.Regist
 			"name", name,
 			"error", err,
 		)
+		span.SetTag(string(ext.Error), err != nil)
 		span.Finish()
 	}()
 	return s.next.FindByName(ctx, name)

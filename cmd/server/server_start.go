@@ -281,6 +281,7 @@ func initHttpHandler(g *group.Group) {
 		middleware.CheckAuthMiddleware(logger, cacheSvc, tracer),       // 2
 	}
 	tokenEms = append(tokenEms, ems...)
+	nsEms := append([]endpoint.Middleware{middleware.NamespaceMiddleware(logger)}, tokenEms...)
 
 	r := mux.NewRouter()
 
@@ -304,7 +305,7 @@ func initHttpHandler(g *group.Group) {
 
 	r.PathPrefix("/cluster").Handler(http.StripPrefix("/cluster", cluster.MakeHTTPHandler(clusterSvc, append(systemEms, ems...), opts)))
 	r.PathPrefix("/node").Handler(http.StripPrefix("/node", nodes.MakeHTTPHandler(nodeSvc, tokenEms, opts)))
-	r.PathPrefix("/namespace").Handler(http.StripPrefix("/namespace", pkgNs.MakeHTTPHandler(namespaceSvc, tokenEms, opts)))
+	r.PathPrefix("/namespace").Handler(http.StripPrefix("/namespace", pkgNs.MakeHTTPHandler(namespaceSvc, tokenEms, nsEms, opts)))
 	r.PathPrefix("/deployment").Handler(http.StripPrefix("/deployment", deployment.MakeHTTPHandler(deploymentSvc, tokenEms, opts)))
 	r.PathPrefix("/configmap").Handler(http.StripPrefix("/configmap", configmap.MakeHTTPHandler(configMapSvc, tokenEms, opts)))
 	r.PathPrefix("/secret").Handler(http.StripPrefix("/secret", secret.MakeHTTPHandler(secretSvc, tokenEms, opts)))

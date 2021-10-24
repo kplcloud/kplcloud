@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+// Namespace 项目空间
+// TODO: 项目空间的配额考虑 如何设计？配额直接在这还是新增一张表来存储？
 type Namespace struct {
 	Id        int64      `gorm:"column:id;primary_key" json:"id"`
 	ClusterId int64      `gorm:"column:cluster_id;comment:'集群ID'" json:"cluster_id"`

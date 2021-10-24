@@ -65,7 +65,7 @@ var ResponseMessage = map[ResStatus]int{
 	ErrNamespaceNotfound: 940,
 	ErrNameNotfound:      941,
 	ErrNamespaceExists:   942,
-	ErrNamespaceCreate:   943,
+	ErrNamespaceSave:     943,
 
 	ErrDeploymentSyncList:    960,
 	ErrDeploymentGetNotfound: 961,
@@ -122,7 +122,8 @@ const (
 	ErrNamespaceNotfound ResStatus = "空间不存在"
 	ErrNameNotfound      ResStatus = "名称不存在"
 	ErrNamespaceExists   ResStatus = "空间已存在"
-	ErrNamespaceCreate   ResStatus = "空间创建失败"
+	ErrNamespaceSave     ResStatus = "空间保存失败"
+	ErrNamespaceList     ResStatus = "空间获取出错"
 
 	ErrDeploymentSyncList    ResStatus = "同步失败"
 	ErrDeploymentGetNotfound ResStatus = "项目不存在"
@@ -167,9 +168,11 @@ const (
 	ErrSysSettingExists   ResStatus = "配置已存在"
 	ErrSysSettingSave     ResStatus = "配置保存失败"
 
-	ErrNodeCordon   ResStatus = "操作失败"
-	ErrNodeNotfound ResStatus = "节点不存在"
-	ErrNodeDrain    ResStatus = "驱逐失败"
+	ErrNodeCordon    ResStatus = "操作失败"
+	ErrNodeNotfound  ResStatus = "节点不存在"
+	ErrNodeDrain     ResStatus = "驱逐失败"
+	ErrNodeDelete    ResStatus = "节点删除失败"
+	ErrNodeScheduled ResStatus = "请将节点设置为不可调度状态"
 
 	ErrTemplateSave ResStatus = "模版保存失败"
 )

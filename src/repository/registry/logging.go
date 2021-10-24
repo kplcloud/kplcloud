@@ -23,6 +23,21 @@ type logging struct {
 	traceId string
 }
 
+func (l *logging) List(ctx context.Context, query string, page, pageSize int) (res []types.Registry, total int, err error) {
+	defer func(begin time.Time) {
+		_ = l.logger.Log(
+			l.traceId, ctx.Value(l.traceId),
+			"method", "List",
+			"query", query,
+			"page", page,
+			"pageSize", pageSize,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return l.next.List(ctx, query, page, pageSize)
+}
+
 func (l *logging) FindByNames(ctx context.Context, names []string) (res []types.Registry, err error) {
 	defer func(begin time.Time) {
 		_ = l.logger.Log(

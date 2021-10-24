@@ -19,6 +19,21 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
+func (s *tracing) Delete(ctx context.Context, clusterId int64, nodeName string) (err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Delete", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "package.Nodes",
+	})
+	defer func() {
+		span.LogKV(
+			"clusterId", clusterId,
+			"nodeName", nodeName,
+			"err", err)
+		span.Finish()
+	}()
+	return s.next.Delete(ctx, clusterId, nodeName)
+}
+
 func (s *tracing) Cordon(ctx context.Context, clusterId int64, nodeName string) (err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Cordon", stdopentracing.Tag{
 		Key:   string(ext.Component),

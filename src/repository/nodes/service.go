@@ -16,14 +16,33 @@ import (
 
 type Middleware func(Service) Service
 
+type Callback func() error
+
 type Service interface {
 	Save(ctx context.Context, data *types.Nodes) (err error)
 	FindByName(ctx context.Context, clusterId int64, name string) (res types.Nodes, err error)
 	List(ctx context.Context, clusterId int64, query string, page, pageSize int) (res []types.Nodes, total int, err error)
+	Delete(ctx context.Context, clusterId int64, nodeName string, callback Callback) (err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) Delete(ctx context.Context, clusterId int64, nodeName string, callback Callback) (err error) {
+	tx := s.db.Model(&types.Nodes{}).Begin()
+	if err = tx.Where("cluster_id = ? AND name = ?", clusterId, nodeName).
+		Delete(&types.Nodes{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err = callback(); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
 }
 
 func (s *service) List(ctx context.Context, clusterId int64, query string, page, pageSize int) (res []types.Nodes, total int, err error) {
