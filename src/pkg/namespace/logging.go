@@ -21,6 +21,57 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) List(ctx context.Context, clusterId int64, names []string, query string, page, pageSize int) (res []result, total int, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "List",
+			"clusterId", clusterId,
+			"names", names,
+			"query", query,
+			"page", page,
+			"pageSize", pageSize,
+			"total", total,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.List(ctx, clusterId, names, query, page, pageSize)
+}
+
+func (s *logging) Delete(ctx context.Context, clusterId int64, name string, force bool) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Delete",
+			"clusterId", clusterId,
+			"name", name,
+			"force", force,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Delete(ctx, clusterId, name, force)
+}
+
+func (s *logging) Update(ctx context.Context, clusterId int64, name string, alias, remark, status string, imageSecrets []string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Update",
+			"clusterId", clusterId,
+			"name", name,
+			"alias", alias,
+			"remark", remark,
+			"status", status,
+			"imageSecrets", imageSecrets,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Update(ctx, clusterId, name, alias, remark, status, imageSecrets)
+}
+
 func (s *logging) Create(ctx context.Context, clusterId int64, name, alias, remark string, imageSecrets []string) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

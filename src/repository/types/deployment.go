@@ -11,8 +11,8 @@ import "time"
 
 type Deployment struct {
 	Id        int64      `gorm:"column:id;rimary_key" json:"id"`
-	Name      string     `json:"name"`
-	Namespace string     `json:"namespace"`
+	Name      string     `gorm:"column:name;index;24;notnull;comment:'名称'" json:"name"`
+	Namespace string     `gorm:"column:namespace;index;24;notnull;;comment:'空间'" json:"namespace"`
 	Replicas  int        `json:"replicas"`
 	Data      string     `json:"data"`
 	CreatedAt time.Time  `gorm:"column:created_at" json:"created_at" form:"created_at"` // 创建时间

@@ -19,6 +19,21 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
+func (s *tracing) Delete(ctx context.Context, clusterId int64, nodeName string) (err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Delete", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "package.Nodes",
+	})
+	defer func() {
+		span.LogKV(
+			"clusterId", clusterId,
+			"nodeName", nodeName,
+			"err", err)
+		span.Finish()
+	}()
+	return s.next.Delete(ctx, clusterId, nodeName)
+}
+
 func (s *tracing) Cordon(ctx context.Context, clusterId int64, nodeName string) (err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Cordon", stdopentracing.Tag{
 		Key:   string(ext.Component),
@@ -65,7 +80,7 @@ func (s *tracing) Info(ctx context.Context, clusterId int64, nodeName string) (r
 	return s.next.Info(ctx, clusterId, nodeName)
 }
 
-func (s *tracing) List(ctx context.Context, clusterId int64, page, pageSize int) (res []nodeResult, total int, err error) {
+func (s *tracing) List(ctx context.Context, clusterId int64, query string, page, pageSize int) (res []nodeResult, total int, err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", stdopentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "package.Nodes",
@@ -75,10 +90,11 @@ func (s *tracing) List(ctx context.Context, clusterId int64, page, pageSize int)
 			"clusterId", clusterId,
 			"page", page,
 			"pageSize", pageSize,
+			"query", query,
 			"err", err)
 		span.Finish()
 	}()
-	return s.next.List(ctx, clusterId, page, pageSize)
+	return s.next.List(ctx, clusterId, query, page, pageSize)
 }
 
 func (s *tracing) Sync(ctx context.Context, clusterName string) (err error) {

@@ -23,6 +23,20 @@ type logging struct {
 	traceId string
 }
 
+func (l *logging) Delete(ctx context.Context, clusterId int64, nodeName string, callback Callback) (err error) {
+	defer func(begin time.Time) {
+		_ = l.logger.Log(
+			l.traceId, ctx.Value(l.traceId),
+			"method", "Delete",
+			"clusterId", clusterId,
+			"nodeName", nodeName,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return l.next.Delete(ctx, clusterId, nodeName, callback)
+}
+
 func (l *logging) Save(ctx context.Context, data *types.Nodes) (err error) {
 	defer func(begin time.Time) {
 		_ = l.logger.Log(
@@ -49,7 +63,7 @@ func (l *logging) FindByName(ctx context.Context, clusterId int64, name string) 
 	return l.next.FindByName(ctx, clusterId, name)
 }
 
-func (l *logging) List(ctx context.Context, clusterId int64, page, pageSize int) (res []types.Nodes, total int, err error) {
+func (l *logging) List(ctx context.Context, clusterId int64, query string, page, pageSize int) (res []types.Nodes, total int, err error) {
 	defer func(begin time.Time) {
 		_ = l.logger.Log(
 			l.traceId, ctx.Value(l.traceId),
@@ -57,12 +71,13 @@ func (l *logging) List(ctx context.Context, clusterId int64, page, pageSize int)
 			"clusterId", clusterId,
 			"page", page,
 			"pageSize", pageSize,
+			"query", query,
 			"total", total,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.List(ctx, clusterId, page, pageSize)
+	return l.next.List(ctx, clusterId, query, page, pageSize)
 }
 
 func NewLogging(logger log.Logger, traceId string) Middleware {

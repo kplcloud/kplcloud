@@ -121,6 +121,8 @@ func (s *service) Permission(ctx context.Context, id int64, permIds []int64) (er
 		return encode.ErrSysRoleSave.Error()
 	}
 
+	// rds
+
 	return
 }
 

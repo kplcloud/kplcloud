@@ -27,10 +27,16 @@ type Middleware func(Service) Service
 // Service 集群模块
 type Service interface {
 	// Add 添加集群
-	Add(ctx context.Context, name, alias, data string) (err error)
+	Add(ctx context.Context, name, alias, data, remark string) (err error)
 	// List 集群列表
 	List(ctx context.Context, name string, page, pageSize int) (res []listResult, total int, err error)
 	SyncRoles(ctx context.Context, clusterId int64) (err error)
+	// Delete 删除集群，假删除，数据还留存
+	Delete(ctx context.Context, name string) (err error)
+	// Update 更新集群配置
+	Update(ctx context.Context, name, alias, data, remark string) (err error)
+	// Info 集群详细信息
+	Info(ctx context.Context, name string) (res infoResult, err error)
 }
 
 type service struct {
@@ -38,6 +44,71 @@ type service struct {
 	logger     log.Logger
 	traceId    string
 	repository repository.Repository
+}
+
+func (s *service) Info(ctx context.Context, name string) (res infoResult, err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	cluster, err := s.repository.Cluster(ctx).FindByName(ctx, name)
+	if err != nil {
+		_ = level.Error(logger).Log("repository.Cluster", "err", err.Error())
+		err = encode.ErrClusterNotfound.Error()
+		return
+	}
+	res.Name = cluster.Name
+	res.Alias = cluster.Alias
+	res.Remark = cluster.Remark
+	res.Status = cluster.Status
+	res.NodeNum = cluster.NodeNum
+	res.ConfigData = cluster.ConfigData
+	res.Id = cluster.Id
+	res.CreatedAt = cluster.CreatedAt
+	res.UpdatedAt = cluster.UpdatedAt
+	return
+}
+
+func (s *service) Update(ctx context.Context, name, alias, data, remark string) (err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	cl, err := s.repository.Cluster(ctx).FindByName(ctx, name)
+	if err != nil {
+		_ = level.Error(logger).Log("repository.Cluster", "err", err.Error())
+		return encode.ErrClusterNotfound.Error()
+	}
+	cl.Alias = alias
+	cl.ConfigData = data
+	cl.Remark = remark
+
+	if err = s.repository.Cluster(ctx).Save(ctx, &cl, func(tx *gorm.DB) error {
+		if err = s.k8sClient.Connect(ctx, name, data); err != nil {
+			_ = level.Error(logger).Log("k8sClient.Connect", "err", err.Error())
+			return encode.ErrClusterConnect.Error()
+		}
+		return nil
+	}); err != nil {
+		_ = level.Error(logger).Log("repository.Cluster", "Save", "err", err.Error())
+		return encode.ErrClusterAdd.Error()
+	}
+
+	return
+}
+
+func (s *service) Delete(ctx context.Context, name string) (err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+	cl, err := s.repository.Cluster(ctx).FindByName(ctx, name)
+	if err != nil {
+		err = encode.ErrClusterNotfound.Wrap(errors.Wrap(err, "repository.Cluster.List"))
+		_ = level.Error(logger).Log("repository.Cluster", "FindByName", "err", err.Error())
+		return
+	}
+
+	err = s.repository.Cluster(ctx).Delete(ctx, cl.Id, false)
+	if err != nil {
+		_ = level.Error(logger).Log("repository.Cluster", "Delete", "err", err.Error())
+		return encode.ErrClusterDelete.Error()
+	}
+
+	return
 }
 
 func (s *service) List(ctx context.Context, name string, page, pageSize int) (res []listResult, total int, err error) {
@@ -48,11 +119,13 @@ func (s *service) List(ctx context.Context, name string, page, pageSize int) (re
 	}
 	for _, v := range list {
 		res = append(res, listResult{
-			Name:    v.Name,
-			Alias:   v.Alias,
-			Remark:  v.Remark,
-			Status:  v.Status,
-			NodeNum: v.NodeNum,
+			Name:      v.Name,
+			Alias:     v.Alias,
+			Remark:    v.Remark,
+			Status:    v.Status,
+			NodeNum:   v.NodeNum,
+			CreatedAt: v.CreatedAt,
+			UpdatedAt: v.UpdatedAt,
 		})
 	}
 
@@ -94,7 +167,7 @@ func (s *service) SyncRoles(ctx context.Context, clusterId int64) (err error) {
 	return
 }
 
-func (s *service) Add(ctx context.Context, name, alias, data string) (err error) {
+func (s *service) Add(ctx context.Context, name, alias, data, remark string) (err error) {
 	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
 
 	cluster := types.Cluster{
@@ -112,7 +185,7 @@ func (s *service) Add(ctx context.Context, name, alias, data string) (err error)
 		return nil
 	}); err != nil {
 		_ = level.Error(logger).Log("repository.Cluster", "Save", "err", err.Error())
-		return encode.ErrClusterAdd.Error()
+		return encode.ErrClusterAdd.Wrap(err)
 	}
 
 	return

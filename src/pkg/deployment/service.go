@@ -11,18 +11,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/ghodss/yaml"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/kplcloud/kplcloud/src/repository/types"
-	appv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"strings"
-
 	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/repository"
+	"github.com/kplcloud/kplcloud/src/repository/types"
+	appv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strings"
 )
 
 type Middleware func(Service) Service
@@ -86,39 +84,31 @@ func (s *service) Sync(ctx context.Context, clusterId int64, ns string) (err err
 	fmt.Println(ns)
 
 	for _, v := range nss.Items {
-		b, _ := json.Marshal(v)
+		b, _ := yaml.Marshal(v)
 		fmt.Println(string(b))
-		fmt.Println("request.Cpu", v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().Value())
-		fmt.Println("limit.Cpu", v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Value())
-		fmt.Println("request.Memory", v.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().Value())
-		fmt.Println("limit.Memory", v.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().Value())
-		fmt.Println("limit.Memory", v.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().String())
-		v.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().SetScaled(4096, resource.Mega)
-		v.Spec.Template.Spec.Containers[0].Resources.Limits = v1.ResourceList{
-			v1.ResourceMemory: resource.MustParse(""),
-		}
-		fmt.Println("limit.Memory", v.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().String())
-		fmt.Println("---")
-		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().AsInt64())
-		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().AsInt64())
-		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().Value())
-		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Value())
-		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().String())
-		fmt.Println(v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().String())
+
 		p := types.Project{
-			Alias:       v.Name,
-			Name:        v.Name,
-			Namespace:   v.Namespace,
-			Cpu:         0,
-			MaxCpu:      0,
-			Memory:      0,
-			MaxMemory:   0,
-			GitRepo:     "",
-			Version:     "",
-			Status:      "",
-			Remark:      "",
-			AuditStatus: 0,
+			Alias:        v.Name,
+			Name:         v.Name,
+			Namespace:    v.Namespace,
+			Replicas:     int(*v.Spec.Replicas),
+			Cpu:          v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().Value(),
+			MaxCpu:       v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Value(),
+			Memory:       v.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().Value(),
+			MaxMemory:    v.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().Value(),
+			GitRepo:      "",
+			Version:      "",
+			Status:       "",
+			AuditStatus:  types.AuditStatusSuccess,
+			DeployMethod: types.DeployMethodGit,
 		}
+
+		//dep := types.Deployment{
+		//	Name:      "",
+		//	Namespace: "",
+		//	Replicas:  0,
+		//	Data:      "",
+		//}
 		fmt.Println(p)
 	}
 

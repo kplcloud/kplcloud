@@ -21,6 +21,47 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) Info(ctx context.Context, name string) (res infoResult, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Info",
+			"name", name,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Info(ctx, name)
+}
+
+func (s *logging) Update(ctx context.Context, name, alias, data, remark string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Update",
+			"name", name,
+			"alias", alias,
+			"remark", remark,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Update(ctx, name, alias, data, remark)
+}
+
+func (s *logging) Delete(ctx context.Context, name string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Delete",
+			"name", name,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Delete(ctx, name)
+}
+
 func (s *logging) List(ctx context.Context, name string, page, pageSize int) (res []listResult, total int, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
@@ -41,18 +82,19 @@ func (s *logging) SyncRoles(ctx context.Context, clusterId int64) (err error) {
 	panic("implement me")
 }
 
-func (s *logging) Add(ctx context.Context, name, alias, data string) (err error) {
+func (s *logging) Add(ctx context.Context, name, alias, data, remark string) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
 			s.traceId, ctx.Value(s.traceId),
 			"method", "Add",
 			"name", name,
 			"alias", alias,
+			"remark", remark,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return s.next.Add(ctx, name, alias, data)
+	return s.next.Add(ctx, name, alias, data, remark)
 }
 
 func NewLogging(logger log.Logger, traceId string) Middleware {

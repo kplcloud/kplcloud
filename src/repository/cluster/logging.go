@@ -23,6 +23,19 @@ type logging struct {
 	traceId string
 }
 
+func (l *logging) FindByIds(ctx context.Context, ids []int64) (res []types.Cluster, err error) {
+	defer func(begin time.Time) {
+		_ = l.logger.Log(
+			l.traceId, ctx.Value(l.traceId),
+			"method", "FindByIds",
+			"ids", ids,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return l.next.FindByIds(ctx, ids)
+}
+
 func (l *logging) List(ctx context.Context, name string, status, page, pageSize int) (res []types.Cluster, total int, err error) {
 	defer func(begin time.Time) {
 		_ = l.logger.Log(

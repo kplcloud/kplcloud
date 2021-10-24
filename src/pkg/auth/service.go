@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"fmt"
+	"github.com/go-kit/kit/log/level"
+	"github.com/jinzhu/gorm"
 	"strings"
 	"time"
 
@@ -23,7 +25,9 @@ type Middleware func(Service) Service
 
 type Service interface {
 	// Login 登陆
-	Login(ctx context.Context, username, password string) (rs string, err error)
+	Login(ctx context.Context, username, password string) (rs string, sessionTimeout int64, err error)
+	// Register 注册用户
+	Register(ctx context.Context, username, email, password, mobile, remark string) (err error)
 	// AuthLoginGithub github 授权登陆跳转
 	//AuthLoginGithub(w http.ResponseWriter, r *http.Request)
 	//// AuthLoginGithubCallback github 授权登陆回调
@@ -41,9 +45,45 @@ type service struct {
 	traceId        string
 }
 
-func (s *service) Login(ctx context.Context, username, password string) (rs string, err error) {
+func (s *service) Register(ctx context.Context, username, email, password, mobile, remark string) (err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	_, err = s.repository.SysUser().FindByEmail(ctx, username)
+	if err == nil {
+		_ = level.Warn(logger).Log("repository.SysUser", "FindByEmail")
+		return encode.ErrAuthRegisterExists.Error()
+	}
+	if !gorm.IsRecordNotFoundError(err) {
+		_ = level.Error(logger).Log("repository.SysUser", "FindByEmail", "err", err.Error())
+		return encode.ErrAuthRegisterExists.Error()
+	}
+	var loginName string
+	loginName = strings.Split(email, "@")[0]
+	passwordHashed := util.EncodePassword(password, s.appKey)
+	exp := time.Now().AddDate(1, 0, 0)
+	err = s.repository.SysUser().Save(ctx, &types.SysUser{
+		Username:  username,
+		Mobile:    mobile,
+		LoginName: strings.ToLower(loginName),
+		Email:     email,
+		Password:  passwordHashed,
+		Locked:    false,
+		Remark:    remark,
+		ExpiresAt: &exp,
+	})
+	if err != nil {
+		_ = level.Error(logger).Log("repository.SysUser", "Save", "err", err.Error())
+		return encode.ErrAuthRegisterExists.Error()
+	}
+
+	return
+}
+
+func (s *service) Login(ctx context.Context, username, password string) (rs string, sessionTimeout int64, err error) {
 	sysUser, err := s.repository.SysUser().FindByEmail(ctx, username)
 	if err != nil {
+		// 用户名或密码错误
+		err = encode.ErrAccountLogin.Error()
 		return
 	}
 	passwordHashed := util.EncodePassword(password, s.appKey)
@@ -57,8 +97,15 @@ func (s *service) Login(ctx context.Context, username, password string) (rs stri
 		err = encode.ErrAccountLocked.Error()
 		return
 	}
-
+	sessionTimeout = s.sessionTimeout
 	rs, err = s.jwtToken(ctx, sysUser)
+	go func(sysUser *types.SysUser) {
+		t := time.Now()
+		sysUser.LastLogin = &t
+		if e := s.repository.SysUser().Save(ctx, sysUser); e != nil {
+			_ = level.Error(s.logger).Log("repository.SysUse", "Save", "err", e.Error())
+		}
+	}(&sysUser)
 	return
 }
 
@@ -108,15 +155,19 @@ func (s *service) jwtToken(ctx context.Context, sysUser types.SysUser) (tk strin
 	var namespaces []string
 	//var groups []int64
 	var roleIds []int64
+	var clusters []string
 	var permissions []types.SysPermission
 
-	for _, ns := range sysUser.SysNamespaces {
+	for _, ns := range sysUser.Namespaces {
 		namespaces = append(namespaces, ns.Name)
 	}
 	for _, role := range sysUser.SysRoles {
 		roleIds = append(roleIds, role.Id)
 		// TODO: 去重
 		permissions = append(permissions, role.SysPermissions...)
+	}
+	for _, v := range sysUser.Clusters {
+		clusters = append(clusters, v.Name)
 	}
 
 	if err = s.cache.Set(ctx, fmt.Sprintf("user:%d:info", sysUser.Id), sysUser, timeout); err != nil {
@@ -127,8 +178,16 @@ func (s *service) jwtToken(ctx context.Context, sysUser types.SysUser) (tk strin
 		err = encode.ErrAuthLogin.Wrap(errors.Wrap(err, "permissions"))
 		return tk, err
 	}
-	if err = s.cache.Set(ctx, fmt.Sprintf("user:%d:namespaces", sysUser.Id), roleIds, timeout); err != nil {
+	if err = s.cache.Set(ctx, fmt.Sprintf("user:%d:clusters", sysUser.Id), clusters, timeout); err != nil {
+		err = encode.ErrAuthLogin.Wrap(errors.Wrap(err, "clusters"))
+		return tk, err
+	}
+	if err = s.cache.Set(ctx, fmt.Sprintf("user:%d:namespaces", sysUser.Id), namespaces, timeout); err != nil {
 		err = encode.ErrAuthLogin.Wrap(errors.Wrap(err, "namespaces"))
+		return tk, err
+	}
+	if err = s.cache.Set(ctx, fmt.Sprintf("user:%d:roles", sysUser.Id), roleIds, timeout); err != nil {
+		err = encode.ErrAuthLogin.Wrap(errors.Wrap(err, "roles"))
 		return tk, err
 	}
 	if err = s.cache.Set(ctx, fmt.Sprintf("login:%d:token", sysUser.Id), tk, timeout); err != nil {

@@ -28,8 +28,11 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 	ems = append(ems, dmw...)
 
 	eps := NewEndpoint(s, map[string][]endpoint.Middleware{
-		"Sync": ems,
-		"Info": ems,
+		"Sync":   ems,
+		"Info":   ems,
+		"List":   ems,
+		"Cordon": ems,
+		"Drain":  ems,
 	})
 
 	r := mux.NewRouter()
@@ -52,10 +55,42 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodGet)
+	r.Handle("/{cluster}/cordon/{name}", kithttp.NewServer(
+		eps.CordonEndpoint,
+		decodeInfoRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodPut)
+	r.Handle("/{cluster}/drain/{name}", kithttp.NewServer(
+		eps.DrainEndpoint,
+		decodeDrainRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodPut)
+	r.Handle("/{cluster}/delete/{name}", kithttp.NewServer(
+		eps.DrainEndpoint,
+		decodeDrainRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodDelete)
 
 	return r
 }
 
+func decodeDrainRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req drainRequest
+
+	vars := mux.Vars(r)
+	name, ok := vars["name"]
+	if !ok {
+		return nil, encode.InvalidParams.Error()
+	}
+	req.Name = name
+
+	req.Force, _ = strconv.ParseBool(r.URL.Query().Get("force"))
+
+	return req, nil
+}
 func decodeInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req infoRequest
 
@@ -81,6 +116,7 @@ func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) 
 	}
 	req.page = page
 	req.pageSize = pageSize
+	req.query = r.URL.Query().Get("query")
 	return req, nil
 }
 

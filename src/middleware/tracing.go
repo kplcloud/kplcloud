@@ -72,7 +72,7 @@ func TracingMiddleware(tracer stdopentracing.Tracer) endpoint.Middleware {
 			if tracer == nil {
 				return next(ctx, request)
 			}
-			span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, tracer, "Middleware", stdopentracing.Tag{
+			span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, tracer, "TracingMiddleware", stdopentracing.Tag{
 				Key:   string(ext.Component),
 				Value: "Middleware",
 			})

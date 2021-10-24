@@ -21,7 +21,23 @@ type logging struct {
 	traceId string
 }
 
-func (s *logging) Login(ctx context.Context, username, password string) (rs string, err error) {
+func (s *logging) Register(ctx context.Context, username, email, password, mobile, remark string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Register",
+			"username", username,
+			"mobile", mobile,
+			"remark", remark,
+			"email", email,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Register(ctx, username, email, password, mobile, remark)
+}
+
+func (s *logging) Login(ctx context.Context, username, password string) (rs string, sessionTimeout int64, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
 			s.traceId, ctx.Value(s.traceId),

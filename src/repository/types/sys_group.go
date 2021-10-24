@@ -9,7 +9,7 @@ package types
 
 import "time"
 
-// 系统组，与namespace类似，预留还没想好怎么用
+// SysGroup 系统组，与namespace类似，预留还没想好怎么用
 type SysGroup struct {
 	Id        int64      `gorm:"column:id;primary_key" json:"id"`
 	Alias     string     `gorm:"column:notnull;alias;comment:'中文名'" json:"alias"`                // 中文名

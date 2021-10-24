@@ -10,6 +10,8 @@ package server
 import (
 	"context"
 	"fmt"
+	captcha "github.com/icowan/kit-captcha"
+	"github.com/kplcloud/kplcloud/src/pkg/account"
 	"github.com/kplcloud/kplcloud/src/pkg/auth"
 	"github.com/kplcloud/kplcloud/src/pkg/configmap"
 	"github.com/kplcloud/kplcloud/src/pkg/cronjob"
@@ -18,6 +20,7 @@ import (
 	"github.com/kplcloud/kplcloud/src/pkg/registry"
 	"github.com/kplcloud/kplcloud/src/pkg/secret"
 	"github.com/kplcloud/kplcloud/src/pkg/storageclass"
+	"github.com/kplcloud/kplcloud/src/pkg/syssetting"
 	"github.com/kplcloud/kplcloud/src/pkg/template"
 	"net/http"
 	"os"
@@ -76,13 +79,11 @@ kplcloud start -p :8080 -g :8082
 
 	tracer stdopentracing.Tracer
 
-	//authSvc          auth.Service
-	//accountSvc       account.Service
-
 	sysUserSvc       sysuser.Service
 	sysRoleSvc       sysrole.Service
 	sysPermissionSvc syspermission.Service
 	authSvc          auth.Service
+	sysSettingSvc    syssetting.Service
 
 	clusterSvc      cluster.Service
 	nodeSvc         nodes.Service
@@ -95,6 +96,8 @@ kplcloud start -p :8080 -g :8082
 	registrySvc     registry.Service
 	pvcSvc          persistentvolumeclaim.Service
 	templateSvc     template.Service
+	captchaSvc      captcha.Service
+	accountSvc      account.Service
 )
 
 func start() (err error) {
@@ -124,9 +127,12 @@ func start() (err error) {
 
 	// 以下是各个服务的初始化
 	// 授权登录
-	//authSvc = auth.New(logger, logging.TraceId, cf, store, cacheSvc, apiSvc, cf.GetBool("server", "debug"))
-	//authSvc = auth.NewLogging(logger, logging.TraceId)(authSvc)
-	//
+	authSvc = auth.New(logger, logging.TraceId, store, cacheSvc,
+		cf.GetString("server", "key"),
+		int64(cf.GetInt("server", "session.timeout")),
+	)
+	authSvc = auth.NewLogging(logger, logging.TraceId)(authSvc)
+
 	//// 用户信息模块
 	//accountSvc = account.New(logger, logging.TraceId, store)
 	//accountSvc = account.NewLogging(logger, logging.TraceId)(accountSvc)
@@ -141,6 +147,11 @@ func start() (err error) {
 	// 用户信息模块
 	sysPermissionSvc = syspermission.New(logger, logging.TraceId, store)
 	sysPermissionSvc = syspermission.NewLogging(logger, logging.TraceId)(sysPermissionSvc)
+	sysSettingSvc = syssetting.New(logger, logging.TraceId, store)
+	sysSettingSvc = syssetting.NewLogging(logger, logging.TraceId)(sysSettingSvc)
+
+	accountSvc = account.New(logger, logging.TraceId, store, cacheSvc)
+	accountSvc = account.NewLogging(logger, logging.TraceId)(accountSvc)
 
 	clusterSvc = cluster.New(logger, logging.TraceId, store, k8sClient)
 	clusterSvc = cluster.NewLogging(logger, logging.TraceId)(clusterSvc)
@@ -162,10 +173,9 @@ func start() (err error) {
 	registrySvc = registry.NewLogging(logger, logging.TraceId)(registrySvc)
 	pvcSvc = persistentvolumeclaim.New(logger, logging.TraceId, k8sClient, store)
 	pvcSvc = persistentvolumeclaim.NewLogging(logger, logging.TraceId)(pvcSvc)
-	authSvc = auth.New(logger, logging.TraceId, store, cacheSvc, cf.GetString("server", "key"), int64(cf.GetInt("server", "session.timeout")))
-	authSvc = auth.NewLogging(logger, logging.TraceId)(authSvc)
 	templateSvc = template.New(logger, logging.TraceId, store)
 	templateSvc = template.NewLogging(logger, logging.TraceId)(templateSvc)
+	captchaSvc = captcha.New(logger, NewCaptchaStore(cacheSvc, logger, time.Minute*5), logging.TraceId)
 
 	if tracer != nil {
 		//authSvc = auth.NewTracing(tracer)(authSvc)
@@ -183,6 +193,8 @@ func start() (err error) {
 		pvcSvc = persistentvolumeclaim.NewTracing(tracer)(pvcSvc)
 		authSvc = auth.NewTracing(tracer)(authSvc)
 		templateSvc = template.NewTracing(tracer)(templateSvc)
+		accountSvc = account.NewTracing(tracer)(accountSvc)
+		sysSettingSvc = syssetting.NewTracing(tracer)(sysSettingSvc)
 	}
 
 	g := &group.Group{}
@@ -258,37 +270,59 @@ func initHttpHandler(g *group.Group) {
 	}
 
 	var tokenEms = []endpoint.Middleware{
-		middleware.AuditMiddleware(store, tracer),                // 5
-		middleware.ClusterMiddleware(store),                      // 4
-		middleware.CheckPermissionMiddleware(logger, cacheSvc),   // 3
-		middleware.CheckAuthMiddleware(logger, cacheSvc, tracer), // 2
+		middleware.AuditMiddleware(store, tracer),                      // 5
+		middleware.ClusterMiddleware(store, cacheSvc, tracer),          // 4
+		middleware.CheckPermissionMiddleware(logger, cacheSvc, tracer), // 3
+		middleware.CheckAuthMiddleware(logger, cacheSvc, tracer),       // 2
+	}
+	var systemEms = []endpoint.Middleware{
+		middleware.AuditMiddleware(store, tracer),                      // 5
+		middleware.CheckPermissionMiddleware(logger, cacheSvc, tracer), // 3
+		middleware.CheckAuthMiddleware(logger, cacheSvc, tracer),       // 2
 	}
 	tokenEms = append(tokenEms, ems...)
+	nsEms := append([]endpoint.Middleware{middleware.NamespaceMiddleware(logger)}, tokenEms...)
 
 	r := mux.NewRouter()
 
 	// 授权登录模块
-	r.PathPrefix("/auth").Handler(http.StripPrefix("/auth", auth.MakeHTTPHandler(authSvc, ems, opts)))
+	r.PathPrefix("/auth").Handler(http.StripPrefix("/auth", auth.MakeHTTPHandler(authSvc, ems, opts, captchaSvc)))
+	r.PathPrefix("/captcha").Handler(captcha.MakeHTTPHandler(logger, captchaSvc, opts, ems, "/captcha/", func(ctx context.Context, w http.ResponseWriter, response interface{}) (err error) {
+		resp, ok := response.(captcha.GenerateResponse)
+		if !ok {
+			return nil
+		}
+		resp.CaptchaUrl = cf.GetString(config.SectionServer, "domain") + resp.CaptchaUrl
+		w.Header().Set("X-Captcha-Id", resp.CaptchaId)
+		return encode.JsonResponse(ctx, w, encode.Response{
+			Success: true,
+			Code:    200,
+			Data:    resp,
+			Error:   nil,
+		})
+	}))
 	//r.PathPrefix("/account").Handler(http.StripPrefix("/account", account.MakeHTTPHandler(accountSvc, tokenEms, opts)))
 
-	r.PathPrefix("/cluster").Handler(http.StripPrefix("/cluster", cluster.MakeHTTPHandler(clusterSvc, tokenEms, opts)))
+	r.PathPrefix("/cluster").Handler(http.StripPrefix("/cluster", cluster.MakeHTTPHandler(clusterSvc, append(systemEms, ems...), opts)))
 	r.PathPrefix("/node").Handler(http.StripPrefix("/node", nodes.MakeHTTPHandler(nodeSvc, tokenEms, opts)))
-	r.PathPrefix("/namespace").Handler(http.StripPrefix("/namespace", pkgNs.MakeHTTPHandler(namespaceSvc, tokenEms, opts)))
+	r.PathPrefix("/namespace").Handler(http.StripPrefix("/namespace", pkgNs.MakeHTTPHandler(namespaceSvc, tokenEms, nsEms, opts)))
 	r.PathPrefix("/deployment").Handler(http.StripPrefix("/deployment", deployment.MakeHTTPHandler(deploymentSvc, tokenEms, opts)))
 	r.PathPrefix("/configmap").Handler(http.StripPrefix("/configmap", configmap.MakeHTTPHandler(configMapSvc, tokenEms, opts)))
 	r.PathPrefix("/secret").Handler(http.StripPrefix("/secret", secret.MakeHTTPHandler(secretSvc, tokenEms, opts)))
 	r.PathPrefix("/storage-class").Handler(http.StripPrefix("/storage-class", storageclass.MakeHTTPHandler(storageClassSvc, tokenEms, opts)))
 	r.PathPrefix("/cronjob").Handler(http.StripPrefix("/cronjob", cronjob.MakeHTTPHandler(cronjobSvc, tokenEms, opts)))
 	r.PathPrefix("/persistent-volume-claim").Handler(http.StripPrefix("/persistent-volume-claim", persistentvolumeclaim.MakeHTTPHandler(pvcSvc, tokenEms, opts)))
-	r.PathPrefix("/registry").Handler(http.StripPrefix("/registry", registry.MakeHTTPHandler(registrySvc, ems, opts)))
+	r.PathPrefix("/registry").Handler(http.StripPrefix("/registry", registry.MakeHTTPHandler(registrySvc, append(systemEms, ems...), opts)))
 	r.PathPrefix("/template").Handler(http.StripPrefix("/template", template.MakeHTTPHandler(templateSvc, ems, opts)))
 
 	// 以下为系统模块
 	// 系统用户模块
-	r.PathPrefix("/system/user").Handler(http.StripPrefix("/system/user", sysuser.MakeHTTPHandler(sysUserSvc, tokenEms, opts)))
+	r.PathPrefix("/system/user").Handler(http.StripPrefix("/system/user", sysuser.MakeHTTPHandler(sysUserSvc, append(systemEms, ems...), opts)))
 	// 系统角色、权限
-	r.PathPrefix("/system/role").Handler(http.StripPrefix("/system/role", sysrole.MakeHTTPHandler(sysRoleSvc, tokenEms, opts)))
-	r.PathPrefix("/system/permission").Handler(http.StripPrefix("/system/permission", syspermission.MakeHTTPHandler(sysPermissionSvc, tokenEms, opts)))
+	r.PathPrefix("/system/role").Handler(http.StripPrefix("/system/role", sysrole.MakeHTTPHandler(sysRoleSvc, append(systemEms, ems...), opts)))
+	r.PathPrefix("/system/permission").Handler(http.StripPrefix("/system/permission", syspermission.MakeHTTPHandler(sysPermissionSvc, append(systemEms, ems...), opts)))
+	r.PathPrefix("/system/setting").Handler(http.StripPrefix("/system/setting", syssetting.MakeHTTPHandler(sysSettingSvc, append(systemEms, ems...), opts)))
+	r.PathPrefix("/account").Handler(http.StripPrefix("/account", account.MakeHTTPHandler(accountSvc, append(systemEms, ems...), opts)))
 
 	// 以下为业务模块
 

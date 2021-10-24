@@ -32,6 +32,8 @@ var ResponseMessage = map[ResStatus]int{
 	ErrAuthLogin:               1006,
 	ErrAuthCheckCaptchaCode:    1007,
 	ErrAuthCheckCaptchaNotnull: 1008,
+	ErrAuthRegisterExists:      1009,
+	ErrAuthRegisterSave:        1010,
 
 	// 系统API
 	ErrSysRoleNotfound:     2001,
@@ -42,22 +44,28 @@ var ResponseMessage = map[ResStatus]int{
 	ErrSysRoleUserDelete:   2006,
 	ErrSysUserNotfound:     2007,
 
+	ErrSysSettingNotfound: 2020,
+	ErrSysSettingExists:   2021,
+	ErrSysSettingDelete:   2022,
+	ErrSysSettingSave:     2023,
+
 	ErrInstallDbConnect:  901,
 	ErrInstallDbDrive:    902,
 	ErrInstallUploadPath: 903,
 	ErrInstallWebPath:    904,
 	ErrInstallUpload:     905,
 
-	ErrClusterAdd:      920,
-	ErrClusterConnect:  921,
-	ErrClusterNotfound: 922,
-	ErrClusterParams:   923,
-	ErrClusterList:     924,
+	ErrClusterAdd:           920,
+	ErrClusterConnect:       921,
+	ErrClusterNotfound:      922,
+	ErrClusterParams:        923,
+	ErrClusterList:          924,
+	ErrClusterNotPermission: 925,
 
 	ErrNamespaceNotfound: 940,
 	ErrNameNotfound:      941,
 	ErrNamespaceExists:   942,
-	ErrNamespaceCreate:   943,
+	ErrNamespaceSave:     943,
 
 	ErrDeploymentSyncList:    960,
 	ErrDeploymentGetNotfound: 961,
@@ -99,11 +107,13 @@ const (
 	ErrInstallWebPath    ResStatus = "Web目录未配置"
 	ErrInstallUpload     ResStatus = "上传文件失败"
 
-	ErrClusterAdd      ResStatus = "集群添加错误"
-	ErrClusterConnect  ResStatus = "集群链接错误"
-	ErrClusterNotfound ResStatus = "集群不存在"
-	ErrClusterParams   ResStatus = "集群参数错误"
-	ErrClusterList     ResStatus = "集群列表错误"
+	ErrClusterAdd           ResStatus = "集群添加错误"
+	ErrClusterConnect       ResStatus = "集群链接错误"
+	ErrClusterNotfound      ResStatus = "集群不存在"
+	ErrClusterParams        ResStatus = "集群参数错误"
+	ErrClusterList          ResStatus = "集群列表错误"
+	ErrClusterNotPermission ResStatus = "无权访问该集群"
+	ErrClusterDelete        ResStatus = "集群删除失败"
 
 	ErrSecretMarshal   ResStatus = "转换错误"
 	ErrSecretImageSave ResStatus = "添加镜像Secret错误"
@@ -112,7 +122,8 @@ const (
 	ErrNamespaceNotfound ResStatus = "空间不存在"
 	ErrNameNotfound      ResStatus = "名称不存在"
 	ErrNamespaceExists   ResStatus = "空间已存在"
-	ErrNamespaceCreate   ResStatus = "空间创建失败"
+	ErrNamespaceSave     ResStatus = "空间保存失败"
+	ErrNamespaceList     ResStatus = "空间获取出错"
 
 	ErrDeploymentSyncList    ResStatus = "同步失败"
 	ErrDeploymentGetNotfound ResStatus = "项目不存在"
@@ -140,6 +151,8 @@ const (
 	ErrAuthLogin               ResStatus = "登录失败"
 	ErrAuthCheckCaptchaCode    ResStatus = "图形验证码错误"
 	ErrAuthCheckCaptchaNotnull ResStatus = "图形验证码不能为空"
+	ErrAuthRegisterExists      ResStatus = "注册用户已存在"
+	ErrAuthRegisterSave        ResStatus = "注册失败,请联系管理员"
 
 	// 系统API
 	ErrSysRoleNotfound     ResStatus = "角色不存在"
@@ -150,9 +163,16 @@ const (
 	ErrSysRoleUserDelete   ResStatus = "角色删除失败"
 	ErrSysUserNotfound     ResStatus = "用户不存在"
 
-	ErrNodeCordon   ResStatus = "操作失败"
-	ErrNodeNotfound ResStatus = "节点不存在"
-	ErrNodeDrain    ResStatus = "驱逐失败"
+	ErrSysSettingNotfound ResStatus = "配置不存在"
+	ErrSysSettingDelete   ResStatus = "删除失败"
+	ErrSysSettingExists   ResStatus = "配置已存在"
+	ErrSysSettingSave     ResStatus = "配置保存失败"
+
+	ErrNodeCordon    ResStatus = "操作失败"
+	ErrNodeNotfound  ResStatus = "节点不存在"
+	ErrNodeDrain     ResStatus = "驱逐失败"
+	ErrNodeDelete    ResStatus = "节点删除失败"
+	ErrNodeScheduled ResStatus = "请将节点设置为不可调度状态"
 
 	ErrTemplateSave ResStatus = "模版保存失败"
 )

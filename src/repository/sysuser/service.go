@@ -110,7 +110,7 @@ func (s *service) List(ctx context.Context, namespaceIds []int64, email string, 
 	query := s.db.Model(&types.SysUser{}).Preload("SysRoles")
 
 	if namespaceIds != nil {
-		query = query.Preload("SysNamespaces", func(db *gorm.DB) *gorm.DB {
+		query = query.Preload("Namespaces", func(db *gorm.DB) *gorm.DB {
 			return db.Where("id IN (?)", namespaceIds)
 		})
 	}
@@ -126,7 +126,8 @@ func (s *service) List(ctx context.Context, namespaceIds []int64, email string, 
 func (s *service) FindByEmail(ctx context.Context, email string) (res types.SysUser, err error) {
 	query := s.db.Model(&types.SysUser{}).
 		Preload("SysRoles.SysPermissions").
-		Preload("SysNamespaces")
+		Preload("Clusters").
+		Preload("Namespaces")
 	if strings.Contains(email, "@") {
 		query = query.Where("email = ?", email)
 	} else {
@@ -137,8 +138,37 @@ func (s *service) FindByEmail(ctx context.Context, email string) (res types.SysU
 }
 
 func (s *service) Save(ctx context.Context, user *types.SysUser) (err error) {
+	tx := s.db.Model(user).Begin()
+	var sysRoles = user.SysRoles
+	var clusters = user.Clusters
 	user.SysRoles = nil
-	return s.db.Model(user).Save(user).Error
+	user.Clusters = nil
+	if err = tx.Save(user).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if sysRoles != nil {
+		if err = tx.Association("SysRoles").Clear().Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+		if err = tx.Association("SysRoles").Append(sysRoles).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	if clusters != nil {
+		if err = tx.Association("Clusters").Clear().Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+		if err = tx.Association("Clusters").Append(clusters).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit().Error
 }
 
 func New(db *gorm.DB) Service {

@@ -9,6 +9,7 @@ package syssetting
 
 import (
 	"context"
+	"strings"
 
 	"github.com/jinzhu/gorm"
 
@@ -21,10 +22,31 @@ type Service interface {
 	Update(ctx context.Context, data *types.SysSetting) (err error)
 	Find(ctx context.Context, section, key string) (res types.SysSetting, err error)
 	FindAll(ctx context.Context) (res []types.SysSetting, err error)
+	List(ctx context.Context, key string, page, pageSize int) (res []types.SysSetting, total int, err error)
+	FindById(ctx context.Context, id int64) (res types.SysSetting, err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) FindById(ctx context.Context, id int64) (res types.SysSetting, err error) {
+	err = s.db.Model(&res).Where("id = ?", id).First(&res).Error
+	return
+}
+
+func (s *service) List(ctx context.Context, key string, page, pageSize int) (res []types.SysSetting, total int, err error) {
+	query := s.db.Model(&types.SysSetting{})
+	if !strings.EqualFold(key, "") {
+		query = query.Where("`key` LIKE ?", "%"+key+"%").
+			Or("section LIKE ?", "%"+key+"%")
+	}
+	err = query.Count(&total).
+		Order("section,id DESC").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		Find(&res).Error
+	return
 }
 
 func (s *service) FindAll(ctx context.Context) (res []types.SysSetting, err error) {
@@ -33,7 +55,7 @@ func (s *service) FindAll(ctx context.Context) (res []types.SysSetting, err erro
 }
 
 func (s *service) Delete(_ context.Context, section, key string) (err error) {
-	return s.db.Model(&types.SysSetting{}).Where("key = ?", key).Delete(&types.SysSetting{}).Error
+	return s.db.Model(&types.SysSetting{}).Where("section = ? AND `key` = ?", section, key).Delete(&types.SysSetting{}).Error
 }
 
 func (s *service) Update(_ context.Context, data *types.SysSetting) (err error) {
@@ -41,7 +63,7 @@ func (s *service) Update(_ context.Context, data *types.SysSetting) (err error) 
 }
 
 func (s *service) Find(_ context.Context, section, key string) (res types.SysSetting, err error) {
-	err = s.db.Model(&types.SysSetting{}).Where("`key` = ?", key).First(&res).Error
+	err = s.db.Model(&types.SysSetting{}).Where("section = ? AND `key` = ?", section, key).First(&res).Error
 	return
 }
 

@@ -23,6 +23,34 @@ type loggingServer struct {
 	traceId string
 }
 
+func (l *loggingServer) FindById(ctx context.Context, id int64) (res types.SysSetting, err error) {
+	defer func(begin time.Time) {
+		_ = l.logger.Log(
+			l.traceId, ctx.Value(l.traceId),
+			"method", "FindById",
+			"id", id,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return l.next.FindById(ctx, id)
+}
+
+func (l *loggingServer) List(ctx context.Context, key string, page, pageSize int) (res []types.SysSetting, total int, err error) {
+	defer func(begin time.Time) {
+		_ = l.logger.Log(
+			l.traceId, ctx.Value(l.traceId),
+			"method", "List",
+			"key", key,
+			"page", page,
+			"pageSize", pageSize,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return l.next.List(ctx, key, page, pageSize)
+}
+
 func (l *loggingServer) FindAll(ctx context.Context) (res []types.SysSetting, err error) {
 	defer func(begin time.Time) {
 		_ = l.logger.Log(

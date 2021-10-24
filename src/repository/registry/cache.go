@@ -28,6 +28,10 @@ type cache struct {
 	kitcache kitcache.Service
 }
 
+func (s *cache) List(ctx context.Context, query string, page, pageSize int) (res []types.Registry, total int, err error) {
+	return s.next.List(ctx, query, page, pageSize)
+}
+
 func (s *cache) FindByNames(ctx context.Context, names []string) (res []types.Registry, err error) {
 	return s.next.FindByNames(ctx, names)
 }

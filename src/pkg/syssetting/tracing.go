@@ -20,10 +20,59 @@ type traceServer struct {
 	tracer stdopentracing.Tracer
 }
 
+func (s *traceServer) Add(ctx context.Context, section, key, value, remark string, enable bool) (err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Add", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "package.SysSetting",
+	})
+	defer func() {
+		span.LogKV(
+			"section", section,
+			"key", key, "value", value,
+			"remark", remark,
+			"enable", enable,
+			"err", err)
+		span.Finish()
+	}()
+	return s.next.Add(ctx, section, key, value, remark, enable)
+}
+
+func (s *traceServer) Update(ctx context.Context, id int64, section, key, value, remark string, enable bool) (err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Update", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "package.SysSetting",
+	})
+	defer func() {
+		span.LogKV(
+			"id", id,
+			"section", section,
+			"key", key, "value", value,
+			"remark", remark,
+			"enable", enable,
+			"err", err)
+		span.Finish()
+	}()
+	return s.next.Update(ctx, id, section, key, value, remark, enable)
+}
+
+func (s *traceServer) Delete(ctx context.Context, id int64) (err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Delete", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "package.SysSetting",
+	})
+	defer func() {
+		span.LogKV(
+			"id", id,
+			"err", err)
+		span.Finish()
+	}()
+	return s.next.Delete(ctx, id)
+}
+
 func (s *traceServer) List(ctx context.Context, key string, page, pageSize int) (res []listResult, total int, err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", stdopentracing.Tag{
 		Key:   string(ext.Component),
-		Value: "SysSetting",
+		Value: "package.SysSetting",
 	})
 	defer func() {
 		span.LogKV(

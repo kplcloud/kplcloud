@@ -23,6 +23,23 @@ type loggingServer struct {
 	traceId string
 }
 
+func (l *loggingServer) List(ctx context.Context, clusterId int64, names []string, query string, page, pageSize int) (res []types.Namespace, total int, err error) {
+	defer func(begin time.Time) {
+		_ = l.logger.Log(
+			l.traceId, ctx.Value(l.traceId),
+			"method", "List",
+			"clusterId", clusterId,
+			"query", query,
+			"page", page,
+			"pageSize", pageSize,
+			"total", total,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return l.next.List(ctx, clusterId, names, query, page, pageSize)
+}
+
 func (l *loggingServer) SaveCall(ctx context.Context, data *types.Namespace, call Call) (err error) {
 	defer func(begin time.Time) {
 		_ = l.logger.Log(

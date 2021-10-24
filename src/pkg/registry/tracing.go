@@ -20,6 +20,23 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
+func (s *tracing) List(ctx context.Context, query string, page, pageSize int) (res []result, total int, err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "package.Registry",
+	})
+	defer func() {
+		span.LogKV(
+			"query", query,
+			"page", page,
+			"pageSize", pageSize,
+			"err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.List(ctx, query, page, pageSize)
+}
+
 func (s *tracing) Create(ctx context.Context, name, host, username, password, remark string) (err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Create", stdopentracing.Tag{
 		Key:   string(ext.Component),
@@ -33,6 +50,7 @@ func (s *tracing) Create(ctx context.Context, name, host, username, password, re
 			"password", password,
 			"remark", remark,
 			"err", err)
+		span.SetTag(string(ext.Error), err != nil)
 		span.Finish()
 	}()
 	return s.next.Create(ctx, name, host, username, password, remark)

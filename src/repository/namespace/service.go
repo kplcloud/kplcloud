@@ -11,6 +11,7 @@ import (
 	"context"
 	"github.com/jinzhu/gorm"
 	"github.com/kplcloud/kplcloud/src/repository/types"
+	"strings"
 )
 
 type Middleware func(next Service) Service
@@ -18,15 +19,28 @@ type Middleware func(next Service) Service
 type Call func() error
 
 type Service interface {
-	// 保存过更新
+	// Save 保存或更新
 	Save(ctx context.Context, data *types.Namespace) (err error)
 	SaveCall(ctx context.Context, data *types.Namespace, call Call) (err error)
 	FindByIds(ctx context.Context, ids []int64) (res []types.Namespace, err error)
 	FindByName(ctx context.Context, clusterId int64, name string) (res types.Namespace, err error)
+	List(ctx context.Context, clusterId int64, names []string, query string, page, pageSize int) (res []types.Namespace, total int, err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) List(ctx context.Context, clusterId int64, names []string, query string, page, pageSize int) (res []types.Namespace, total int, err error) {
+	q := s.db.Model(&types.Namespace{}).Where("cluster_id = ? AND name IN(?)", clusterId, names)
+	if !strings.EqualFold(query, "") {
+		q = q.Where("name LIKE ?", "'%"+query+"%'")
+	}
+	err = q.Count(&total).Order("created_at DESC").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		Find(&res).Error
+	return
 }
 
 func (s *service) SaveCall(ctx context.Context, data *types.Namespace, call Call) (err error) {

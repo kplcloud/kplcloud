@@ -18,13 +18,14 @@ import (
 
 type (
 	listResult struct {
-		Id          int64     `json:"id"`
-		Alias       string    `json:"alias"`
-		Name        string    `json:"name"`
-		Enabled     bool      `json:"enabled"`
-		Description string    `json:"description"`
-		CreatedAt   time.Time `json:"createdAt"`
-		UpdatedAt   time.Time `json:"updatedAt"`
+		Id          int64      `json:"id"`
+		Alias       string     `json:"alias"`
+		Name        string     `json:"name"`
+		Enabled     bool       `json:"enabled"`
+		Description string     `json:"description"`
+		ExpiresAt   *time.Time `json:"expiresAt"`
+		CreatedAt   time.Time  `json:"createdAt"`
+		UpdatedAt   time.Time  `json:"updatedAt"`
 	}
 
 	listRequest struct {
@@ -33,8 +34,8 @@ type (
 
 	addRequest struct {
 		Id          int64  `json:"id"`
-		Alias       string `json:"alias"`
-		Name        string `json:"name"`
+		Alias       string `json:"alias" valid:"required"`
+		Name        string `json:"name" valid:"required"`
 		Enabled     bool   `json:"enabled"`
 		Description string `json:"description"`
 	}

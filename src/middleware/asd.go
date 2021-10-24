@@ -29,25 +29,27 @@ var ErrorASD = errors.New("权限验证失败！")
 type ASDContext string
 
 const (
-	UserIdContext     ASDContext = "userId"
-	EmailContext      ASDContext = "email"
-	NamespaceContext  ASDContext = "namespace"
-	NameContext       ASDContext = "name"
-	RoleIdsContext    ASDContext = "roleIds"
-	GroupIdsContext   ASDContext = "groupIds"
-	NamespacesContext ASDContext = "namespaces"
-	ProjectContext    ASDContext = "project"
-	GroupIdContext    ASDContext = "groupId"
-	IsAdmin           ASDContext = "isAdmin"
-	CronJobContext    ASDContext = "cronJob"
+	UserIdContext    ASDContext = "userId"
+	EmailContext     ASDContext = "email"
+	NamespaceContext ASDContext = "namespace"
+	NameContext      ASDContext = "name"
+	RoleIdsContext   ASDContext = "roleIds"
+	GroupIdsContext  ASDContext = "groupIds"
+	//NamespacesContext ASDContext = "namespaces"
+	ProjectContext ASDContext = "project"
+	GroupIdContext ASDContext = "groupId"
+	IsAdmin        ASDContext = "isAdmin"
+	CronJobContext ASDContext = "cronJob"
 
 	ContextKeyClusterName   ASDContext = "ctx-cluster-name"   // 集群名称
 	ContextKeyClusterId     ASDContext = "ctx-cluster-id"     // 集群ID
 	ContextKeyNamespaceName ASDContext = "ctx-namespace-name" // 空间标识
+	ContextKeyNamespaceList ASDContext = "ctx-namespace-list" // 空间标识列表
 	ContextKeyNamespaceId   ASDContext = "ctx-namespace-id"   // 空间ID
 	ContextKeyName          ASDContext = "ctx-name"           // 名称
 	ContextUserId           ASDContext = "ctx-user-id"        // 用户ID
 	ContextPermissionId     ASDContext = "ctx-permission-id"  // 权限ID
+	ContextKeyClusters      ASDContext = "ctx-clusters"       // 集群列表
 )
 
 var (
@@ -100,6 +102,13 @@ func CheckAuthMiddleware(logger log.Logger, cache kitcache.Service, tracer opent
 				return
 			}
 
+			var clusters, namespaces []string
+			if _, err := cache.Get(ctx, fmt.Sprintf("user:%d:namespaces", claim.UserId), &namespaces); err == nil {
+				ctx = context.WithValue(ctx, ContextKeyNamespaceList, namespaces)
+			}
+			if _, err := cache.Get(ctx, fmt.Sprintf("user:%d:clusters", claim.UserId), &clusters); err == nil {
+				ctx = context.WithValue(ctx, ContextKeyClusters, clusters)
+			}
 			ctx = context.WithValue(ctx, ContextUserId, claim.UserId)
 			ctx = context.WithValue(ctx, "Authorization", token)
 			return next(ctx, request)
@@ -107,9 +116,24 @@ func CheckAuthMiddleware(logger log.Logger, cache kitcache.Service, tracer opent
 	}
 }
 
-func CheckPermissionMiddleware(logger log.Logger, cacheSvc kitcache.Service) endpoint.Middleware {
+func CheckPermissionMiddleware(logger log.Logger, cacheSvc kitcache.Service, tracer opentracing.Tracer) endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+			if tracer != nil {
+				var span opentracing.Span
+				span, ctx = opentracing.StartSpanFromContextWithTracer(ctx, tracer, "CheckPermissionMiddleware", opentracing.Tag{
+					Key:   string(ext.Component),
+					Value: "Middleware",
+				}, opentracing.Tag{
+					Key:   "userId",
+					Value: ctx.Value(ContextUserId),
+				})
+				defer func() {
+					span.LogKV("err", err)
+					span.Finish()
+				}()
+			}
+
 			userId, ok := ctx.Value(ContextUserId).(int64)
 			if !ok {
 				err = encode.ErrAccountNotLogin.Error()
@@ -192,36 +216,6 @@ func regexMatch(key1 string, key2 string) bool {
 		panic(err)
 	}
 	return res
-}
-
-func NamespaceMiddleware(logger log.Logger) endpoint.Middleware {
-	return func(next endpoint.Endpoint) endpoint.Endpoint {
-		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-			var namespace, name string
-			namespace, _ = ctx.Value(NamespaceContext).(string)
-			name, _ = ctx.Value(NameContext).(string)
-
-			var permission bool
-			var namespaces []string
-			if ctx.Value(NamespacesContext) != nil {
-				namespaces = ctx.Value(NamespacesContext).([]string)
-			}
-
-			for _, v := range namespaces {
-				if v == namespace {
-					permission = true
-					break
-				}
-			}
-
-			if !permission {
-				_ = level.Error(logger).Log("name", name, "namespace", namespace, "permission", permission)
-				return nil, ErrorASD
-			}
-
-			return next(ctx, request)
-		}
-	}
 }
 
 func CronJobMiddleware(logger log.Logger, cronjobRepository repository.CronjobRepository, groupsRepository repository.GroupsRepository) endpoint.Middleware {

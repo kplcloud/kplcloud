@@ -21,6 +21,20 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) Delete(ctx context.Context, clusterId int64, nodeName string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Delete",
+			"clusterId", clusterId,
+			"nodeName", nodeName,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Delete(ctx, clusterId, nodeName)
+}
+
 func (s *logging) Cordon(ctx context.Context, clusterId int64, nodeName string) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
@@ -64,7 +78,7 @@ func (s *logging) Info(ctx context.Context, clusterId int64, nodeName string) (r
 	return s.next.Info(ctx, clusterId, nodeName)
 }
 
-func (s *logging) List(ctx context.Context, clusterId int64, page, pageSize int) (res []nodeResult, total int, err error) {
+func (s *logging) List(ctx context.Context, clusterId int64, query string, page, pageSize int) (res []nodeResult, total int, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
 			s.traceId, ctx.Value(s.traceId),
@@ -72,11 +86,12 @@ func (s *logging) List(ctx context.Context, clusterId int64, page, pageSize int)
 			"page", page,
 			"pageSize", pageSize,
 			"total", total,
+			"query", query,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return s.next.List(ctx, clusterId, page, pageSize)
+	return s.next.List(ctx, clusterId, query, page, pageSize)
 }
 
 func (s *logging) Sync(ctx context.Context, clusterName string) (err error) {

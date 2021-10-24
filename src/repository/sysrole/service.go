@@ -18,17 +18,17 @@ import (
 type Middleware func(next Service) Service
 
 type Service interface {
-	// 角色列表
+	// List 角色列表
 	List(ctx context.Context, page, pageSize int) (res []types.SysRole, total int, err error)
-	// 保存角色
+	// Save 保存角色
 	Save(ctx context.Context, data *types.SysRole) (err error)
-	// 根据ID查询角色列表
+	// FindByIds 根据ID查询角色列表
 	FindByIds(ctx context.Context, ids []int64) (res []types.SysRole, err error)
-	// 根据ID查询角色信息
+	// Find 根据ID查询角色信息
 	Find(ctx context.Context, id int64) (res types.SysRole, err error)
-	// 更新角色权限
+	// AddPermissions 更新角色权限
 	AddPermissions(ctx context.Context, role *types.SysRole, permissions []types.SysPermission) (err error)
-	// 删除角色
+	// Delete 删除角色
 	Delete(ctx context.Context, id int64) (err error)
 }
 
