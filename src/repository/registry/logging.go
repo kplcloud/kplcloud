@@ -23,6 +23,10 @@ type logging struct {
 	traceId string
 }
 
+func (l *logging) SaveCall(ctx context.Context, reg *types.Registry, call Call) (err error) {
+	panic("implement me")
+}
+
 func (l *logging) List(ctx context.Context, query string, page, pageSize int) (res []types.Registry, total int, err error) {
 	defer func(begin time.Time) {
 		_ = l.logger.Log(

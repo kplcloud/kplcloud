@@ -125,6 +125,9 @@ const (
 	ErrNamespaceSave     ResStatus = "空间保存失败"
 	ErrNamespaceList     ResStatus = "空间获取出错"
 
+	ErrRegistryNotfound ResStatus = "镜像仓库不存在"
+	ErrRegistryUpdate   ResStatus = "镜像仓库更新失败"
+
 	ErrDeploymentSyncList    ResStatus = "同步失败"
 	ErrDeploymentGetNotfound ResStatus = "项目不存在"
 

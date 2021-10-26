@@ -16,15 +16,31 @@ import (
 
 type Middleware func(Service) Service
 
+type Call func() error
+
 type Service interface {
 	Save(ctx context.Context, reg *types.Registry) (err error)
 	FindByName(ctx context.Context, name string) (res types.Registry, err error)
 	FindByNames(ctx context.Context, names []string) (res []types.Registry, err error)
 	List(ctx context.Context, query string, page, pageSize int) (res []types.Registry, total int, err error)
+	SaveCall(ctx context.Context, reg *types.Registry, call Call) (err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) SaveCall(ctx context.Context, reg *types.Registry, call Call) (err error) {
+	tx := s.db.Model(reg).Begin()
+	if err = tx.Save(reg).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err = call(); err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit().Error
 }
 
 func (s *service) List(ctx context.Context, query string, page, pageSize int) (res []types.Registry, total int, err error) {

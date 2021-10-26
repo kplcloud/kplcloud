@@ -24,7 +24,7 @@ type Service interface {
 	// List 系统用户列表
 	List(ctx context.Context, email string, page, pageSize int) (res []listResult, total int, err error)
 	// Add 添加系统用户
-	Add(ctx context.Context, username, email, remark string, locked bool, namespaceIds, roleIds []int64) (err error)
+	Add(ctx context.Context, username, email, remark string, locked bool, clusterIds, namespaceIds, roleIds []int64) (err error)
 	// Locked 锁定或解锁用户
 	Locked(ctx context.Context, userId int64) (err error)
 	// Delete 删除用户
@@ -96,26 +96,33 @@ func (s *service) Update(ctx context.Context, userId int64, username, email, rem
 	return s.repository.SysUser().Save(ctx, &sysUser)
 }
 
-func (s *service) Add(ctx context.Context, username, email, remark string, locked bool, namespaceIds, roleIds []int64) (err error) {
+func (s *service) Add(ctx context.Context, username, email, remark string, locked bool, clusterIds, namespaceIds, roleIds []int64) (err error) {
 	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId), "method", "Add")
 	roles, err := s.repository.SysRole().FindByIds(ctx, roleIds)
 	if err != nil {
 		_ = level.Error(logger).Log("repository.SysRole", "FindByIds", "err", err.Error())
 		return
 	}
-	//namespaces, err := s.repository.SysNamespace().FindByIds(ctx, namespaceIds)
-	//if err != nil {
-	//	_ = level.Error(logger).Log("repository.SysRole", "FindByIds", "err", err.Error())
-	//	return
-	//}
+	clusters, err := s.repository.Cluster(ctx).FindByIds(ctx, clusterIds)
+	if err != nil {
+		_ = level.Error(logger).Log("repository.Cluster", "FindByIds", "err", err.Error())
+		return
+	}
+	namespaces, err := s.repository.Namespace(ctx).FindByIds(ctx, namespaceIds)
+	if err != nil {
+		_ = level.Error(logger).Log("repository.SysRole", "FindByIds", "err", err.Error())
+		return
+	}
 
 	if err = s.repository.SysUser().Save(ctx, &types.SysUser{
-		Username:  username,
-		LoginName: username,
-		Email:     email,
-		Remark:    remark,
-		Locked:    locked,
-		SysRoles:  roles,
+		Username:   username,
+		LoginName:  username,
+		Email:      email,
+		Remark:     remark,
+		Locked:     locked,
+		SysRoles:   roles,
+		Namespaces: namespaces,
+		Clusters:   clusters,
 		//SysNamespaces: namespaces,
 	}); err != nil {
 		_ = level.Error(logger).Log("repository.SysUser", "Save", "err", err.Error())

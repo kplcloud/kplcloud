@@ -65,7 +65,7 @@ func (s *loggingServer) Update(ctx context.Context, userId int64, username, emai
 	return s.next.Update(ctx, userId, username, email, remark, locked, clusterIds, roleIds)
 }
 
-func (s *loggingServer) Add(ctx context.Context, username, email, remark string, locked bool, clusterIds, roleIds []int64) (err error) {
+func (s *loggingServer) Add(ctx context.Context, username, email, remark string, locked bool, clusterIds, namespaceIds, roleIds []int64) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
 			s.traceId, ctx.Value(s.traceId),
@@ -75,12 +75,13 @@ func (s *loggingServer) Add(ctx context.Context, username, email, remark string,
 			"remark", remark,
 			"locked", locked,
 			"clusterIds", clusterIds,
+			"namespaceIds", namespaceIds,
 			"roleIds", roleIds,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return s.next.Add(ctx, username, email, remark, locked, clusterIds, roleIds)
+	return s.next.Add(ctx, username, email, remark, locked, clusterIds, namespaceIds, roleIds)
 }
 
 func (s *loggingServer) List(ctx context.Context, email string, page, pageSize int) (res []listResult, total int, err error) {

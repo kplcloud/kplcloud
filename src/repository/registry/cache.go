@@ -28,6 +28,10 @@ type cache struct {
 	kitcache kitcache.Service
 }
 
+func (s *cache) SaveCall(ctx context.Context, reg *types.Registry, call Call) (err error) {
+	panic("implement me")
+}
+
 func (s *cache) List(ctx context.Context, query string, page, pageSize int) (res []types.Registry, total int, err error) {
 	return s.next.List(ctx, query, page, pageSize)
 }

@@ -68,7 +68,7 @@ func (s *traceServer) Update(ctx context.Context, userId int64, username, email,
 	return s.next.Update(ctx, userId, username, email, remark, locked, clusterIds, roleIds)
 }
 
-func (s *traceServer) Add(ctx context.Context, username, email, remark string, locked bool, clusterIds, roleIds []int64) (err error) {
+func (s *traceServer) Add(ctx context.Context, username, email, remark string, locked bool, clusterIds, namespaceIds, roleIds []int64) (err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Add", stdopentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "SysUser",
@@ -80,10 +80,11 @@ func (s *traceServer) Add(ctx context.Context, username, email, remark string, l
 			"remark", remark,
 			"locked", locked,
 			"clusterIds", clusterIds,
+			"namespaceIds", namespaceIds,
 			"err", err)
 		span.Finish()
 	}()
-	return s.next.Add(ctx, username, email, remark, locked, clusterIds, roleIds)
+	return s.next.Add(ctx, username, email, remark, locked, clusterIds, namespaceIds, roleIds)
 }
 
 func (s *traceServer) List(ctx context.Context, email string, page, pageSize int) (res []listResult, total int, err error) {

@@ -21,6 +21,10 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) SaveCall(ctx context.Context, reg *types.Registry, call Call) (err error) {
+	panic("implement me")
+}
+
 func (s *tracing) List(ctx context.Context, query string, page, pageSize int) (res []types.Registry, total int, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", opentracing.Tag{
 		Key:   string(ext.Component),

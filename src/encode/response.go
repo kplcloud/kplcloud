@@ -21,6 +21,7 @@ type Response struct {
 	Code    int         `json:"code"`
 	Data    interface{} `json:"data,omitempty"`
 	Error   error       `json:"message,omitempty"`
+	TraceId string      `json:"traceId,omitempty"`
 }
 
 type Failure interface {
@@ -58,11 +59,13 @@ func JsonError(ctx context.Context, err error, w http.ResponseWriter) {
 	if err == nil {
 		err = errors.Wrap(err, ErrSystem.Error().Error())
 	}
-
+	traceId, _ := ctx.Value("traceId").(string)
+	w.Header().Set("TraceId", traceId)
 	_ = kithttp.EncodeJSONResponse(ctx, w, map[string]interface{}{
 		"message": err.Error(),
 		"code":    ResponseMessage[ResStatus(strings.Split(err.Error(), ":")[0])],
 		"success": false,
+		"traceId": traceId,
 	})
 }
 
@@ -83,7 +86,9 @@ func JsonResponse(ctx context.Context, w http.ResponseWriter, response interface
 			w.Header().Set(k, v)
 		}
 	}
-
+	traceId, _ := ctx.Value("traceId").(string)
+	resp.TraceId = traceId
+	w.Header().Set("TraceId", traceId)
 	return kithttp.EncodeJSONResponse(ctx, w, resp)
 }
 

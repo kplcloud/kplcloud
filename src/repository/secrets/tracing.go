@@ -21,6 +21,10 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) FindByName(ctx context.Context, name string) (res []types.Secret, err error) {
+	panic("implement me")
+}
+
 func (s *tracing) Delete(ctx context.Context, clusterId int64, ns, name string) (err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Delete", opentracing.Tag{
 		Key:   string(ext.Component),

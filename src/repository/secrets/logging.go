@@ -23,6 +23,10 @@ type logging struct {
 	traceId string
 }
 
+func (l *logging) FindByName(ctx context.Context, name string) (res []types.Secret, err error) {
+	panic("implement me")
+}
+
 func (l *logging) Delete(ctx context.Context, clusterId int64, ns, name string) (err error) {
 	defer func(begin time.Time) {
 		_ = l.logger.Log(
