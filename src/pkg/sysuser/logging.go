@@ -21,6 +21,48 @@ type loggingServer struct {
 	traceId string
 }
 
+func (s *loggingServer) GetRoles(ctx context.Context, sysUserId int64, names []string) (res []roleResult, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "GetRoles",
+			"sysUserId", sysUserId,
+			"names", names,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.GetRoles(ctx, sysUserId, names)
+}
+
+func (s *loggingServer) GetCluster(ctx context.Context, sysUserId int64, clusterNames []string) (res []clusterResult, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "GetCluster",
+			"sysUserId", sysUserId,
+			"clusterNames", clusterNames,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.GetCluster(ctx, sysUserId, clusterNames)
+}
+
+func (s *loggingServer) GetNamespaces(ctx context.Context, sysUserId int64, clusterNames []string) (res []namespaceResult, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "GetNamespaces",
+			"sysUserId", sysUserId,
+			"clusterNames", clusterNames,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.GetNamespaces(ctx, sysUserId, clusterNames)
+}
+
 func (s *loggingServer) Locked(ctx context.Context, userId int64) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

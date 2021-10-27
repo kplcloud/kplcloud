@@ -30,10 +30,25 @@ type Service interface {
 	AddPermissions(ctx context.Context, role *types.SysRole, permissions []types.SysPermission) (err error)
 	// Delete 删除角色
 	Delete(ctx context.Context, id int64) (err error)
+	// FindByNames 根据名称获取所有的角色
+	FindByNames(ctx context.Context, names []string) (res []types.SysRole, err error)
+	// FindByLevel 取得大于或小于level的角色
+	// factor: >,<,=,!=,>=,<=
+	FindByLevel(ctx context.Context, level int, factor string) (res []types.SysRole, err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) FindByLevel(ctx context.Context, level int, factor string) (res []types.SysRole, err error) {
+	err = s.db.Model(&res).Where("level ? ?", factor, level).Order("level DESC").Find(&res).Error
+	return
+}
+
+func (s *service) FindByNames(ctx context.Context, names []string) (res []types.SysRole, err error) {
+	err = s.db.Model(&res).Where("name IN (?)", names).Order("level DESC").Find(&res).Error
+	return
 }
 
 func (s *service) Delete(ctx context.Context, id int64) (err error) {

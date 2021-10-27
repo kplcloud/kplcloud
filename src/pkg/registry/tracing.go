@@ -20,6 +20,10 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
+func (s *tracing) Secret(ctx context.Context, name string) (err error) {
+	panic("implement me")
+}
+
 func (s *tracing) Update(ctx context.Context, name, host, username, password, remark string) (err error) {
 	panic("implement me")
 }

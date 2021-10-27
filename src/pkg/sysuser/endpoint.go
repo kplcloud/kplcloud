@@ -55,6 +55,27 @@ type (
 		RoleIds       []int64 `json:"roles" valid:"required"`
 		NamespacesIds []int64 `json:"namespaces"  valid:"required"`
 	}
+
+	roleResult struct {
+		Id          int64  `json:"id"`
+		Alias       string `json:"alias"`
+		Name        string `json:"name"`
+		Enabled     bool   `json:"enabled"`
+		Description string `json:"description"`
+	}
+	clusterResult struct {
+		Id     int64  `json:"id"`
+		Name   string `json:"name"`
+		Alias  string `json:"alias"`
+		Remark string `json:"remark"` // 备注
+		//Label  string `json:"label"`  // 标签
+		//Status int    `json:"status"` // 状态
+	}
+	namespaceResult struct {
+		Name   string `json:"name"`
+		Alias  string `json:"alias"`
+		Remark string `json:"remark"`
+	}
 )
 
 type Endpoints struct {
