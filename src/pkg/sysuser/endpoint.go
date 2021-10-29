@@ -46,13 +46,35 @@ type (
 		ClusterIds    []int64    `json:"clusterIds" valid:"required"`
 	}
 	updateRequest struct {
-		UserId     int64   `json:"userId" valid:"required"`
-		Username   string  `json:"username" valid:"required"`
-		Email      string  `json:"email" valid:"required"`
-		Locked     bool    `json:"locked"`
-		Remark     string  `json:"remark"`
-		ClusterIds []int64 `json:"clusters" valid:"required"`
-		RoleIds    []int64 `json:"roles" valid:"required"`
+		UserId        int64   `json:"userId" valid:"required"`
+		Username      string  `json:"username" valid:"required"`
+		Email         string  `json:"email" valid:"required"`
+		Locked        bool    `json:"locked"`
+		Remark        string  `json:"remark"`
+		ClusterIds    []int64 `json:"clusters" valid:"required"`
+		RoleIds       []int64 `json:"roles" valid:"required"`
+		NamespacesIds []int64 `json:"namespaces"  valid:"required"`
+	}
+
+	roleResult struct {
+		Id          int64  `json:"id"`
+		Alias       string `json:"alias"`
+		Name        string `json:"name"`
+		Enabled     bool   `json:"enabled"`
+		Description string `json:"description"`
+	}
+	clusterResult struct {
+		Id     int64  `json:"id"`
+		Name   string `json:"name"`
+		Alias  string `json:"alias"`
+		Remark string `json:"remark"` // 备注
+		//Label  string `json:"label"`  // 标签
+		//Status int    `json:"status"` // 状态
+	}
+	namespaceResult struct {
+		Name   string `json:"name"`
+		Alias  string `json:"alias"`
+		Remark string `json:"remark"`
 	}
 )
 
@@ -105,7 +127,7 @@ func makeUpdateEndpoint(s Service) endpoint.Endpoint {
 func makeAddEndpoint(s Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(addRequest)
-		err = s.Add(ctx, req.Username, req.Email, req.Remark, req.Locked, req.ClusterIds, req.RoleIds)
+		err = s.Add(ctx, req.Username, req.Email, req.Remark, req.Locked, req.ClusterIds, req.NamespacesIds, req.RoleIds)
 		return encode.Response{
 			Error: err,
 		}, err

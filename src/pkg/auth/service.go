@@ -25,8 +25,12 @@ type Middleware func(Service) Service
 
 type Service interface {
 	// Login 登陆
+	// 登陆目前提供两种方案, Email 或 LDAP 具体看项目设置里配的是哪个登陆方式
+	// 登陆需要验证码，在中间件处理了
 	Login(ctx context.Context, username, password string) (rs string, sessionTimeout int64, err error)
 	// Register 注册用户
+	// 用户注册成功之后是锁定状态，需要管理给分配集群、空间和服务或组
+	// 注册需要验证码，在中间件处理了
 	Register(ctx context.Context, username, email, password, mobile, remark string) (err error)
 	// AuthLoginGithub github 授权登陆跳转
 	//AuthLoginGithub(w http.ResponseWriter, r *http.Request)

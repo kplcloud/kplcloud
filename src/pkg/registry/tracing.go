@@ -20,6 +20,26 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
+func (s *tracing) Secret(ctx context.Context, name string) (err error) {
+	panic("implement me")
+}
+
+func (s *tracing) Update(ctx context.Context, name, host, username, password, remark string) (err error) {
+	panic("implement me")
+}
+
+func (s *tracing) Delete(ctx context.Context, name string) (err error) {
+	panic("implement me")
+}
+
+func (s *tracing) Password(ctx context.Context, name string) (res string, err error) {
+	panic("implement me")
+}
+
+func (s *tracing) Info(ctx context.Context, name string) (res result, err error) {
+	panic("implement me")
+}
+
 func (s *tracing) List(ctx context.Context, query string, page, pageSize int) (res []result, total int, err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", stdopentracing.Tag{
 		Key:   string(ext.Component),

@@ -21,6 +21,26 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) Secret(ctx context.Context, name string) (err error) {
+	panic("implement me")
+}
+
+func (s *logging) Update(ctx context.Context, name, host, username, password, remark string) (err error) {
+	panic("implement me")
+}
+
+func (s *logging) Delete(ctx context.Context, name string) (err error) {
+	panic("implement me")
+}
+
+func (s *logging) Password(ctx context.Context, name string) (res string, err error) {
+	panic("implement me")
+}
+
+func (s *logging) Info(ctx context.Context, name string) (res result, err error) {
+	panic("implement me")
+}
+
 func (s *logging) List(ctx context.Context, query string, page, pageSize int) (res []result, total int, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

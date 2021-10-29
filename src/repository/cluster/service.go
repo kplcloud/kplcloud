@@ -23,6 +23,7 @@ type Service interface {
 	FindByIds(ctx context.Context, ids []int64) (res []types.Cluster, err error)
 	FindAll(ctx context.Context, status int) (res []types.Cluster, err error)
 	FindByName(ctx context.Context, name string) (res types.Cluster, err error)
+	FindByNames(ctx context.Context, names []string) (res []types.Cluster, err error)
 	Save(ctx context.Context, data *types.Cluster, calls ...Call) (err error)
 	Delete(ctx context.Context, id int64, unscoped bool) (err error)
 	List(ctx context.Context, name string, status int, page, pageSize int) (res []types.Cluster, total int, err error)
@@ -31,6 +32,11 @@ type Service interface {
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) FindByNames(ctx context.Context, names []string) (res []types.Cluster, err error) {
+	err = s.db.Model(&types.Cluster{}).Where("name IN (?)", names).Find(&res).Error
+	return
 }
 
 func (s *service) FindByIds(ctx context.Context, ids []int64) (res []types.Cluster, err error) {

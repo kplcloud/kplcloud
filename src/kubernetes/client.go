@@ -141,6 +141,7 @@ func NewClient(store repository.Repository) (cli K8sClient, err error) {
 func (c *client) Do(ctx context.Context) *kubernetes.Clientset {
 	cluster, ok := ctx.Value(middleware.ContextKeyClusterName).(string)
 	if !ok {
+		// TODO: 取个默认的，如何给上层抛错？
 		cluster = "c1"
 	}
 	return c.clientSet[cluster]
