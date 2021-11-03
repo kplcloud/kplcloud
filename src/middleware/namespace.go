@@ -12,6 +12,7 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/kplcloud/kplcloud/src/encode"
 )
 
 func NamespaceMiddleware(logger log.Logger) endpoint.Middleware {
@@ -36,7 +37,7 @@ func NamespaceMiddleware(logger log.Logger) endpoint.Middleware {
 
 			if !permission {
 				_ = level.Error(logger).Log("name", name, "namespace", namespace, "permission", permission)
-				return nil, ErrorASD
+				return nil, encode.ErrAccountASD.Error()
 			}
 
 			return next(ctx, request)

@@ -12,6 +12,7 @@ import (
 	"fmt"
 	captcha "github.com/icowan/kit-captcha"
 	"github.com/kplcloud/kplcloud/src/pkg/account"
+	"github.com/kplcloud/kplcloud/src/pkg/audits"
 	"github.com/kplcloud/kplcloud/src/pkg/auth"
 	"github.com/kplcloud/kplcloud/src/pkg/configmap"
 	"github.com/kplcloud/kplcloud/src/pkg/cronjob"
@@ -98,6 +99,7 @@ kplcloud start -p :8080 -g :8082
 	templateSvc     template.Service
 	captchaSvc      captcha.Service
 	accountSvc      account.Service
+	auditSvc        audits.Service
 )
 
 func start() (err error) {
@@ -152,6 +154,8 @@ func start() (err error) {
 
 	accountSvc = account.New(logger, logging.TraceId, store, cacheSvc)
 	accountSvc = account.NewLogging(logger, logging.TraceId)(accountSvc)
+	auditSvc = audits.New(logger, logging.TraceId, store)
+	auditSvc = audits.NewLogging(logger, logging.TraceId)(auditSvc)
 
 	clusterSvc = cluster.New(logger, logging.TraceId, store, k8sClient)
 	clusterSvc = cluster.NewLogging(logger, logging.TraceId)(clusterSvc)
@@ -325,6 +329,7 @@ func initHttpHandler(g *group.Group) {
 	r.PathPrefix("/system/permission").Handler(http.StripPrefix("/system/permission", syspermission.MakeHTTPHandler(sysPermissionSvc, append(systemEms, ems...), opts)))
 	r.PathPrefix("/system/setting").Handler(http.StripPrefix("/system/setting", syssetting.MakeHTTPHandler(sysSettingSvc, append(systemEms, ems...), opts)))
 	r.PathPrefix("/account").Handler(http.StripPrefix("/account", account.MakeHTTPHandler(accountSvc, append(systemEms, ems...), opts)))
+	r.PathPrefix("/audits").Handler(http.StripPrefix("/audits", audits.MakeHTTPHandler(auditSvc, append(systemEms, ems...), opts)))
 
 	// 以下为业务模块
 

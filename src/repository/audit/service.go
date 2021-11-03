@@ -17,10 +17,24 @@ type Middleware func(Service) Service
 
 type Service interface {
 	Save(ctx context.Context, audit *types.Audit) (err error)
+	List(ctx context.Context, query string, page, pageSize int) (res []types.Audit, total int, err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) List(ctx context.Context, query string, page, pageSize int) (res []types.Audit, total int, err error) {
+	err = s.db.Model(&types.Audit{}).
+		Preload("User").
+		Preload("Permission").
+		Preload("Cluster").
+		Count(&total).
+		Order("created_at DESC").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		Find(&res).Error
+	return
 }
 
 func (s *service) Save(ctx context.Context, audit *types.Audit) (err error) {

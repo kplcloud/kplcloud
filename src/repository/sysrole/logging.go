@@ -23,6 +23,14 @@ type loggingServer struct {
 	traceId string
 }
 
+func (l *loggingServer) FindByNames(ctx context.Context, names []string) (res []types.SysRole, err error) {
+	panic("implement me")
+}
+
+func (l *loggingServer) FindByLevel(ctx context.Context, level int, factor string) (res []types.SysRole, err error) {
+	panic("implement me")
+}
+
 func (l *loggingServer) Delete(ctx context.Context, id int64) (err error) {
 	defer func(begin time.Time) {
 		_ = l.logger.Log(
@@ -102,7 +110,7 @@ func (l *loggingServer) List(ctx context.Context, page, pageSize int) (res []typ
 }
 
 func NewLogging(logger log.Logger, traceId string) Middleware {
-	logger = log.With(logger, "sysrole", "logging")
+	logger = log.With(logger, "repository.sysrole", "logging")
 	return func(next Service) Service {
 		return &loggingServer{
 			logger:  level.Info(logger),

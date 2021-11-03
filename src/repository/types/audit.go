@@ -36,6 +36,10 @@ type Audit struct {
 	CreatedAt time.Time  `gorm:"column:created_at" json:"created_at"` // 创建时间
 	UpdatedAt time.Time  `gorm:"column:updated_at" json:"updated_at"` // 更新时间
 	DeletedAt *time.Time `gorm:"column:deleted_at" json:"deleted_at"`
+
+	User       SysUser       `gorm:"foreignkey:user_id;references:id;OnDelete:SET NULL;"`
+	Permission SysPermission `gorm:"foreignkey:permission_id;references:id;OnDelete:SET NULL;"`
+	Cluster    Cluster       `gorm:"foreignkey:cluster_id;references:id;OnDelete:SET NULL;"`
 }
 
 // TableName set table

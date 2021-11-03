@@ -91,7 +91,3 @@ func JsonResponse(ctx context.Context, w http.ResponseWriter, response interface
 	w.Header().Set("TraceId", traceId)
 	return kithttp.EncodeJSONResponse(ctx, w, resp)
 }
-
-func XmlResponse(ctx context.Context, w http.ResponseWriter, response interface{}) (err error) {
-	return nil
-}

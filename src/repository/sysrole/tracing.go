@@ -21,6 +21,14 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) FindByNames(ctx context.Context, names []string) (res []types.SysRole, err error) {
+	panic("implement me")
+}
+
+func (s *tracing) FindByLevel(ctx context.Context, level int, factor string) (res []types.SysRole, err error) {
+	panic("implement me")
+}
+
 func (s *tracing) Delete(ctx context.Context, id int64) (err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Delete", opentracing.Tag{
 		Key:   string(ext.Component),

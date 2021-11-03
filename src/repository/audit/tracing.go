@@ -20,6 +20,24 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) List(ctx context.Context, query string, page, pageSize int) (res []types.Audit, total int, err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "repository.Audit",
+	})
+	defer func() {
+		span.LogKV(
+			"query", query,
+			"page", page,
+			"pageSize", pageSize,
+			"error", err,
+		)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.List(ctx, query, page, pageSize)
+}
+
 func (s *tracing) Save(ctx context.Context, data *types.Audit) (err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Save", opentracing.Tag{
 		Key:   string(ext.Component),
@@ -27,6 +45,7 @@ func (s *tracing) Save(ctx context.Context, data *types.Audit) (err error) {
 	})
 	defer func() {
 		span.LogKV("error", err)
+		span.SetTag(string(ext.Error), err != nil)
 		span.Finish()
 	}()
 	return s.next.Save(ctx, data)

@@ -24,8 +24,6 @@ import (
 	"github.com/kplcloud/kplcloud/src/repository"
 )
 
-var ErrorASD = errors.New("权限验证失败！")
-
 type ASDContext string
 
 const (
@@ -33,13 +31,11 @@ const (
 	EmailContext     ASDContext = "email"
 	NamespaceContext ASDContext = "namespace"
 	NameContext      ASDContext = "name"
-	RoleIdsContext   ASDContext = "roleIds"
 	GroupIdsContext  ASDContext = "groupIds"
-	//NamespacesContext ASDContext = "namespaces"
-	ProjectContext ASDContext = "project"
-	GroupIdContext ASDContext = "groupId"
-	IsAdmin        ASDContext = "isAdmin"
-	CronJobContext ASDContext = "cronJob"
+	ProjectContext   ASDContext = "project"
+	GroupIdContext   ASDContext = "groupId"
+	IsAdmin          ASDContext = "isAdmin"
+	CronJobContext   ASDContext = "cronJob"
 
 	ContextKeyClusterName   ASDContext = "ctx-cluster-name"   // 集群名称
 	ContextKeyClusterId     ASDContext = "ctx-cluster-id"     // 集群ID
