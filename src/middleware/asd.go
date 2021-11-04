@@ -178,6 +178,7 @@ func CheckPermissionMiddleware(logger log.Logger, cacheSvc kitcache.Service, tra
 				if !strings.EqualFold(v.Method, requestMethod) {
 					continue
 				}
+				perm = v
 				pass = true
 				break
 			}

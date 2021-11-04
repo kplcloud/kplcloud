@@ -74,6 +74,7 @@ func AuditMiddleware(store repository.Repository, tracer opentracing.Tracer) end
 					req, _ := json.Marshal(request)
 					res, _ := json.Marshal(response)
 					headers, _ := json.Marshal(ctx.Value(kithttp.ContextKeyResponseHeaders))
+					u, _ := url.Parse(ctx.Value(kithttp.ContextKeyRequestURI).(string))
 					if e := store.Audit(ctx).Save(ctx, &types.Audit{
 						ClusterId:    clusterId,
 						Namespace:    ns,
@@ -86,7 +87,7 @@ func AuditMiddleware(store repository.Repository, tracer opentracing.Tracer) end
 						TimeSince:    time.Since(begin).String(),
 						Status:       status,
 						Remark:       remark,
-						Url:          ctx.Value(kithttp.ContextKeyRequestPath).(string),
+						Url:          u.String(),
 						TraceId:      ctx.Value("traceId").(string),
 					}); e != nil {
 						log.Println(errors.Wrap(err, "middleware.store.Audit.Save"))
