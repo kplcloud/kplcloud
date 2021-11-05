@@ -35,6 +35,8 @@ type Service interface {
 	Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error)
 	// CreateProvisioner 创建供应者
 	CreateProvisioner(ctx context.Context, clusterId int64) (err error)
+	// List 存储类列表
+	List(ctx context.Context, clusterId int64, page, pageSize int) (res []listResult, total int, err error)
 }
 
 type service struct {
@@ -42,6 +44,28 @@ type service struct {
 	traceId    string
 	repository repository.Repository
 	k8sClient  kubernetes.K8sClient
+}
+
+func (s *service) List(ctx context.Context, clusterId int64, page, pageSize int) (res []listResult, total int, err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	list, total, err := s.repository.StorageClass(ctx).List(ctx, clusterId, page, pageSize)
+	if err != nil {
+		_ = level.Error(logger).Log("repository.StorageClass", "List", "err", err.Error())
+		return
+	}
+
+	for _, v := range list {
+		res = append(res, listResult{
+			Name:          v.Name,
+			Namespace:     "",
+			Provisioner:   v.Provisioner,
+			VolumeMode:    v.VolumeBindingMode,
+			ReclaimPolicy: v.ReclaimPolicy,
+		})
+	}
+
+	return
 }
 
 func (s *service) CreateProvisioner(ctx context.Context, clusterId int64) (err error) {

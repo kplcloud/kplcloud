@@ -23,10 +23,22 @@ type Service interface {
 	FirstInsert(ctx context.Context, data *types.StorageClass) (err error)
 	Find(ctx context.Context, id int64) (res types.StorageClass, err error)
 	FindName(ctx context.Context, clusterId int64, name string) (res types.StorageClass, err error)
+	List(ctx context.Context, clusterId int64, page, pageSize int) (res []types.StorageClass, total int, err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) List(ctx context.Context, clusterId int64, page, pageSize int) (res []types.StorageClass, total int, err error) {
+	err = s.db.Model(&types.StorageClass{}).
+		Where("cluster_id = ?", clusterId).
+		Count(&total).
+		Order("created_at DESC").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		First(&res).Error
+	return
 }
 
 func (s *service) FindName(ctx context.Context, clusterId int64, name string) (res types.StorageClass, err error) {

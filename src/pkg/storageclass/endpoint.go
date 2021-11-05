@@ -28,6 +28,13 @@ type (
 	listRequest struct {
 		page, pageSize int
 	}
+	listResult struct {
+		Name          string `json:"name"`
+		Namespace     string `json:"namespace"`
+		Provisioner   string `json:"provisioner"`
+		VolumeMode    string `json:"volumeMode"`
+		ReclaimPolicy string `json:"reclaimPolicy"`
+	}
 
 	createRequest struct {
 		Name          string                                `json:"name" valid:"required"`
