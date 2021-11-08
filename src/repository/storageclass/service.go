@@ -37,7 +37,7 @@ func (s *service) List(ctx context.Context, clusterId int64, page, pageSize int)
 		Order("created_at DESC").
 		Offset((page - 1) * pageSize).
 		Limit(pageSize).
-		First(&res).Error
+		Find(&res).Error
 	return
 }
 

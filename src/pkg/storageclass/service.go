@@ -37,6 +37,11 @@ type Service interface {
 	CreateProvisioner(ctx context.Context, clusterId int64) (err error)
 	// List 存储类列表
 	List(ctx context.Context, clusterId int64, page, pageSize int) (res []listResult, total int, err error)
+	// Delete 删除存储类
+	// 存储类删除需要先判断pvc是否删除，否则无法删除
+	Delete(ctx context.Context, clusterId int64, storageName string) (err error)
+	// Update 更新存储类
+	Update(ctx context.Context, clusterId int64, storageName, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error)
 }
 
 type service struct {
@@ -44,6 +49,14 @@ type service struct {
 	traceId    string
 	repository repository.Repository
 	k8sClient  kubernetes.K8sClient
+}
+
+func (s *service) Delete(ctx context.Context, clusterId int64, storageName string) (err error) {
+	panic("implement me")
+}
+
+func (s *service) Update(ctx context.Context, clusterId int64, storageName, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error) {
+	panic("implement me")
 }
 
 func (s *service) List(ctx context.Context, clusterId int64, page, pageSize int) (res []listResult, total int, err error) {

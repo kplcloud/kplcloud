@@ -17,6 +17,7 @@ import (
 	coreV1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"net/http"
+	"strconv"
 
 	"github.com/kplcloud/kplcloud/src/encode"
 )
@@ -30,10 +31,17 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		"Sync":   ems,
 		"SyncPv": ems,
 		"Create": ems,
+		"List":   ems,
 	})
 
 	r := mux.NewRouter()
 
+	r.Handle("/{cluster}/list", kithttp.NewServer(
+		eps.ListEndpoint,
+		decodeListRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodGet)
 	r.Handle("/{cluster}/sync", kithttp.NewServer(
 		eps.SyncEndpoint,
 		kithttp.NopRequestDecoder,
@@ -54,6 +62,24 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 	)).Methods(http.MethodPost)
 
 	return r
+}
+
+func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req listRequest
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize == 0 {
+		pageSize = 10
+	}
+
+	req.page = page
+	req.pageSize = pageSize
+	//req.query = r.URL.Query().Get("query")
+
+	return req, nil
 }
 
 func decodeSyncPvRequest(_ context.Context, r *http.Request) (interface{}, error) {

@@ -22,6 +22,27 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
+func (s *tracing) List(ctx context.Context, clusterId int64, page, pageSize int) (res []listResult, total int, err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "pkg.storageclass",
+	})
+	defer func() {
+		span.LogKV("clusterId", clusterId, "page", page, "pageSize", pageSize, "total", total, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.List(ctx, clusterId, page, pageSize)
+}
+
+func (s *tracing) Delete(ctx context.Context, clusterId int64, storageName string) (err error) {
+	panic("implement me")
+}
+
+func (s *tracing) Update(ctx context.Context, clusterId int64, storageName, provisioner string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error) {
+	panic("implement me")
+}
+
 func (s *tracing) Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "SyncPv", stdopentracing.Tag{
 		Key:   string(ext.Component),

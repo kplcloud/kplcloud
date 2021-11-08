@@ -11,6 +11,7 @@ import (
 	"context"
 	"github.com/jinzhu/gorm"
 	"github.com/kplcloud/kplcloud/src/repository/types"
+	"strings"
 )
 
 type Middleware func(Service) Service
@@ -21,10 +22,28 @@ type Service interface {
 	Save(ctx context.Context, configMap *types.ConfigMap, data []types.Data) (err error)
 	SaveData(ctx context.Context, configMapId int64, key, value string) (err error)
 	FindBy(ctx context.Context, clusterId int64, ns, name string) (res types.ConfigMap, err error)
+	List(ctx context.Context, clusterId int64, ns, name string, page, pageSize int) (res []types.ConfigMap, total int, err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) List(ctx context.Context, clusterId int64, ns, name string, page, pageSize int) (res []types.ConfigMap, total int, err error) {
+	q := s.db.Model(&types.ConfigMap{}).
+		Where("cluster_id = ? ", clusterId)
+	if !strings.EqualFold(ns, "") {
+		q = q.Where("namespace = ?", ns)
+	}
+	if !strings.EqualFold(name, "") {
+		q = q.Where("name = ?", ns)
+	}
+	err = q.Count(&total).
+		Order("created_at DESC").
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).Find(&res).Error
+
+	return
 }
 
 func (s *service) FindBy(ctx context.Context, clusterId int64, ns, name string) (res types.ConfigMap, err error) {
