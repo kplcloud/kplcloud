@@ -9,7 +9,6 @@ package configmap
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/encode"
@@ -45,7 +44,11 @@ func (s *service) List(ctx context.Context, clusterId int64, ns, name string, pa
 	}
 
 	for _, v := range list {
-		fmt.Println(v.Name)
+		res = append(res, configMapResult{
+			Name:      v.Name,
+			Namespace: v.Namespace,
+			Desc:      v.Desc,
+		})
 	}
 
 	return
