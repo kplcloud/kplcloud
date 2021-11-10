@@ -10,7 +10,6 @@ package middleware
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 
@@ -27,7 +26,6 @@ func TracingServerBefore(tracer stdopentracing.Tracer) kithttp.RequestFunc {
 			return ctx
 		}
 		reqPath := ctx.Value(kithttp.ContextKeyRequestURI).(string)
-		fmt.Println(ctx)
 		u, _ := url.Parse(reqPath)
 		span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, tracer, u.Path, stdopentracing.Tag{
 			Key:   string(ext.Component),

@@ -37,10 +37,13 @@ func initSvc() Service {
 	db, err := mysqlclient.NewMysql(dbUrl, true)
 	if err != nil {
 		_ = level.Error(logger).Log("db", "connect", "err", err)
-		return nil
+		panic(err)
 	}
 	store := repository.New(db, logger, "traceId", nil, nil, nil)
 	k8sClient, err := kubernetes.NewClient(store)
+	if err != nil {
+		panic(err)
+	}
 	return New(logger, "traceId", store, k8sClient)
 }
 

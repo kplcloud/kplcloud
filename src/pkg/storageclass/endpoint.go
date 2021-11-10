@@ -34,6 +34,7 @@ type (
 		Provisioner   string `json:"provisioner"`
 		VolumeMode    string `json:"volumeMode"`
 		ReclaimPolicy string `json:"reclaimPolicy"`
+		Remark        string `json:"remark"`
 	}
 
 	createRequest struct {

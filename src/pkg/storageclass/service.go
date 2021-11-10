@@ -71,10 +71,10 @@ func (s *service) List(ctx context.Context, clusterId int64, page, pageSize int)
 	for _, v := range list {
 		res = append(res, listResult{
 			Name:          v.Name,
-			Namespace:     "",
 			Provisioner:   v.Provisioner,
 			VolumeMode:    v.VolumeBindingMode,
 			ReclaimPolicy: v.ReclaimPolicy,
+			Remark:        v.Remark,
 		})
 	}
 
