@@ -21,6 +21,19 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) Delete(ctx context.Context, id int64, call Call) (err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Delete", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "repository.storageclass",
+	})
+	defer func() {
+		span.LogKV("id", id, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.Delete(ctx, id, call)
+}
+
 func (s *tracing) List(ctx context.Context, clusterId int64, page, pageSize int) (res []types.StorageClass, total int, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", opentracing.Tag{
 		Key:   string(ext.Component),

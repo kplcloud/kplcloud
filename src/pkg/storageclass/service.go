@@ -13,6 +13,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/jinzhu/gorm"
+	"github.com/pkg/errors"
 	coreV1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,7 +53,26 @@ type service struct {
 }
 
 func (s *service) Delete(ctx context.Context, clusterId int64, storageName string) (err error) {
-	panic("implement me")
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	class, err := s.repository.StorageClass(ctx).FindName(ctx, clusterId, storageName)
+	if err != nil {
+		_ = level.Error(logger).Log("repository.StorageClass", "FindName", "err", err.Error())
+		err = encode.ErrStorageClassNotfound.Wrap(err)
+		return
+	}
+
+	if err = s.repository.StorageClass(ctx).Delete(ctx, class.Id, func() error {
+		e := s.k8sClient.Do(ctx).StorageV1().StorageClasses().Delete(ctx, class.Name, metav1.DeleteOptions{})
+		if e != nil {
+			return errors.Wrap(e, "k8sClient.Do(ctx).StorageV1().StorageClasses().Delete")
+		}
+		return nil
+	}); err != nil {
+		return encode.ErrStorageClassDelete.Wrap(err)
+	}
+
+	return
 }
 
 func (s *service) Update(ctx context.Context, clusterId int64, storageName, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error) {

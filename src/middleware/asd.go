@@ -172,6 +172,8 @@ func CheckPermissionMiddleware(logger log.Logger, cacheSvc kitcache.Service, tra
 			var pass bool
 			var perm types.SysPermission
 			for _, v := range perms {
+				//fmt.Println("strings.EqualFold(v.Path, requestPath)", strings.EqualFold(v.Path, requestPath), "keyMatch3(requestPath, v.Path)", keyMatch3(requestPath, v.Path))
+				//fmt.Println(v.Path, requestPath)
 				if !strings.EqualFold(v.Path, requestPath) && !keyMatch3(requestPath, v.Path) {
 					continue
 				}
@@ -208,6 +210,9 @@ func keyMatch3(key1 string, key2 string) bool {
 }
 
 func regexMatch(key1 string, key2 string) bool {
+	if !strings.Contains(key2, "[^/]") && !strings.EqualFold(key2, key1) {
+		return false
+	}
 	res, err := regexp.MatchString(key2, key1)
 	if err != nil {
 		panic(err)

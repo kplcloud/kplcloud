@@ -9,12 +9,11 @@ package storageclass
 
 import (
 	"context"
-	coreV1 "k8s.io/api/core/v1"
-	storagev1 "k8s.io/api/storage/v1"
-
 	"github.com/go-kit/kit/endpoint"
 	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/middleware"
+	coreV1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 )
 
 type (
@@ -38,11 +37,11 @@ type (
 	}
 
 	createRequest struct {
-		Name          string                                `json:"name" valid:"required"`
-		Namespace     string                                `json:"namespace" valid:"required"`
-		ReclaimPolicy *coreV1.PersistentVolumeReclaimPolicy `json:"reclaimPolicy" valid:"required"`
-		VolumeMode    *storagev1.VolumeBindingMode          `json:"volumeMode" valid:"required"`
-		Provisioner   string                                `json:"provisioner" valid:"required"`
+		Name          string                               `json:"name" valid:"required"`
+		Namespace     string                               `json:"namespace"`
+		ReclaimPolicy coreV1.PersistentVolumeReclaimPolicy `json:"reclaimPolicy" valid:"required"`
+		VolumeMode    storagev1.VolumeBindingMode          `json:"volumeMode" valid:"required"`
+		Provisioner   string                               `json:"provisioner" valid:"required"`
 	}
 )
 
@@ -51,6 +50,7 @@ type Endpoints struct {
 	SyncPvEndpoint endpoint.Endpoint
 	CreateEndpoint endpoint.Endpoint
 	ListEndpoint   endpoint.Endpoint
+	DeleteEndpoint endpoint.Endpoint
 }
 
 func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
@@ -59,6 +59,7 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 		SyncPvEndpoint: makeSyncPvEndpoint(s),
 		CreateEndpoint: makeCreateEndpoint(s),
 		ListEndpoint:   makeListEndpoint(s),
+		DeleteEndpoint: makeDeleteEndpoint(s),
 	}
 
 	for _, m := range dmw["Sync"] {
@@ -69,6 +70,7 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	}
 	for _, m := range dmw["Create"] {
 		eps.CreateEndpoint = m(eps.CreateEndpoint)
+		eps.DeleteEndpoint = m(eps.DeleteEndpoint)
 	}
 	for _, m := range dmw["List"] {
 		eps.ListEndpoint = m(eps.ListEndpoint)
@@ -101,7 +103,7 @@ func makeCreateEndpoint(s Service) endpoint.Endpoint {
 			return nil, encode.ErrClusterNotfound.Error()
 		}
 		req := request.(createRequest)
-		err = s.Create(ctx, clusterId, req.Namespace, req.Name, req.Provisioner, req.ReclaimPolicy, req.VolumeMode)
+		err = s.Create(ctx, clusterId, req.Namespace, req.Name, req.Provisioner, &req.ReclaimPolicy, &req.VolumeMode)
 		return encode.Response{
 			Error: err,
 		}, err
@@ -116,6 +118,20 @@ func makeSyncPvEndpoint(s Service) endpoint.Endpoint {
 		}
 		req := request.(syncPvRequest)
 		err = s.SyncPv(ctx, clusterId, req.Name)
+		return encode.Response{
+			Error: err,
+		}, err
+	}
+}
+
+func makeDeleteEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		clusterId, ok := ctx.Value(middleware.ContextKeyClusterId).(int64)
+		if !ok {
+			return nil, encode.ErrClusterNotfound.Error()
+		}
+		req := request.(syncPvRequest)
+		err = s.Delete(ctx, clusterId, req.Name)
 		return encode.Response{
 			Error: err,
 		}, err

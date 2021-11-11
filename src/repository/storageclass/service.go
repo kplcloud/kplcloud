@@ -24,10 +24,27 @@ type Service interface {
 	Find(ctx context.Context, id int64) (res types.StorageClass, err error)
 	FindName(ctx context.Context, clusterId int64, name string) (res types.StorageClass, err error)
 	List(ctx context.Context, clusterId int64, page, pageSize int) (res []types.StorageClass, total int, err error)
+	Delete(ctx context.Context, id int64, call Call) (err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) Delete(ctx context.Context, id int64, call Call) (err error) {
+	tx := s.db.Model(types.StorageClass{}).Begin()
+
+	if err = tx.Where("id = ?", id).Unscoped().Delete(&types.StorageClass{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err = call(); err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
 }
 
 func (s *service) List(ctx context.Context, clusterId int64, page, pageSize int) (res []types.StorageClass, total int, err error) {

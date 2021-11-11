@@ -138,6 +138,7 @@ const (
 	ErrStorageClassSyncPv   ResStatus = "StorageClass Pv同步失败"
 	ErrStorageClassExists   ResStatus = "StorageClass 已存在"
 	ErrStorageClassCreate   ResStatus = "StorageClass 创建失败"
+	ErrStorageClassDelete   ResStatus = "StorageClass 删除失败"
 
 	ErrPersistentVolumeClaimList   ResStatus = "存储卷声明列表获取失败"
 	ErrPersistentVolumeClaimCreate ResStatus = "存储卷声明创建失败"

@@ -37,7 +37,15 @@ func (s *logging) List(ctx context.Context, clusterId int64, page, pageSize int)
 }
 
 func (s *logging) Delete(ctx context.Context, clusterId int64, storageName string) (err error) {
-	panic("implement me")
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Delete", "clusterId", clusterId, "storageName", storageName,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Delete(ctx, clusterId, storageName)
 }
 
 func (s *logging) Update(ctx context.Context, clusterId int64, storageName, provisioner string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error) {
