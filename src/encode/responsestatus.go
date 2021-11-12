@@ -77,6 +77,7 @@ var ResponseMessage = map[ResStatus]int{
 	ErrStorageClassSyncPv:   1102,
 	ErrStorageClassExists:   1103,
 	ErrStorageClassCreate:   1104,
+	ErrStorageClassUpdate:   1105,
 
 	ErrSecretMarshal:   1120,
 	ErrSecretImageSave: 1121,
@@ -138,6 +139,8 @@ const (
 	ErrStorageClassSyncPv   ResStatus = "StorageClass Pv同步失败"
 	ErrStorageClassExists   ResStatus = "StorageClass 已存在"
 	ErrStorageClassCreate   ResStatus = "StorageClass 创建失败"
+	ErrStorageClassDelete   ResStatus = "StorageClass 删除失败"
+	ErrStorageClassUpdate   ResStatus = "StorageClass 更新失败"
 
 	ErrPersistentVolumeClaimList   ResStatus = "存储卷声明列表获取失败"
 	ErrPersistentVolumeClaimCreate ResStatus = "存储卷声明创建失败"

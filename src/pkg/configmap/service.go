@@ -22,6 +22,9 @@ type Middleware func(Service) Service
 
 type Service interface {
 	Sync(ctx context.Context, clusterId int64, ns string) (err error)
+
+	// List 配置字典列表
+	List(ctx context.Context, clusterId int64, ns, name string, page, pageSize int) (res []configMapResult, total int, err error)
 }
 
 type service struct {
@@ -29,6 +32,26 @@ type service struct {
 	logger     log.Logger
 	repository repository.Repository
 	k8sClient  kubernetes.K8sClient
+}
+
+func (s *service) List(ctx context.Context, clusterId int64, ns, name string, page, pageSize int) (res []configMapResult, total int, err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	list, total, err := s.repository.ConfigMap(ctx).List(ctx, clusterId, ns, name, page, pageSize)
+	if err != nil {
+		_ = level.Error(logger).Log("repository.ConfigMap", "List", "err", err.Error())
+		return
+	}
+
+	for _, v := range list {
+		res = append(res, configMapResult{
+			Name:      v.Name,
+			Namespace: v.Namespace,
+			Desc:      v.Desc,
+		})
+	}
+
+	return
 }
 
 func (s *service) Sync(ctx context.Context, clusterId int64, ns string) (err error) {

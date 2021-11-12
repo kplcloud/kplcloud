@@ -229,8 +229,6 @@ func accessControl(h http.Handler, logger log.Logger) http.Handler {
 		if r.Method == "OPTIONS" {
 			return
 		}
-		fmt.Println("logging.TraceId", r.Context().Value(logging.TraceId))
-		fmt.Println(w.Header().Get("TraceId"))
 		_ = level.Info(logger).Log("remote-addr", r.RemoteAddr, "uri", r.RequestURI, "method", r.Method, "length", r.ContentLength)
 
 		h.ServeHTTP(w, r)

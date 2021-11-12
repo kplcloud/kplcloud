@@ -23,10 +23,22 @@ type logging struct {
 	traceId string
 }
 
-func (l *logging) FindBy(ctx context.Context, clusterId int64, ns, name string) (res types.ConfigMap, err error) {
+func (s *logging) List(ctx context.Context, clusterId int64, ns, name string, page, pageSize int) (res []types.ConfigMap, total int, err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "List", "clusterId",clusterId,"ns",ns,"name",name,"page",page,"pageSize",pageSize,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.List(ctx,clusterId,ns,name,page,pageSize)
+}
+
+func (s *logging) FindBy(ctx context.Context, clusterId int64, ns, name string) (res types.ConfigMap, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "FindBy",
 			"clusterId", clusterId,
 			"ns", ns,
@@ -35,25 +47,25 @@ func (l *logging) FindBy(ctx context.Context, clusterId int64, ns, name string) 
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.FindBy(ctx, clusterId, ns, name)
+	return s.next.FindBy(ctx, clusterId, ns, name)
 }
 
-func (l *logging) Save(ctx context.Context, configMap *types.ConfigMap, data []types.Data) (err error) {
+func (s *logging) Save(ctx context.Context, configMap *types.ConfigMap, data []types.Data) (err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "Save",
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.Save(ctx, configMap, data)
+	return s.next.Save(ctx, configMap, data)
 }
 
-func (l *logging) SaveData(ctx context.Context, configMapId int64, key, value string) (err error) {
+func (s *logging) SaveData(ctx context.Context, configMapId int64, key, value string) (err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "SaveData",
 			"configMapId", configMapId,
 			"key", key,
@@ -61,7 +73,7 @@ func (l *logging) SaveData(ctx context.Context, configMapId int64, key, value st
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.SaveData(ctx, configMapId, key, value)
+	return s.next.SaveData(ctx, configMapId, key, value)
 }
 
 func NewLogging(logger log.Logger, traceId string) Middleware {

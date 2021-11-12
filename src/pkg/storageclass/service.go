@@ -13,6 +13,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/jinzhu/gorm"
+	"github.com/pkg/errors"
 	coreV1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,9 +33,18 @@ type Service interface {
 	SyncPv(ctx context.Context, clusterId int64, storageName string) (err error)
 	SyncPvc(ctx context.Context, clusterId int64, ns string, storageName string) (err error)
 	// Create 创建StorageClass
-	Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error)
+	Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode, remark string) (err error)
 	// CreateProvisioner 创建供应者
 	CreateProvisioner(ctx context.Context, clusterId int64) (err error)
+	// List 存储类列表
+	List(ctx context.Context, clusterId int64, page, pageSize int) (res []listResult, total int, err error)
+	// Delete 删除存储类
+	// 存储类删除需要先判断pvc是否删除，否则无法删除
+	Delete(ctx context.Context, clusterId int64, storageName string) (err error)
+	// Update 更新存储类
+	Update(ctx context.Context, clusterId int64, storageName, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode, remark string) (err error)
+	// Recover 恢复删除的存储类
+	Recover(ctx context.Context, clusterId int64, storageName string) (err error)
 }
 
 type service struct {
@@ -44,11 +54,100 @@ type service struct {
 	k8sClient  kubernetes.K8sClient
 }
 
+func (s *service) Recover(ctx context.Context, clusterId int64, storageName string) (err error) {
+	// 1. 查询删除的存储类
+	// 2. 将数据添加到k8s
+	// 3. 取消删除字段
+	panic("implement me")
+}
+
+func (s *service) Delete(ctx context.Context, clusterId int64, storageName string) (err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	class, err := s.repository.StorageClass(ctx).FindName(ctx, clusterId, storageName)
+	if err != nil {
+		_ = level.Warn(logger).Log("repository.StorageClass", "FindName", "err", err.Error())
+		err = encode.ErrStorageClassNotfound.Wrap(err)
+		return
+	}
+
+	if err = s.repository.StorageClass(ctx).Delete(ctx, class.Id, func() error {
+		e := s.k8sClient.Do(ctx).StorageV1().StorageClasses().Delete(ctx, class.Name, metav1.DeleteOptions{})
+		if e != nil {
+			return errors.Wrap(e, "k8sClient.Do(ctx).StorageV1().StorageClasses().Delete")
+		}
+		return nil
+	}); err != nil {
+		return encode.ErrStorageClassDelete.Wrap(err)
+	}
+
+	return
+}
+
+func (s *service) Update(ctx context.Context, clusterId int64, storageName, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode, remark string) (err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+	class, err := s.repository.StorageClass(ctx).FindName(ctx, clusterId, storageName)
+	if err != nil {
+		_ = level.Warn(logger).Log("repository.StorageClass", "FindName", "err", err.Error())
+		err = encode.ErrStorageClassNotfound.Wrap(err)
+		return
+	}
+
+	class.Provisioner = provisioner
+	class.ReclaimPolicy = string(*reclaimPolicy)
+	class.VolumeBindingMode = string(*volumeBindingMode)
+	class.Remark = remark
+
+	err = s.repository.StorageClass(ctx).Save(ctx, &class, func() error {
+		storageClass, e := s.k8sClient.Do(ctx).StorageV1().StorageClasses().Get(ctx, storageName, metav1.GetOptions{})
+		if e != nil {
+			return encode.ErrStorageClassNotfound.Wrap(errors.Wrap(e, "k8sClient.Do(ctx).StorageV1().StorageClasses().Get"))
+		}
+		storageClass.Provisioner = provisioner
+		storageClass.ReclaimPolicy = reclaimPolicy
+		storageClass.VolumeBindingMode = volumeBindingMode
+		storageClass, e = s.k8sClient.Do(ctx).StorageV1().StorageClasses().Update(ctx, storageClass, metav1.UpdateOptions{})
+		if e != nil {
+			return encode.ErrStorageClassUpdate.Wrap(errors.Wrap(e, "k8sClient.Do(ctx).StorageV1().StorageClasses().Update"))
+		}
+		return nil
+	})
+	if err != nil {
+		return encode.ErrStorageClassUpdate.Wrap(err)
+	}
+
+	return
+}
+
+func (s *service) List(ctx context.Context, clusterId int64, page, pageSize int) (res []listResult, total int, err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	list, total, err := s.repository.StorageClass(ctx).List(ctx, clusterId, page, pageSize)
+	if err != nil {
+		_ = level.Error(logger).Log("repository.StorageClass", "List", "err", err.Error())
+		return
+	}
+
+	for _, v := range list {
+		res = append(res, listResult{
+			Name:          v.Name,
+			Provisioner:   v.Provisioner,
+			VolumeMode:    v.VolumeBindingMode,
+			ReclaimPolicy: v.ReclaimPolicy,
+			Remark:        v.Remark,
+			CreatedAt:     v.CreatedAt,
+			UpdatedAt:     v.UpdatedAt,
+		})
+	}
+
+	return
+}
+
 func (s *service) CreateProvisioner(ctx context.Context, clusterId int64) (err error) {
 	panic("implement me")
 }
 
-func (s *service) Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error) {
+func (s *service) Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode, remark string) (err error) {
 	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
 	_, err = s.repository.StorageClass(ctx).FindName(ctx, clusterId, name)
 	if err == nil {

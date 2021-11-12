@@ -11,18 +11,21 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	valid "github.com/asaskevich/govalidator"
 	"github.com/go-kit/kit/endpoint"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
 	coreV1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/kplcloud/kplcloud/src/encode"
 )
 
 func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.ServerOption) http.Handler {
-	ems := []endpoint.Middleware{}
+	var ems []endpoint.Middleware
 
 	ems = append(ems, dmw...)
 
@@ -30,10 +33,18 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		"Sync":   ems,
 		"SyncPv": ems,
 		"Create": ems,
+		"List":   ems,
+		"Update": ems,
 	})
 
 	r := mux.NewRouter()
 
+	r.Handle("/{cluster}/list", kithttp.NewServer(
+		eps.ListEndpoint,
+		decodeListRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodGet)
 	r.Handle("/{cluster}/sync", kithttp.NewServer(
 		eps.SyncEndpoint,
 		kithttp.NopRequestDecoder,
@@ -52,8 +63,44 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodPost)
+	r.Handle("/{cluster}/delete/{storage}", kithttp.NewServer(
+		eps.DeleteEndpoint,
+		decodeSyncPvRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodDelete)
+	r.Handle("/{cluster}/update/{storage}", kithttp.NewServer(
+		eps.UpdateEndpoint,
+		decodeCreateRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodPut)
+	r.Handle("/{cluster}/recover/{storage}", kithttp.NewServer(
+		eps.RecoverEndpoint,
+		decodeCreateRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodPut)
 
 	return r
+}
+
+func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req listRequest
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize == 0 {
+		pageSize = 10
+	}
+
+	req.page = page
+	req.pageSize = pageSize
+	//req.query = r.URL.Query().Get("query")
+
+	return req, nil
 }
 
 func decodeSyncPvRequest(_ context.Context, r *http.Request) (interface{}, error) {
@@ -74,37 +121,44 @@ func decodeCreateRequest(_ context.Context, r *http.Request) (interface{}, error
 		return nil, encode.InvalidParams.Wrap(err)
 	}
 
-	var reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy
-	switch *req.ReclaimPolicy {
+	var reclaimPolicy coreV1.PersistentVolumeReclaimPolicy
+	switch req.ReclaimPolicy {
 	case coreV1.PersistentVolumeReclaimRecycle:
-		policy := coreV1.PersistentVolumeReclaimRecycle
-		reclaimPolicy = &policy
+		reclaimPolicy = coreV1.PersistentVolumeReclaimRecycle
 	case coreV1.PersistentVolumeReclaimDelete:
-		policy := coreV1.PersistentVolumeReclaimDelete
-		reclaimPolicy = &policy
+		reclaimPolicy = coreV1.PersistentVolumeReclaimDelete
 	case coreV1.PersistentVolumeReclaimRetain:
-		policy := coreV1.PersistentVolumeReclaimRetain
-		reclaimPolicy = &policy
+		reclaimPolicy = coreV1.PersistentVolumeReclaimRetain
+	default:
+		reclaimPolicy = ""
 	}
-	var volumeMode *storagev1.VolumeBindingMode
-	switch *req.VolumeMode {
+	var volumeMode storagev1.VolumeBindingMode
+	switch req.VolumeMode {
 	case storagev1.VolumeBindingImmediate:
-		policy := storagev1.VolumeBindingImmediate
-		volumeMode = &policy
+		volumeMode = storagev1.VolumeBindingImmediate
 	case storagev1.VolumeBindingWaitForFirstConsumer:
-		policy := storagev1.VolumeBindingWaitForFirstConsumer
-		volumeMode = &policy
+		volumeMode = storagev1.VolumeBindingWaitForFirstConsumer
+	default:
+		volumeMode = ""
 	}
 
-	if reclaimPolicy == nil {
+	if strings.EqualFold(string(reclaimPolicy), "") {
 		return nil, encode.InvalidParams.Wrap(errors.New("reclaimPolicy not null"))
 	}
-	if volumeMode == nil {
+	if strings.EqualFold(string(volumeMode), "") {
 		return nil, encode.InvalidParams.Wrap(errors.New("volumeMode not null"))
 	}
 
 	req.VolumeMode = volumeMode
 	req.ReclaimPolicy = reclaimPolicy
+
+	validResult, err := valid.ValidateStruct(req)
+	if err != nil {
+		return nil, encode.InvalidParams.Wrap(err)
+	}
+	if !validResult {
+		return nil, encode.InvalidParams.Wrap(errors.New("valid false"))
+	}
 
 	return req, nil
 }

@@ -21,6 +21,10 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) List(ctx context.Context, clusterId int64, ns, name string, page, pageSize int) (res []configMapResult, total int, err error) {
+	panic("implement me")
+}
+
 func (s *logging) Sync(ctx context.Context, clusterId int64, ns string) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

@@ -20,6 +20,10 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
+func (s *tracing) List(ctx context.Context, clusterId int64, ns, name string, page, pageSize int) (res []configMapResult, total int, err error) {
+	panic("implement me")
+}
+
 func (s *tracing) Sync(ctx context.Context, clusterId int64, ns string) (err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Sync", stdopentracing.Tag{
 		Key:   string(ext.Component),
