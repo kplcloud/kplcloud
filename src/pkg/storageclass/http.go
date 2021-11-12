@@ -34,6 +34,7 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		"SyncPv": ems,
 		"Create": ems,
 		"List":   ems,
+		"Update": ems,
 	})
 
 	r := mux.NewRouter()
@@ -68,6 +69,18 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodDelete)
+	r.Handle("/{cluster}/update/{storage}", kithttp.NewServer(
+		eps.UpdateEndpoint,
+		decodeCreateRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodPut)
+	r.Handle("/{cluster}/recover/{storage}", kithttp.NewServer(
+		eps.RecoverEndpoint,
+		decodeCreateRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodPut)
 
 	return r
 }

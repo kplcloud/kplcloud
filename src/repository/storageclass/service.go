@@ -34,7 +34,8 @@ type service struct {
 func (s *service) Delete(ctx context.Context, id int64, call Call) (err error) {
 	tx := s.db.Model(types.StorageClass{}).Begin()
 
-	if err = tx.Where("id = ?", id).Unscoped().Delete(&types.StorageClass{}).Error; err != nil {
+	//if err = tx.Where("id = ?", id).Unscoped().Delete(&types.StorageClass{}).Error; err != nil {
+	if err = tx.Where("id = ?", id).Delete(&types.StorageClass{}).Error; err != nil {
 		tx.Rollback()
 		return err
 	}

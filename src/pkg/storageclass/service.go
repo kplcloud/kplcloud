@@ -33,7 +33,7 @@ type Service interface {
 	SyncPv(ctx context.Context, clusterId int64, storageName string) (err error)
 	SyncPvc(ctx context.Context, clusterId int64, ns string, storageName string) (err error)
 	// Create 创建StorageClass
-	Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error)
+	Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode, remark string) (err error)
 	// CreateProvisioner 创建供应者
 	CreateProvisioner(ctx context.Context, clusterId int64) (err error)
 	// List 存储类列表
@@ -42,7 +42,9 @@ type Service interface {
 	// 存储类删除需要先判断pvc是否删除，否则无法删除
 	Delete(ctx context.Context, clusterId int64, storageName string) (err error)
 	// Update 更新存储类
-	Update(ctx context.Context, clusterId int64, storageName, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error)
+	Update(ctx context.Context, clusterId int64, storageName, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode, remark string) (err error)
+	// Recover 恢复删除的存储类
+	Recover(ctx context.Context, clusterId int64, storageName string) (err error)
 }
 
 type service struct {
@@ -52,12 +54,19 @@ type service struct {
 	k8sClient  kubernetes.K8sClient
 }
 
+func (s *service) Recover(ctx context.Context, clusterId int64, storageName string) (err error) {
+	// 1. 查询删除的存储类
+	// 2. 将数据添加到k8s
+	// 3. 取消删除字段
+	panic("implement me")
+}
+
 func (s *service) Delete(ctx context.Context, clusterId int64, storageName string) (err error) {
 	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
 
 	class, err := s.repository.StorageClass(ctx).FindName(ctx, clusterId, storageName)
 	if err != nil {
-		_ = level.Error(logger).Log("repository.StorageClass", "FindName", "err", err.Error())
+		_ = level.Warn(logger).Log("repository.StorageClass", "FindName", "err", err.Error())
 		err = encode.ErrStorageClassNotfound.Wrap(err)
 		return
 	}
@@ -75,8 +84,39 @@ func (s *service) Delete(ctx context.Context, clusterId int64, storageName strin
 	return
 }
 
-func (s *service) Update(ctx context.Context, clusterId int64, storageName, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error) {
-	panic("implement me")
+func (s *service) Update(ctx context.Context, clusterId int64, storageName, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode, remark string) (err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+	class, err := s.repository.StorageClass(ctx).FindName(ctx, clusterId, storageName)
+	if err != nil {
+		_ = level.Warn(logger).Log("repository.StorageClass", "FindName", "err", err.Error())
+		err = encode.ErrStorageClassNotfound.Wrap(err)
+		return
+	}
+
+	class.Provisioner = provisioner
+	class.ReclaimPolicy = string(*reclaimPolicy)
+	class.VolumeBindingMode = string(*volumeBindingMode)
+	class.Remark = remark
+
+	err = s.repository.StorageClass(ctx).Save(ctx, &class, func() error {
+		storageClass, e := s.k8sClient.Do(ctx).StorageV1().StorageClasses().Get(ctx, storageName, metav1.GetOptions{})
+		if e != nil {
+			return encode.ErrStorageClassNotfound.Wrap(errors.Wrap(e, "k8sClient.Do(ctx).StorageV1().StorageClasses().Get"))
+		}
+		storageClass.Provisioner = provisioner
+		storageClass.ReclaimPolicy = reclaimPolicy
+		storageClass.VolumeBindingMode = volumeBindingMode
+		storageClass, e = s.k8sClient.Do(ctx).StorageV1().StorageClasses().Update(ctx, storageClass, metav1.UpdateOptions{})
+		if e != nil {
+			return encode.ErrStorageClassUpdate.Wrap(errors.Wrap(e, "k8sClient.Do(ctx).StorageV1().StorageClasses().Update"))
+		}
+		return nil
+	})
+	if err != nil {
+		return encode.ErrStorageClassUpdate.Wrap(err)
+	}
+
+	return
 }
 
 func (s *service) List(ctx context.Context, clusterId int64, page, pageSize int) (res []listResult, total int, err error) {
@@ -95,6 +135,8 @@ func (s *service) List(ctx context.Context, clusterId int64, page, pageSize int)
 			VolumeMode:    v.VolumeBindingMode,
 			ReclaimPolicy: v.ReclaimPolicy,
 			Remark:        v.Remark,
+			CreatedAt:     v.CreatedAt,
+			UpdatedAt:     v.UpdatedAt,
 		})
 	}
 
@@ -105,7 +147,7 @@ func (s *service) CreateProvisioner(ctx context.Context, clusterId int64) (err e
 	panic("implement me")
 }
 
-func (s *service) Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error) {
+func (s *service) Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode, remark string) (err error) {
 	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
 	_, err = s.repository.StorageClass(ctx).FindName(ctx, clusterId, name)
 	if err == nil {

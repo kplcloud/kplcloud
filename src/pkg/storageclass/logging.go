@@ -23,6 +23,18 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) Recover(ctx context.Context, clusterId int64, storageName string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Recover", "clusterId", clusterId, "storageName", storageName,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Recover(ctx, clusterId, storageName)
+}
+
 func (s *logging) List(ctx context.Context, clusterId int64, page, pageSize int) (res []listResult, total int, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
@@ -48,11 +60,19 @@ func (s *logging) Delete(ctx context.Context, clusterId int64, storageName strin
 	return s.next.Delete(ctx, clusterId, storageName)
 }
 
-func (s *logging) Update(ctx context.Context, clusterId int64, storageName, provisioner string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error) {
-	panic("implement me")
+func (s *logging) Update(ctx context.Context, clusterId int64, storageName, provisioner string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode, remark string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Update", "clusterId", clusterId, "storageName", storageName, "provisioner", provisioner, "reclaimPolicy", reclaimPolicy, "volumeBindingMode", volumeBindingMode, "remark", remark,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Update(ctx, clusterId, storageName, provisioner, reclaimPolicy, volumeBindingMode, remark)
 }
 
-func (s *logging) Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode) (err error) {
+func (s *logging) Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode, remark string) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
 			s.traceId, ctx.Value(s.traceId),
@@ -63,11 +83,12 @@ func (s *logging) Create(ctx context.Context, clusterId int64, ns, name, provisi
 			"provisioner", provisioner,
 			"reclaimPolicy", reclaimPolicy,
 			"volumeBindingMode", volumeBindingMode,
+			"remark", remark,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return s.next.Create(ctx, clusterId, ns, name, provisioner, reclaimPolicy, volumeBindingMode)
+	return s.next.Create(ctx, clusterId, ns, name, provisioner, reclaimPolicy, volumeBindingMode, remark)
 }
 
 func (s *logging) CreateProvisioner(ctx context.Context, clusterId int64) (err error) {
