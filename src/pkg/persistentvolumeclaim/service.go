@@ -21,19 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-//var (
-//	ErrPvcK8sList            = errors.New("存储卷声明列表获取失败")
-//	ErrPvcGet                = errors.New("存储卷声明获取错误")
-//	ErrPvcPost               = errors.New("存储卷声明创建失败")
-//	ErrPvcDelete             = errors.New("存储卷声明删除错误,或许已经删除了")
-//	ErrPvcTemplateGet        = errors.New("存储卷声明模版获取错误")
-//	ErrPvcTemplateEncode     = errors.New("存储卷声明模版解析错误")
-//	ErrPvGet                 = errors.New("存储卷获取错误")
-//	ErrStorageClassNotExists = errors.New("存储类不存在")
-//	ErrPvcListCount          = errors.New("存储卷声明统计出错")
-//	ErrPvcList               = errors.New("存储卷声明获取出错")
-//)
-
 type Middleware func(Service) Service
 
 type Service interface {
@@ -146,7 +133,9 @@ func (s *service) Create(ctx context.Context, clusterId int64, ns, name, storage
 }
 
 func (s *service) List(ctx context.Context, clusterId int64, ns string, page, pageSize int) (resp map[string]interface{}, err error) {
-	panic("implement me")
+	//logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	return
 }
 
 func (s *service) All(ctx context.Context, clusterId int64) (resp map[string]interface{}, err error) {

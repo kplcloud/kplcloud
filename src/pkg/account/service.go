@@ -13,6 +13,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	kitcache "github.com/icowan/kit-cache"
+	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	"sync"
@@ -27,6 +28,8 @@ type Service interface {
 	Menus(ctx context.Context, userId int64) (res []userMenuResult, err error)
 	// Logout 退出登录
 	Logout(ctx context.Context, userId int64) (err error)
+	// Namespaces 根据clusterName获取该集群下当前用户可以访问的空间
+	Namespaces(ctx context.Context, userId, clusterId int64) (res []nsResult, err error)
 }
 
 type service struct {
@@ -34,6 +37,36 @@ type service struct {
 	logger     log.Logger
 	repository repository.Repository
 	cache      kitcache.Service
+}
+
+func (s *service) Namespaces(ctx context.Context, userId, clusterId int64) (res []nsResult, err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+	sysUser, err := s.repository.SysUser().Find(ctx, userId, "Namespaces")
+	if err != nil {
+		_ = level.Warn(logger).Log("repository.SysUser", "Find", "err", err.Error())
+		err = encode.ErrAccountNamespace.Wrap(err)
+		return
+	}
+	var ns []string
+	for _, v := range sysUser.Namespaces {
+		ns = append(ns, v.Name)
+	}
+
+	names, err := s.repository.Namespace(ctx).FindByNames(ctx, clusterId, ns)
+	if err != nil {
+		_ = level.Warn(logger).Log("repository.SysUser", "Find", "err", err.Error())
+		err = encode.ErrAccountNamespace.Wrap(err)
+		return
+	}
+
+	for _, v := range names {
+		res = append(res, nsResult{
+			Name:  v.Name,
+			Alias: v.Alias,
+		})
+	}
+
+	return
 }
 
 func (s *service) Logout(ctx context.Context, userId int64) (err error) {

@@ -162,6 +162,7 @@ func (s *service) Create(ctx context.Context, clusterId int64, ns, name, provisi
 	storage.VolumeBindingMode = string(*volumeBindingMode)
 	storage.Provisioner = provisioner
 	storage.Name = name
+	storage.Remark = remark
 	if err = s.repository.StorageClass(ctx).Save(ctx, storage, func() error {
 		// TODO: 考虑使用模版
 		create, err := s.k8sClient.Do(ctx).StorageV1().StorageClasses().Create(ctx, &storagev1.StorageClass{

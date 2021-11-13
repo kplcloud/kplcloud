@@ -21,6 +21,18 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) Namespaces(ctx context.Context, userId, clusterId int64) (res []nsResult, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Namespaces", "userId", userId, "clusterId", clusterId,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Namespaces(ctx, userId, clusterId)
+}
+
 func (s *logging) Logout(ctx context.Context, userId int64) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

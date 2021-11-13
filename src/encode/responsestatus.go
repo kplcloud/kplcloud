@@ -154,6 +154,7 @@ const (
 	ErrAccountNotFound         ResStatus = "账号不存在"
 	ErrAccountASD              ResStatus = "权限验证失败"
 	ErrAccountLocked           ResStatus = "用户已被锁定"
+	ErrAccountNamespace        ResStatus = "用户空间错误"
 	ErrAuthLogin               ResStatus = "登录失败"
 	ErrAuthCheckCaptchaCode    ResStatus = "图形验证码错误"
 	ErrAuthCheckCaptchaNotnull ResStatus = "图形验证码不能为空"
