@@ -17,7 +17,7 @@ import (
 type (
 	listRequest struct {
 		page, pageSize int
-		query          string
+		query, status  string
 	}
 	auditResult struct {
 		Cluster        string    `json:"cluster"`

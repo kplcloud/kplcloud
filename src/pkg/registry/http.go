@@ -38,6 +38,18 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodPost)
+	r.Handle("/update/{name}", kithttp.NewServer(
+		eps.UpdateEndpoint,
+		decodeUpdateRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodPut)
+	r.Handle("/delete/{name}", kithttp.NewServer(
+		eps.DeleteEndpoint,
+		decodeDeleteRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodDelete)
 	r.Handle("/list", kithttp.NewServer(
 		eps.ListEndpoint,
 		decodeListRequest,
@@ -79,5 +91,37 @@ func decodeCreateRequest(_ context.Context, r *http.Request) (interface{}, error
 	if !validResult {
 		return nil, encode.InvalidParams.Wrap(errors.New("valid false"))
 	}
+	return req, nil
+}
+
+func decodeUpdateRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req updateRequest
+	vars := mux.Vars(r)
+	name, ok := vars["name"]
+	if !ok {
+		return nil, encode.Invalid.Error()
+	}
+	req.Name = name
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return req, encode.InvalidParams.Wrap(err)
+	}
+	validResult, err := valid.ValidateStruct(req)
+	if err != nil {
+		return nil, encode.InvalidParams.Wrap(err)
+	}
+	if !validResult {
+		return nil, encode.InvalidParams.Wrap(errors.New("valid false"))
+	}
+	return req, nil
+}
+
+func decodeDeleteRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req registryRequest
+	vars := mux.Vars(r)
+	name, ok := vars["name"]
+	if !ok {
+		return nil, encode.Invalid.Error()
+	}
+	req.Name = name
 	return req, nil
 }

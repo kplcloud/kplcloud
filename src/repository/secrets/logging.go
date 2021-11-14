@@ -1,6 +1,6 @@
 /**
  * @Time : 8/19/21 1:29 PM
- * @Author : solacowa@gmail.com
+ * @Author : solacowa@gmais.com
  * @File : logging
  * @Software: GoLand
  */
@@ -23,14 +23,22 @@ type logging struct {
 	traceId string
 }
 
-func (l *logging) FindByName(ctx context.Context, name string) (res []types.Secret, err error) {
-	panic("implement me")
+func (s *logging) FindByName(ctx context.Context, name string) (res []types.Secret, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "FindByName", "name", name,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.FindByName(ctx, name)
 }
 
-func (l *logging) Delete(ctx context.Context, clusterId int64, ns, name string) (err error) {
+func (s *logging) Delete(ctx context.Context, clusterId int64, ns, name string) (err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "Delete",
 			"clusterId", clusterId,
 			"ns", ns,
@@ -39,13 +47,13 @@ func (l *logging) Delete(ctx context.Context, clusterId int64, ns, name string) 
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.Delete(ctx, clusterId, ns, name)
+	return s.next.Delete(ctx, clusterId, ns, name)
 }
 
-func (l *logging) FindBy(ctx context.Context, clusterId int64, ns, name string) (res types.Secret, err error) {
+func (s *logging) FindBy(ctx context.Context, clusterId int64, ns, name string) (res types.Secret, err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "FindBy",
 			"clusterId", clusterId,
 			"ns", ns,
@@ -54,19 +62,19 @@ func (l *logging) FindBy(ctx context.Context, clusterId int64, ns, name string) 
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.FindBy(ctx, clusterId, ns, name)
+	return s.next.FindBy(ctx, clusterId, ns, name)
 }
 
-func (l *logging) Save(ctx context.Context, configMap *types.Secret, data []types.Data) (err error) {
+func (s *logging) Save(ctx context.Context, configMap *types.Secret, data []types.Data) (err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "Save",
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.Save(ctx, configMap, data)
+	return s.next.Save(ctx, configMap, data)
 }
 
 func NewLogging(logger log.Logger, traceId string) Middleware {

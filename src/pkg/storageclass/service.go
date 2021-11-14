@@ -45,6 +45,9 @@ type Service interface {
 	Update(ctx context.Context, clusterId int64, storageName, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode, remark string) (err error)
 	// Recover 恢复删除的存储类
 	Recover(ctx context.Context, clusterId int64, storageName string) (err error)
+	// Info 获取存储类详情
+	// 从数据库查基本信息 ps: 该存储类下的所有pvc 应该在pvc包，通过clusterId 和 storageName查询
+	Info(ctx context.Context, clusterId int64, storageName string) (res infoResult, err error)
 }
 
 type service struct {
@@ -52,6 +55,27 @@ type service struct {
 	traceId    string
 	repository repository.Repository
 	k8sClient  kubernetes.K8sClient
+}
+
+func (s *service) Info(ctx context.Context, clusterId int64, storageName string) (res infoResult, err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+	class, err := s.repository.StorageClass(ctx).FindName(ctx, clusterId, storageName)
+	if err != nil {
+		_ = level.Warn(logger).Log("repository.StorageClass", "FindName", "err", err.Error())
+		err = encode.ErrStorageClassNotfound.Wrap(err)
+		return
+	}
+
+	res.Remark = class.Remark
+	res.Name = class.Name
+	res.UpdatedAt = class.UpdatedAt
+	res.CreatedAt = class.CreatedAt
+	res.Provisioner = class.Provisioner
+	res.VolumeMode = class.VolumeBindingMode
+	res.ResourceVersion = class.ResourceVersion
+	res.Detail = class.Detail
+	// 是否需要自动远程同步？
+	return
 }
 
 func (s *service) Recover(ctx context.Context, clusterId int64, storageName string) (err error) {

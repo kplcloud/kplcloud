@@ -19,6 +19,7 @@ type SysPermission struct {
 	Name        string `gorm:"column:name;unique;size:32;notnull;comment:'标识'" json:"name"`
 	Path        string `gorm:"column:path;unique;size:64;notnull;comment:'路径'" json:"path"`
 	Description string `gorm:"column:description;null;comment:'描述'" json:"description"`
+	Sort        int    `gorm:"column:sort;null;default:0;comment:'排序'" json:"sort"`
 	//Methods     []SysPermissionMethod `json:"methods"`
 	CreatedAt time.Time  `gorm:"column:created_at" json:"created_at" form:"created_at"` // 创建时间
 	UpdatedAt time.Time  `gorm:"column:updated_at" json:"updated_at" form:"updated_at"` // 更新时间

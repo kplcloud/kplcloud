@@ -28,7 +28,9 @@ type Service interface {
 	// 需要更新相应的secrets，需要便利每个namespace 并更新相应的secrets
 	Update(ctx context.Context, name, host, username, password, remark string) (err error)
 	// Delete 删除仓库
-	// 需要便利每个namespace 并删除相应的secrets
+	// TODO 是否需要遍历所有空间 并删除相应的secrets？ 再考虑考虑，
+	// TODO 如果不处理会有很多的垃圾数据，如果处理了那现有的莫名其妙就没有？
+	// TODO 如果不处理会报接像拉取失败的问题，这个要怎么处理比较合理呢？
 	Delete(ctx context.Context, name string) (err error)
 	// Password 获取仓库密码 只有管理员可以查看，在中间件处理就行了
 	Password(ctx context.Context, name string) (res string, err error)
@@ -60,7 +62,9 @@ func (s *service) Update(ctx context.Context, name, host, username, password, re
 	oldReg = reg
 	reg.Host = host
 	reg.Username = username
-	reg.Password = password
+	if !strings.EqualFold(password, "") {
+		reg.Password = password
+	}
 	reg.Remark = remark
 	if err = s.repository.Registry(ctx).SaveCall(ctx, &reg, func() error {
 		secrets, err := s.repository.Secrets(ctx).FindByName(ctx, oldReg.Name)
@@ -102,14 +106,23 @@ func (s *service) Update(ctx context.Context, name, host, username, password, re
 }
 
 func (s *service) Delete(ctx context.Context, name string) (err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
 	reg, err := s.repository.Registry(ctx).FindByName(ctx, name)
 	if err != nil {
+		_ = level.Warn(logger).Log("repository.Registry", "FindName", "err", err.Error())
 		err = encode.ErrRegistryNotfound.Error()
 		return
 	}
 
-	// 遍历所有空间，删除对应的secret
-	fmt.Println(reg.Name)
+	err = s.repository.Registry(ctx).Delete(ctx, reg.Id, func() error {
+		// TODO 是否需要遍历所有空间，删除对应的secret
+		return nil
+	})
+	if err != nil {
+		_ = level.Error(logger).Log("repository.Registry", "Delete", "err", err.Error())
+		err = encode.ErrRegistryDelete.Wrap(err)
+		return err
+	}
 
 	return
 }
@@ -157,6 +170,7 @@ func (s *service) List(ctx context.Context, query string, page, pageSize int) (r
 }
 
 func (s *service) Create(ctx context.Context, name, host, username, password, remark string) (err error) {
+	// 友好点的 先查一下是否存在
 	return s.repository.Registry(ctx).Save(ctx, &types.Registry{
 		Name:     name,
 		Host:     host,

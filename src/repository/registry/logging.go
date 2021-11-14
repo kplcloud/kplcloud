@@ -1,6 +1,6 @@
 /**
  * @Time : 8/19/21 1:29 PM
- * @Author : solacowa@gmail.com
+ * @Author : solacowa@gmais.com
  * @File : logging
  * @Software: GoLand
  */
@@ -23,14 +23,34 @@ type logging struct {
 	traceId string
 }
 
-func (l *logging) SaveCall(ctx context.Context, reg *types.Registry, call Call) (err error) {
-	panic("implement me")
+func (s *logging) Delete(ctx context.Context, id int64, call Call) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Delete", "id", id, "call", call,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Delete(ctx, id, call)
 }
 
-func (l *logging) List(ctx context.Context, query string, page, pageSize int) (res []types.Registry, total int, err error) {
+func (s *logging) SaveCall(ctx context.Context, reg *types.Registry, call Call) (err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "SaveCall", "reg", reg, "call", call,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.SaveCall(ctx, reg, call)
+}
+
+func (s *logging) List(ctx context.Context, query string, page, pageSize int) (res []types.Registry, total int, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "List",
 			"query", query,
 			"page", page,
@@ -39,45 +59,45 @@ func (l *logging) List(ctx context.Context, query string, page, pageSize int) (r
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.List(ctx, query, page, pageSize)
+	return s.next.List(ctx, query, page, pageSize)
 }
 
-func (l *logging) FindByNames(ctx context.Context, names []string) (res []types.Registry, err error) {
+func (s *logging) FindByNames(ctx context.Context, names []string) (res []types.Registry, err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "Save",
 			"names", names,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.FindByNames(ctx, names)
+	return s.next.FindByNames(ctx, names)
 }
 
-func (l *logging) Save(ctx context.Context, reg *types.Registry) (err error) {
+func (s *logging) Save(ctx context.Context, reg *types.Registry) (err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "Save",
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.Save(ctx, reg)
+	return s.next.Save(ctx, reg)
 }
 
-func (l *logging) FindByName(ctx context.Context, name string) (res types.Registry, err error) {
+func (s *logging) FindByName(ctx context.Context, name string) (res types.Registry, err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "FindByName",
 			"name", name,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.FindByName(ctx, name)
+	return s.next.FindByName(ctx, name)
 }
 
 func NewLogging(logger log.Logger, traceId string) Middleware {

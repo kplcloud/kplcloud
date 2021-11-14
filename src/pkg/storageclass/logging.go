@@ -23,6 +23,18 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) Info(ctx context.Context, clusterId int64, storageName string) (res infoResult, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Info", "clusterId", clusterId, "storageName", storageName,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Info(ctx, clusterId, storageName)
+}
+
 func (s *logging) Recover(ctx context.Context, clusterId int64, storageName string) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

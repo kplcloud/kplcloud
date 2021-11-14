@@ -22,7 +22,16 @@ type tracing struct {
 }
 
 func (s *tracing) FindByName(ctx context.Context, name string) (res []types.Secret, err error) {
-	panic("implement me")
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "FindByName", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "repository.secrets",
+	})
+	defer func() {
+		span.LogKV("name", name, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.FindByName(ctx, name)
 }
 
 func (s *tracing) Delete(ctx context.Context, clusterId int64, ns, name string) (err error) {

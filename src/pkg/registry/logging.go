@@ -26,11 +26,27 @@ func (s *logging) Secret(ctx context.Context, name string) (err error) {
 }
 
 func (s *logging) Update(ctx context.Context, name, host, username, password, remark string) (err error) {
-	panic("implement me")
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Update", "name", name, "host", host, "username", username, "password", password, "remark", remark,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Update(ctx, name, host, username, password, remark)
 }
 
 func (s *logging) Delete(ctx context.Context, name string) (err error) {
-	panic("implement me")
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Delete", "name", name,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Delete(ctx, name)
 }
 
 func (s *logging) Password(ctx context.Context, name string) (res string, err error) {

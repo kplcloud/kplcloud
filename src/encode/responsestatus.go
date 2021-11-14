@@ -91,6 +91,10 @@ var ResponseMessage = map[ResStatus]int{
 	ErrPersistentVolumeClaimCreate: 1161,
 
 	ErrTemplateSave: 1180,
+
+	ErrRegistryDelete:   1200,
+	ErrRegistryUpdate:   1201,
+	ErrRegistryNotfound: 1202,
 }
 
 const (
@@ -128,6 +132,7 @@ const (
 
 	ErrRegistryNotfound ResStatus = "镜像仓库不存在"
 	ErrRegistryUpdate   ResStatus = "镜像仓库更新失败"
+	ErrRegistryDelete   ResStatus = "镜像仓库删除失败"
 
 	ErrDeploymentSyncList    ResStatus = "同步失败"
 	ErrDeploymentGetNotfound ResStatus = "项目不存在"
