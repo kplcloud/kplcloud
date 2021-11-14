@@ -326,7 +326,7 @@ func initHttpHandler(g *group.Group) {
 	r.PathPrefix("/system/role").Handler(http.StripPrefix("/system/role", sysrole.MakeHTTPHandler(sysRoleSvc, append(systemEms, ems...), opts)))
 	r.PathPrefix("/system/permission").Handler(http.StripPrefix("/system/permission", syspermission.MakeHTTPHandler(sysPermissionSvc, append(systemEms, ems...), opts)))
 	r.PathPrefix("/system/setting").Handler(http.StripPrefix("/system/setting", syssetting.MakeHTTPHandler(sysSettingSvc, append(systemEms, ems...), opts)))
-	r.PathPrefix("/account").Handler(http.StripPrefix("/account", account.MakeHTTPHandler(accountSvc, append(systemEms, ems...), opts)))
+	r.PathPrefix("/account").Handler(http.StripPrefix("/account", account.MakeHTTPHandler(accountSvc, append(systemEms, ems...), opts, store, cacheSvc, tracer)))
 	r.PathPrefix("/audits").Handler(http.StripPrefix("/audits", audits.MakeHTTPHandler(auditSvc, append(systemEms, ems...), opts)))
 
 	// 以下为业务模块

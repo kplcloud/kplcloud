@@ -21,8 +21,30 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) Delete(ctx context.Context, id int64, call Call) (err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Delete", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "repository.registry",
+	})
+	defer func() {
+		span.LogKV("id", id, "call", call, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.Delete(ctx, id, call)
+}
+
 func (s *tracing) SaveCall(ctx context.Context, reg *types.Registry, call Call) (err error) {
-	panic("implement me")
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "SaveCall", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "repository.registry",
+	})
+	defer func() {
+		span.LogKV("reg", reg, "call", call, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.SaveCall(ctx, reg, call)
 }
 
 func (s *tracing) List(ctx context.Context, query string, page, pageSize int) (res []types.Registry, total int, err error) {

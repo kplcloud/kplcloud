@@ -53,6 +53,7 @@ func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) 
 	req.page = page
 	req.pageSize = pageSize
 	req.query = r.URL.Query().Get("query")
+	req.status = r.URL.Query().Get("status")
 
 	return req, nil
 }

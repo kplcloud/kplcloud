@@ -20,6 +20,19 @@ type tracing struct {
 	tracer stdopentracing.Tracer
 }
 
+func (s *tracing) Namespaces(ctx context.Context, userId, clusterId int64) (res []nsResult, err error) {
+	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "GetNamespaces", stdopentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "pkg.account",
+	})
+	defer func() {
+		span.LogKV("userId", userId, "clusterId", clusterId, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.Namespaces(ctx, userId, clusterId)
+}
+
 func (s *tracing) Logout(ctx context.Context, userId int64) (err error) {
 	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Logout", stdopentracing.Tag{
 		Key:   string(ext.Component),

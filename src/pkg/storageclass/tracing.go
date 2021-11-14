@@ -12,18 +12,31 @@ import (
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 
-	stdopentracing "github.com/opentracing/opentracing-go"
+	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 )
 
 // 链路追踪中间件
 type tracing struct {
 	next   Service
-	tracer stdopentracing.Tracer
+	tracer opentracing.Tracer
+}
+
+func (s *tracing) Info(ctx context.Context, clusterId int64, storageName string) (res infoResult, err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Info", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "pkg.storageclass",
+	})
+	defer func() {
+		span.LogKV("clusterId", clusterId, "storageName", storageName, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.Info(ctx, clusterId, storageName)
 }
 
 func (s *tracing) Recover(ctx context.Context, clusterId int64, storageName string) (err error) {
-	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Recover", stdopentracing.Tag{
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Recover", opentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "pkg.storageclass",
 	})
@@ -36,7 +49,7 @@ func (s *tracing) Recover(ctx context.Context, clusterId int64, storageName stri
 }
 
 func (s *tracing) List(ctx context.Context, clusterId int64, page, pageSize int) (res []listResult, total int, err error) {
-	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", stdopentracing.Tag{
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", opentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "pkg.storageclass",
 	})
@@ -49,7 +62,7 @@ func (s *tracing) List(ctx context.Context, clusterId int64, page, pageSize int)
 }
 
 func (s *tracing) Delete(ctx context.Context, clusterId int64, storageName string) (err error) {
-	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Delete", stdopentracing.Tag{
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Delete", opentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "pkg.storageclass",
 	})
@@ -62,7 +75,7 @@ func (s *tracing) Delete(ctx context.Context, clusterId int64, storageName strin
 }
 
 func (s *tracing) Update(ctx context.Context, clusterId int64, storageName, provisioner string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode, remark string) (err error) {
-	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Update", stdopentracing.Tag{
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Update", opentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "pkg.storageclass",
 	})
@@ -75,7 +88,7 @@ func (s *tracing) Update(ctx context.Context, clusterId int64, storageName, prov
 }
 
 func (s *tracing) Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode, remark string) (err error) {
-	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "SyncPv", stdopentracing.Tag{
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "SyncPv", opentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "package.StorageClass",
 	})
@@ -99,7 +112,7 @@ func (s *tracing) CreateProvisioner(ctx context.Context, clusterId int64) (err e
 }
 
 func (s *tracing) SyncPv(ctx context.Context, clusterId int64, storageName string) (err error) {
-	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "SyncPv", stdopentracing.Tag{
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "SyncPv", opentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "package.StorageClass",
 	})
@@ -118,7 +131,7 @@ func (s *tracing) SyncPvc(ctx context.Context, clusterId int64, ns string, stora
 }
 
 func (s *tracing) Sync(ctx context.Context, clusterId int64) (err error) {
-	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Sync", stdopentracing.Tag{
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Sync", opentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "package.StorageClass",
 	})
@@ -131,7 +144,7 @@ func (s *tracing) Sync(ctx context.Context, clusterId int64) (err error) {
 	return s.next.Sync(ctx, clusterId)
 }
 
-func NewTracing(otTracer stdopentracing.Tracer) Middleware {
+func NewTracing(otTracer opentracing.Tracer) Middleware {
 	return func(next Service) Service {
 		return &tracing{
 			next:   next,

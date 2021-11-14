@@ -91,6 +91,10 @@ var ResponseMessage = map[ResStatus]int{
 	ErrPersistentVolumeClaimCreate: 1161,
 
 	ErrTemplateSave: 1180,
+
+	ErrRegistryDelete:   1200,
+	ErrRegistryUpdate:   1201,
+	ErrRegistryNotfound: 1202,
 }
 
 const (
@@ -128,6 +132,7 @@ const (
 
 	ErrRegistryNotfound ResStatus = "镜像仓库不存在"
 	ErrRegistryUpdate   ResStatus = "镜像仓库更新失败"
+	ErrRegistryDelete   ResStatus = "镜像仓库删除失败"
 
 	ErrDeploymentSyncList    ResStatus = "同步失败"
 	ErrDeploymentGetNotfound ResStatus = "项目不存在"
@@ -154,6 +159,7 @@ const (
 	ErrAccountNotFound         ResStatus = "账号不存在"
 	ErrAccountASD              ResStatus = "权限验证失败"
 	ErrAccountLocked           ResStatus = "用户已被锁定"
+	ErrAccountNamespace        ResStatus = "用户空间错误"
 	ErrAuthLogin               ResStatus = "登录失败"
 	ErrAuthCheckCaptchaCode    ResStatus = "图形验证码错误"
 	ErrAuthCheckCaptchaNotnull ResStatus = "图形验证码不能为空"

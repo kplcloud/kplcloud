@@ -25,10 +25,18 @@ type Service interface {
 	FindByIds(ctx context.Context, ids []int64) (res []types.Namespace, err error)
 	FindByName(ctx context.Context, clusterId int64, name string) (res types.Namespace, err error)
 	List(ctx context.Context, clusterId int64, names []string, query string, page, pageSize int) (res []types.Namespace, total int, err error)
+	FindByNames(ctx context.Context, clusterId int64, names []string) (res []types.Namespace, err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) FindByNames(ctx context.Context, clusterId int64, names []string) (res []types.Namespace, err error) {
+	err = s.db.Model(&types.Namespace{}).
+		Where("cluster_id = ? AND name IN (?)", clusterId, names).
+		Find(&res).Error
+	return
 }
 
 func (s *service) List(ctx context.Context, clusterId int64, names []string, query string, page, pageSize int) (res []types.Namespace, total int, err error) {

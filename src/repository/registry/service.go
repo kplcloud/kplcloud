@@ -24,10 +24,25 @@ type Service interface {
 	FindByNames(ctx context.Context, names []string) (res []types.Registry, err error)
 	List(ctx context.Context, query string, page, pageSize int) (res []types.Registry, total int, err error)
 	SaveCall(ctx context.Context, reg *types.Registry, call Call) (err error)
+	Delete(ctx context.Context, id int64, call Call) (err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) Delete(ctx context.Context, id int64, call Call) (err error) {
+	tx := s.db.Model(types.Registry{}).Begin()
+
+	if err = tx.Where("id = ?", id).Delete(&types.Registry{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err = call(); err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit().Error
 }
 
 func (s *service) SaveCall(ctx context.Context, reg *types.Registry, call Call) (err error) {
@@ -46,7 +61,7 @@ func (s *service) SaveCall(ctx context.Context, reg *types.Registry, call Call) 
 func (s *service) List(ctx context.Context, query string, page, pageSize int) (res []types.Registry, total int, err error) {
 	q := s.db.Model(&types.Registry{})
 	if !strings.EqualFold(query, "") {
-		q = q.Where("name LIKE '%?%'", query)
+		q = q.Where("`name` LIKE ?", "%"+query+"%")
 	}
 	err = q.Count(&total).
 		Order("created_at DESC").

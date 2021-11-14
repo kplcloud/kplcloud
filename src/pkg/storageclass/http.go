@@ -24,7 +24,7 @@ import (
 	"github.com/kplcloud/kplcloud/src/encode"
 )
 
-func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.ServerOption) http.Handler {
+func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opt []kithttp.ServerOption) http.Handler {
 	var ems []endpoint.Middleware
 
 	ems = append(ems, dmw...)
@@ -33,9 +33,24 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		"Sync":   ems,
 		"SyncPv": ems,
 		"Create": ems,
+		"Info":   ems,
 		"List":   ems,
 		"Update": ems,
 	})
+	opts := []kithttp.ServerOption{
+		kithttp.ServerBefore(func(ctx context.Context, request *http.Request) context.Context {
+			var storageName string
+			vars := mux.Vars(request)
+			storageName, ok := vars["storage"]
+			if !ok {
+				return ctx
+			}
+			ctx = context.WithValue(ctx, contextKeyStorageClassName, storageName)
+			return ctx
+		}),
+	}
+
+	opts = append(opts, opt...)
 
 	r := mux.NewRouter()
 
@@ -81,6 +96,12 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodPut)
+	r.Handle("/{cluster}/info/{storage}", kithttp.NewServer(
+		eps.InfoEndpoint,
+		kithttp.NopRequestDecoder,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodGet)
 
 	return r
 }

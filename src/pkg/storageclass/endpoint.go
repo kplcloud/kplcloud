@@ -39,6 +39,18 @@ type (
 		UpdatedAt     time.Time `json:"updatedAt"`
 	}
 
+	infoResult struct {
+		Name            string    `json:"name"`
+		Provisioner     string    `json:"provisioner"`
+		VolumeMode      string    `json:"volumeMode"`
+		ReclaimPolicy   string    `json:"reclaimPolicy"`
+		Remark          string    `json:"remark"`
+		CreatedAt       time.Time `json:"createdAt"`
+		UpdatedAt       time.Time `json:"updatedAt"`
+		ResourceVersion string    `json:"resourceVersion"`
+		Detail          string    `json:"detail"`
+	}
+
 	createRequest struct {
 		Name          string                               `json:"name" valid:"required"`
 		Namespace     string                               `json:"namespace"`
@@ -57,6 +69,7 @@ type Endpoints struct {
 	DeleteEndpoint  endpoint.Endpoint
 	UpdateEndpoint  endpoint.Endpoint
 	RecoverEndpoint endpoint.Endpoint
+	InfoEndpoint    endpoint.Endpoint
 }
 
 func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
@@ -68,6 +81,7 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 		DeleteEndpoint:  makeDeleteEndpoint(s),
 		UpdateEndpoint:  makeUpdateEndpoint(s),
 		RecoverEndpoint: makeRecoverEndpoint(s),
+		InfoEndpoint:    makeInfoEndpoint(s),
 	}
 
 	for _, m := range dmw["Sync"] {
@@ -84,6 +98,7 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	}
 	for _, m := range dmw["List"] {
 		eps.ListEndpoint = m(eps.ListEndpoint)
+		eps.InfoEndpoint = m(eps.InfoEndpoint)
 	}
 	return eps
 }
@@ -171,6 +186,24 @@ func makeRecoverEndpoint(s Service) endpoint.Endpoint {
 		req := request.(syncPvRequest)
 		err = s.Recover(ctx, clusterId, req.Name)
 		return encode.Response{
+			Error: err,
+		}, err
+	}
+}
+
+func makeInfoEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		clusterId, ok := ctx.Value(middleware.ContextKeyClusterId).(int64)
+		if !ok {
+			return nil, encode.ErrClusterNotfound.Error()
+		}
+		name, ok := ctx.Value(contextKeyStorageClassName).(string)
+		if !ok {
+			return nil, encode.ErrStorageClassNotfound.Error()
+		}
+		res, err := s.Info(ctx, clusterId, name)
+		return encode.Response{
+			Data:  res,
 			Error: err,
 		}, err
 	}
