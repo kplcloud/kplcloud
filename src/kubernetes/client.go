@@ -102,7 +102,7 @@ func (c *client) Reload(ctx context.Context) (err error) {
 
 // NewClient TODO: logging
 func NewClient(store repository.Repository) (cli K8sClient, err error) {
-	clusters, err := store.Cluster(context.Background()).FindAll(context.Background(), 1)
+	clusters, err := store.Cluster(context.Background()).FindAll(context.Background(), 2)
 	if err != nil {
 		err = errors.Wrap(err, "store.Cluster")
 		return

@@ -70,6 +70,7 @@ func (s *service) Update(ctx context.Context, clusterId int64, name string, alia
 		err = encode.ErrNamespaceSave.Wrap(err)
 		return
 	}
+
 	return
 }
 
