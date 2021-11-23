@@ -83,12 +83,18 @@ func (s *service) Info(ctx context.Context, clusterId int64, nodeName string) (r
 		return
 	}
 
+	cluster, err := s.repository.Cluster(ctx).Find(ctx, clusterId)
+	if err != nil {
+		err = encode.ErrClusterNotfound.Wrap(errors.Wrap(err, "repository.Cluster.Find"))
+		return
+	}
+
 	node, err := s.k8sClient.Do(ctx).CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
 		err = encode.ErrNodeCordon.Wrap(errors.Wrap(err, "k8sClient.Do.CoreV1.Nodes.Get"))
 		return
 	}
-
+	res.Name = resNode.Name
 	res.Remark = resNode.Remark
 	res.InternalIp = resNode.InternalIp
 	res.Scheduled = resNode.Scheduled
@@ -96,15 +102,21 @@ func (s *service) Info(ctx context.Context, clusterId int64, nodeName string) (r
 	res.ExternalIp = resNode.ExternalIp
 	res.OsImage = resNode.OsImage
 	res.Labels = node.Labels
-	res.UsedCPU = apiresource.NewQuantity(node.Status.Capacity.Cpu().Value()-node.Status.Allocatable.Cpu().Value(), apiresource.BinarySI).String()
+	res.Annotations = node.Annotations
+	res.UsedCPU = fmt.Sprintf("%.2f", node.Status.Capacity.Cpu().AsApproximateFloat64()-node.Status.Allocatable.Cpu().AsApproximateFloat64())
 	res.UsedMemory = apiresource.NewQuantity(node.Status.Capacity.Memory().Value()-node.Status.Allocatable.Memory().Value(), apiresource.BinarySI).String()
 	res.CPU = node.Status.Capacity.Cpu().String()
 	res.Memory = node.Status.Capacity.Memory().String()
 	res.KubeProxyVersion = resNode.KubeProxyVersion
 	res.KubeletVersion = resNode.KubeletVersion
+	//res.SystemDisk = fmt.Sprintf("%dG", apiresource.NewQuantity(node.Status.Capacity.StorageEphemeral().Value(), apiresource.DecimalSI).ScaledValue(apiresource.Giga))
 	res.SystemDisk = node.Status.Capacity.StorageEphemeral().String()
 	res.Bandwidth = ""
 	res.PodNum = node.Status.Capacity.Pods().Value()
+	res.ClusterAlias = cluster.Alias
+	res.ClusterName = cluster.Name
+	res.ClusterStatus = cluster.Status
+	res.ContainerVersion = resNode.ContainerVersion
 	return
 }
 

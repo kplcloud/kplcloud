@@ -21,6 +21,19 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) FindNsByNames(ctx context.Context, clusterId int64, ns string, names []string) (res []types.Secret, err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "FindNsByNames", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "repository.secrets",
+	})
+	defer func() {
+		span.LogKV("clusterId", clusterId, "ns", ns, "names", names, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.FindNsByNames(ctx, clusterId, ns, names)
+}
+
 func (s *tracing) FindByName(ctx context.Context, name string) (res []types.Secret, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "FindByName", opentracing.Tag{
 		Key:   string(ext.Component),

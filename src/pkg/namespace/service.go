@@ -39,6 +39,13 @@ type Service interface {
 	// 只允许更新别名和备注，其他的无法操作
 	// 直接中间件判定是否有该中间件的操作权限
 	Update(ctx context.Context, clusterId int64, name string, alias, remark, status string, imageSecrets []string) (err error)
+	// Info 获取空间的基本信息
+	Info(ctx context.Context, clusterId int64, name string) (res result, err error)
+	// IssueSecret 生成镜像密钥，并下发至各个空间的Secrets
+	IssueSecret(ctx context.Context, clusterId int64, name, regName string) (err error)
+	// ReloadSecret 重新加载所有密钥
+	// 清除之前的密钥信息，生成新的密钥并发布到Secrets
+	ReloadSecret(ctx context.Context, clusterId int64, name, regName string) (err error)
 }
 
 type service struct {
@@ -46,6 +53,79 @@ type service struct {
 	logger     log.Logger
 	k8sClient  kubernetes.K8sClient
 	repository repository.Repository
+}
+
+func (s *service) IssueSecret(ctx context.Context, clusterId int64, name, regName string) (err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+	ns, err := s.repository.Namespace(ctx).FindByName(ctx, clusterId, name)
+	if err != nil {
+		_ = level.Warn(logger).Log("repository.Namespace", "FindByName", "err", err.Error())
+		err = encode.ErrNamespaceNotfound.Error()
+		return
+	}
+	reg, err := s.repository.Registry(ctx).FindByName(ctx, regName)
+	if err != nil {
+		_ = level.Warn(logger).Log("repository.Registry", "FindByName", "err", err.Error())
+		err = encode.ErrRegistryNotfound.Error()
+		return err
+	}
+
+	fmt.Println(reg.Host, reg.Name, ns.Name, ns.Alias)
+
+	return
+}
+
+func (s *service) ReloadSecret(ctx context.Context, clusterId int64, name, regName string) (err error) {
+	panic("implement me")
+}
+
+func (s *service) Info(ctx context.Context, clusterId int64, name string) (res result, err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	ns, err := s.repository.Namespace(ctx).FindByName(ctx, clusterId, name)
+	if err != nil {
+		_ = level.Warn(logger).Log("repository.Namespace", "FindByName", "err", err.Error())
+		err = encode.ErrNamespaceNotfound.Error()
+		return
+	}
+
+	// 获取空间证书
+	regs, _, err := s.repository.Registry(ctx).List(ctx, "", 1, 50)
+	if err != nil {
+		_ = level.Error(logger).Log("repository.Registry", "List", "err", err.Error())
+		return
+	}
+	var names, secrets []string
+	for _, v := range regs {
+		names = append(names, v.Name)
+	}
+	res.RegSecrets = names
+	secretList, err := s.repository.Secrets(ctx).FindNsByNames(ctx, clusterId, ns.Name, names)
+	if err != nil {
+		_ = level.Error(logger).Log("repository.Registry", "List", "err", err.Error())
+		return
+	}
+	for _, v := range secretList {
+		secrets = append(secrets, v.Name)
+	}
+	res.ImageSecrets = secrets
+
+	res.Name = ns.Name
+	res.Alias = ns.Alias
+	res.Remark = ns.Remark
+	//res.Status = ns.Status
+	res.UpdatedAt = ns.UpdatedAt
+	res.CreatedAt = ns.CreatedAt
+
+	info, err := s.k8sClient.Do(ctx).CoreV1().Namespaces().Get(ctx, ns.Name, metav1.GetOptions{})
+	if err != nil {
+		_ = level.Warn(logger).Log("k8sClient.Do.CoreV1.Namespaces", "Get", "err", err.Error())
+		err = encode.ErrNamespaceNotfound.Error()
+		return
+	}
+
+	res.Status = string(info.Status.Phase)
+	return
 }
 
 func (s *service) Delete(ctx context.Context, clusterId int64, name string, force bool) (err error) {

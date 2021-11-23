@@ -21,6 +21,7 @@ type Middleware func(Service) Service
 
 type Service interface {
 	FindByIds(ctx context.Context, ids []int64) (res []types.Cluster, err error)
+	Find(ctx context.Context, id int64) (res types.Cluster, err error)
 	FindAll(ctx context.Context, status int) (res []types.Cluster, err error)
 	FindByName(ctx context.Context, name string) (res types.Cluster, err error)
 	FindByNames(ctx context.Context, names []string) (res []types.Cluster, err error)
@@ -32,6 +33,11 @@ type Service interface {
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) Find(ctx context.Context, id int64) (res types.Cluster, err error) {
+	err = s.db.Model(&types.Cluster{}).Where("id = ?", id).Find(&res).Error
+	return
 }
 
 func (s *service) FindByNames(ctx context.Context, names []string) (res []types.Cluster, err error) {
@@ -114,7 +120,15 @@ func (s *service) Save(ctx context.Context, data *types.Cluster, calls ...Call) 
 }
 
 func (s *service) FindAll(ctx context.Context, status int) (res []types.Cluster, err error) {
+<<<<<<< HEAD
 	err = s.db.Model(&types.Cluster{}).Where("status = ?", status).Find(&res).Error
+=======
+	q := s.db.Model(&types.Cluster{})
+	if status > 0 {
+		q = q.Where("status = ?", status)
+	}
+	err = q.Find(&res).Error
+>>>>>>> c5de66001e40c57596899676e7c2ea7a76f3ee77
 	return
 }
 
