@@ -49,19 +49,19 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodGet)
-	r.Handle("/{name}/delete", kithttp.NewServer(
+	r.Handle("/{cluster}/delete", kithttp.NewServer(
 		eps.DeleteEndpoint,
 		decodeDeleteRequest,
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodDelete)
-	r.Handle("/{name}/update", kithttp.NewServer(
+	r.Handle("/{cluster}/update", kithttp.NewServer(
 		eps.UpdateEndpoint,
 		decodeAddRequest,
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodPut)
-	r.Handle("/{name}/info", kithttp.NewServer(
+	r.Handle("/{cluster}/info", kithttp.NewServer(
 		eps.InfoEndpoint,
 		decodeInfoRequest,
 		encode.JsonResponse,
@@ -74,7 +74,7 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 func decodeInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req infoRequest
 	vars := mux.Vars(r)
-	name, ok := vars["name"]
+	name, ok := vars["cluster"]
 	if !ok {
 		return nil, encode.Invalid.Error()
 	}
@@ -85,7 +85,7 @@ func decodeInfoRequest(_ context.Context, r *http.Request) (interface{}, error) 
 func decodeDeleteRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req addRequest
 	vars := mux.Vars(r)
-	name, ok := vars["name"]
+	name, ok := vars["cluster"]
 	if !ok {
 		return nil, encode.Invalid.Error()
 	}
