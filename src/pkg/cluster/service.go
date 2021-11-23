@@ -55,15 +55,19 @@ func (s *service) Info(ctx context.Context, name string) (res infoResult, err er
 		err = encode.ErrClusterNotfound.Error()
 		return
 	}
+	version, _ := s.k8sClient.Do(ctx).ServerVersion()
 	res.Name = cluster.Name
 	res.Alias = cluster.Alias
 	res.Remark = cluster.Remark
 	res.Status = cluster.Status
 	res.NodeNum = cluster.NodeNum
 	res.ConfigData = cluster.ConfigData
-	res.Id = cluster.Id
+	//res.Id = cluster.Id
 	res.CreatedAt = cluster.CreatedAt
 	res.UpdatedAt = cluster.UpdatedAt
+	res.GitVersion = version.GitVersion
+	res.GoVersion = version.GoVersion
+	res.Platform = version.Platform
 	return
 }
 
@@ -112,7 +116,7 @@ func (s *service) Delete(ctx context.Context, name string) (err error) {
 }
 
 func (s *service) List(ctx context.Context, name string, page, pageSize int) (res []listResult, total int, err error) {
-	list, total, err := s.repository.Cluster(ctx).List(ctx, name, 0, page, pageSize)
+	list, total, err := s.repository.Cluster(ctx).List(ctx, name, 1, page, pageSize)
 	if err != nil {
 		err = encode.ErrClusterNotfound.Wrap(errors.Wrap(err, "repository.Cluster.List"))
 		return

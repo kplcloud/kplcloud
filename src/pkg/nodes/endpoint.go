@@ -48,6 +48,9 @@ type (
 		Force bool
 	}
 	infoResult struct {
+		ClusterName      string            `json:"clusterName"`
+		ClusterAlias     string            `json:"clusterAlias"`
+		ClusterStatus    int               `json:"clusterStatus"`
 		Name             string            `json:"name"`
 		Status           string            `json:"status"`
 		CPU              string            `json:"cpu"`
@@ -65,6 +68,7 @@ type (
 		Scheduled        bool              `json:"scheduled"`
 		Remark           string            `json:"remark"`
 		Labels           map[string]string `json:"labels"`
+		Annotations      map[string]string `json:"annotations"`
 		PodNum           int64             `json:"podNum"`
 	}
 )

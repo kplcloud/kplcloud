@@ -43,6 +43,9 @@ type (
 		listResult
 		Id         int64  `json:"id"`
 		ConfigData string `json:"data"`
+		GitVersion string `json:"gitVersion"`
+		GoVersion  string `json:"goVersion"`
+		Platform   string `json:"platform"`
 	}
 )
 

@@ -1,6 +1,6 @@
 /**
  * @Time : 3/10/21 3:35 PM
- * @Author : solacowa@gmail.com
+ * @Author : solacowa@gmais.com
  * @File : logging
  * @Software: GoLand
  */
@@ -23,36 +23,48 @@ type logging struct {
 	traceId string
 }
 
-func (l *logging) FindByNames(ctx context.Context, names []string) (res []types.Cluster, err error) {
+func (s *logging) Find(ctx context.Context, id int64) (res types.Cluster, err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Find", "id", id,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Find(ctx, id)
+}
+
+func (s *logging) FindByNames(ctx context.Context, names []string) (res []types.Cluster, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "FindByNames",
 			"names", names,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.FindByNames(ctx, names)
+	return s.next.FindByNames(ctx, names)
 }
 
-func (l *logging) FindByIds(ctx context.Context, ids []int64) (res []types.Cluster, err error) {
+func (s *logging) FindByIds(ctx context.Context, ids []int64) (res []types.Cluster, err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "FindByIds",
 			"ids", ids,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.FindByIds(ctx, ids)
+	return s.next.FindByIds(ctx, ids)
 }
 
-func (l *logging) List(ctx context.Context, name string, status, page, pageSize int) (res []types.Cluster, total int, err error) {
+func (s *logging) List(ctx context.Context, name string, status, page, pageSize int) (res []types.Cluster, total int, err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "List",
 			"name", name,
 			"status", status,
@@ -63,63 +75,63 @@ func (l *logging) List(ctx context.Context, name string, status, page, pageSize 
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.List(ctx, name, status, page, pageSize)
+	return s.next.List(ctx, name, status, page, pageSize)
 }
 
-func (l *logging) SaveRole(ctx context.Context, clusterRole *types.ClusterRole, roles []types.PolicyRule) (err error) {
+func (s *logging) SaveRole(ctx context.Context, clusterRole *types.ClusterRole, roles []types.PolicyRule) (err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "SaveRole",
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.SaveRole(ctx, clusterRole, roles)
+	return s.next.SaveRole(ctx, clusterRole, roles)
 }
 
-func (l *logging) FindAll(ctx context.Context, status int) (res []types.Cluster, err error) {
+func (s *logging) FindAll(ctx context.Context, status int) (res []types.Cluster, err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "FindAll",
 			"status", status,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.FindAll(ctx, status)
+	return s.next.FindAll(ctx, status)
 }
 
-func (l *logging) FindByName(ctx context.Context, name string) (res types.Cluster, err error) {
+func (s *logging) FindByName(ctx context.Context, name string) (res types.Cluster, err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "FindByName",
 			"name", name,
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.FindByName(ctx, name)
+	return s.next.FindByName(ctx, name)
 }
 
-func (l *logging) Save(ctx context.Context, data *types.Cluster, calls ...Call) (err error) {
+func (s *logging) Save(ctx context.Context, data *types.Cluster, calls ...Call) (err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "Save",
 			"took", time.Since(begin),
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.Save(ctx, data, calls...)
+	return s.next.Save(ctx, data, calls...)
 }
 
-func (l *logging) Delete(ctx context.Context, id int64, unscoped bool) (err error) {
+func (s *logging) Delete(ctx context.Context, id int64, unscoped bool) (err error) {
 	defer func(begin time.Time) {
-		_ = l.logger.Log(
-			l.traceId, ctx.Value(l.traceId),
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
 			"method", "Delete",
 			"id", id,
 			"unscoped", unscoped,
@@ -127,7 +139,7 @@ func (l *logging) Delete(ctx context.Context, id int64, unscoped bool) (err erro
 			"err", err,
 		)
 	}(time.Now())
-	return l.next.Delete(ctx, id, unscoped)
+	return s.next.Delete(ctx, id, unscoped)
 }
 
 func NewLogging(logger log.Logger, traceId string) Middleware {

@@ -21,6 +21,19 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) Find(ctx context.Context, id int64) (res types.Cluster, err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Find", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "repository.cluster",
+	})
+	defer func() {
+		span.LogKV("id", id, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.Find(ctx, id)
+}
+
 func (s *tracing) FindByNames(ctx context.Context, names []string) (res []types.Cluster, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "FindByNames", opentracing.Tag{
 		Key:   string(ext.Component),
