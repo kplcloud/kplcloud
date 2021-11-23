@@ -65,6 +65,12 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, nsdmw []endpoint.Midd
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodDelete)
+	r.Handle("/{cluster}/info/{namespace}", kithttp.NewServer(
+		eps.InfoEndpoint,
+		kithttp.NopRequestDecoder,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodGet)
 
 	return r
 }
