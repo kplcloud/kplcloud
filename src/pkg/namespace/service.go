@@ -70,7 +70,43 @@ func (s *service) IssueSecret(ctx context.Context, clusterId int64, name, regNam
 		return err
 	}
 
-	fmt.Println(reg.Host, reg.Name, ns.Name, ns.Alias)
+	auth := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", reg.Username, reg.Password)))
+	marshal, _ := json.Marshal(map[string]interface{}{
+		reg.Host: map[string]string{
+			"username": reg.Username,
+			"password": reg.Password,
+			"auth":     auth,
+		},
+	})
+	coreV1Secret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name:      reg.Name,
+		},
+		Data: map[string][]byte{
+			corev1.DockerConfigKey: marshal,
+		},
+		Type: corev1.SecretTypeDockercfg,
+	}
+	_, err = s.k8sClient.Do(ctx).CoreV1().Secrets(name).Create(ctx, &coreV1Secret, metav1.CreateOptions{})
+	if err != nil {
+		_ = level.Error(logger).Log("k8sClient.Do", "CoreV1", "Secrets", "Create", "err", err.Error())
+	} else {
+		var secret types.Secret
+		secret.Namespace = ns.Name
+		secret.Name = reg.Name
+		secret.ClusterId = clusterId
+		secret.ResourceVersion = coreV1Secret.ResourceVersion
+		data := types.Data{
+			Style: types.DataStyleSecret,
+			Key:   corev1.DockerConfigKey,
+			Value: string(marshal),
+		}
+		if err = s.repository.Secrets(ctx).Save(ctx, &secret, []types.Data{data}); err != nil {
+			err = encode.ErrSecretImageSave.Wrap(err)
+			_ = level.Error(logger).Log("repository.Secrets", "Save", "err", err.Error())
+		}
+	}
 
 	return
 }
@@ -86,6 +122,13 @@ func (s *service) Info(ctx context.Context, clusterId int64, name string) (res r
 	if err != nil {
 		_ = level.Warn(logger).Log("repository.Namespace", "FindByName", "err", err.Error())
 		err = encode.ErrNamespaceNotfound.Error()
+		return
+	}
+
+	cluster, err := s.repository.Cluster(ctx).Find(ctx, clusterId)
+	if err != nil {
+		_ = level.Warn(logger).Log("repository.Cluster", "Find", "err", err.Error())
+		err = encode.ErrClusterNotfound.Error()
 		return
 	}
 
@@ -116,6 +159,8 @@ func (s *service) Info(ctx context.Context, clusterId int64, name string) (res r
 	//res.Status = ns.Status
 	res.UpdatedAt = ns.UpdatedAt
 	res.CreatedAt = ns.CreatedAt
+	res.ClusterAlias = cluster.Alias
+	res.ClusterName = cluster.Name
 
 	info, err := s.k8sClient.Do(ctx).CoreV1().Namespaces().Get(ctx, ns.Name, metav1.GetOptions{})
 	if err != nil {

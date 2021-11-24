@@ -71,6 +71,12 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, nsdmw []endpoint.Midd
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodGet)
+	r.Handle("/{cluster}/issue-secret/{namespace}", kithttp.NewServer(
+		eps.IssueSecretEndpoint,
+		decodeIssueSecretRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodPost)
 
 	return r
 }
@@ -95,6 +101,21 @@ func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) 
 
 func decodeCreateRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req createRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return req, encode.InvalidParams.Wrap(err)
+	}
+	validResult, err := valid.ValidateStruct(req)
+	if err != nil {
+		return nil, encode.InvalidParams.Wrap(err)
+	}
+	if !validResult {
+		return nil, encode.InvalidParams.Wrap(errors.New("valid false"))
+	}
+	return req, nil
+}
+
+func decodeIssueSecretRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req issueSecretRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return req, encode.InvalidParams.Wrap(err)
 	}

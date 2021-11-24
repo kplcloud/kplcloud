@@ -20,10 +20,16 @@ type Service interface {
 	Delete(ctx context.Context, id int64) (err error)
 	FindByIds(ctx context.Context, ids []int64) (res []types.SysPermission, err error)
 	Find(ctx context.Context, id int64) (res types.SysPermission, err error)
+	FindAll(ctx context.Context) (res []types.SysPermission, err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) FindAll(ctx context.Context) (res []types.SysPermission, err error) {
+	err = s.db.Model(&res).Find(&res).Error
+	return
 }
 
 func (s *service) Find(ctx context.Context, id int64) (res types.SysPermission, err error) {

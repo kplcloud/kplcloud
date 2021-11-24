@@ -20,6 +20,32 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) IssueSecret(ctx context.Context, clusterId int64, name, regName string) (err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "IssueSecret", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "pkg.namespace",
+	})
+	defer func() {
+		span.LogKV("clusterId", clusterId, "name", name, "regName", regName, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.IssueSecret(ctx, clusterId, name, regName)
+}
+
+func (s *tracing) ReloadSecret(ctx context.Context, clusterId int64, name, regName string) (err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "ReloadSecret", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "pkg.namespace",
+	})
+	defer func() {
+		span.LogKV("clusterId", clusterId, "name", name, "regName", regName, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.ReloadSecret(ctx, clusterId, name, regName)
+}
+
 func (s *tracing) Info(ctx context.Context, clusterId int64, name string) (res result, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Info", opentracing.Tag{
 		Key:   string(ext.Component),

@@ -21,6 +21,30 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) IssueSecret(ctx context.Context, clusterId int64, name, regName string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "IssueSecret", "clusterId", clusterId, "name", name, "regName", regName,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.IssueSecret(ctx, clusterId, name, regName)
+}
+
+func (s *logging) ReloadSecret(ctx context.Context, clusterId int64, name, regName string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "ReloadSecret", "clusterId", clusterId, "name", name, "regName", regName,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.ReloadSecret(ctx, clusterId, name, regName)
+}
+
 func (s *logging) Info(ctx context.Context, clusterId int64, name string) (res result, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
