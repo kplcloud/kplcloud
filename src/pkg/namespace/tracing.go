@@ -10,18 +10,57 @@ package namespace
 import (
 	"context"
 
-	stdopentracing "github.com/opentracing/opentracing-go"
+	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
 )
 
 // 链路追踪中间件
 type tracing struct {
 	next   Service
-	tracer stdopentracing.Tracer
+	tracer opentracing.Tracer
+}
+
+func (s *tracing) IssueSecret(ctx context.Context, clusterId int64, name, regName string) (err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "IssueSecret", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "pkg.namespace",
+	})
+	defer func() {
+		span.LogKV("clusterId", clusterId, "name", name, "regName", regName, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.IssueSecret(ctx, clusterId, name, regName)
+}
+
+func (s *tracing) ReloadSecret(ctx context.Context, clusterId int64, name, regName string) (err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "ReloadSecret", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "pkg.namespace",
+	})
+	defer func() {
+		span.LogKV("clusterId", clusterId, "name", name, "regName", regName, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.ReloadSecret(ctx, clusterId, name, regName)
+}
+
+func (s *tracing) Info(ctx context.Context, clusterId int64, name string) (res result, err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Info", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "pkg.namespace",
+	})
+	defer func() {
+		span.LogKV("clusterId", clusterId, "name", name, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.Info(ctx, clusterId, name)
 }
 
 func (s *tracing) List(ctx context.Context, clusterId int64, names []string, query string, page, pageSize int) (res []result, total int, err error) {
-	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", stdopentracing.Tag{
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", opentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "package.Namespace",
 	})
@@ -42,7 +81,7 @@ func (s *tracing) List(ctx context.Context, clusterId int64, names []string, que
 }
 
 func (s *tracing) Delete(ctx context.Context, clusterId int64, name string, force bool) (err error) {
-	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Delete", stdopentracing.Tag{
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Delete", opentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "package.Namespace",
 	})
@@ -59,7 +98,7 @@ func (s *tracing) Delete(ctx context.Context, clusterId int64, name string, forc
 }
 
 func (s *tracing) Update(ctx context.Context, clusterId int64, name string, alias, remark, status string, imageSecrets []string) (err error) {
-	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Update", stdopentracing.Tag{
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Update", opentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "package.Namespace",
 	})
@@ -79,7 +118,7 @@ func (s *tracing) Update(ctx context.Context, clusterId int64, name string, alia
 }
 
 func (s *tracing) Create(ctx context.Context, clusterId int64, name, alias, remark string, imageSecrets []string) (err error) {
-	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Create", stdopentracing.Tag{
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Create", opentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "package.Namespace",
 	})
@@ -95,7 +134,7 @@ func (s *tracing) Create(ctx context.Context, clusterId int64, name, alias, rema
 }
 
 func (s *tracing) Sync(ctx context.Context, clusterId int64) (err error) {
-	span, ctx := stdopentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Sync", stdopentracing.Tag{
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Sync", opentracing.Tag{
 		Key:   string(ext.Component),
 		Value: "package.Namespace",
 	})
@@ -109,7 +148,7 @@ func (s *tracing) Sync(ctx context.Context, clusterId int64) (err error) {
 	return s.next.Sync(ctx, clusterId)
 }
 
-func NewTracing(otTracer stdopentracing.Tracer) Middleware {
+func NewTracing(otTracer opentracing.Tracer) Middleware {
 	return func(next Service) Service {
 		return &tracing{
 			next:   next,

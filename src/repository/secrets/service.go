@@ -22,10 +22,20 @@ type Service interface {
 	Save(ctx context.Context, secret *types.Secret, data []types.Data) (err error)
 	Delete(ctx context.Context, clusterId int64, ns, name string) (err error)
 	FindByName(ctx context.Context, name string) (res []types.Secret, err error)
+	FindNsByNames(ctx context.Context, clusterId int64, ns string, names []string) (res []types.Secret, err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) FindNsByNames(ctx context.Context, clusterId int64, ns string, names []string) (res []types.Secret, err error) {
+	err = s.db.Model(&types.Secret{}).
+		Preload("Data").
+		Where("cluster_id = ?", clusterId).
+		Where("namespace = ?", ns).
+		Where("name IN (?)", names).Find(&res).Error
+	return
 }
 
 func (s *service) FindByName(ctx context.Context, name string) (res []types.Secret, err error) {

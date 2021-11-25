@@ -143,7 +143,7 @@ func (c *client) Do(ctx context.Context) *kubernetes.Clientset {
 	if !ok {
 		// TODO: 取个默认的，如何给上层抛错？
 		cluster = "c1"
-		log.Println("集群没有连接,可以已经被删除了")
+		log.Println("集群没有连接,可能已经被禁用了")
 	}
 	return c.clientSet[cluster]
 }

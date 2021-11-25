@@ -32,12 +32,33 @@ type Endpoints struct {
 func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	eps := Endpoints{
 		CreateEndpoint: makeCreateEndpoint(s),
+		SyncEndpoint:   makeSyncEndpoint(s),
 	}
 
 	for _, m := range dmw["Create"] {
 		eps.CreateEndpoint = m(eps.CreateEndpoint)
 	}
+	for _, m := range dmw["Sync"] {
+		eps.SyncEndpoint = m(eps.SyncEndpoint)
+	}
 	return eps
+}
+
+func makeSyncEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		clusterId, ok := ctx.Value(middleware.ContextKeyClusterId).(int64)
+		if !ok {
+			return nil, encode.ErrClusterNotfound.Error()
+		}
+		ns, ok := ctx.Value(middleware.ContextKeyNamespaceName).(string)
+		if !ok {
+			return nil, encode.ErrNamespaceNotfound.Error()
+		}
+		err = s.Sync(ctx, clusterId, ns)
+		return encode.Response{
+			Error: err,
+		}, err
+	}
 }
 
 func makeCreateEndpoint(s Service) endpoint.Endpoint {

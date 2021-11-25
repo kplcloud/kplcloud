@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-//
+// ConfigMap 配置字典
 type ConfigMap struct {
 	Id              int64      `json:"id"`
 	ClusterId       int64      `gorm:"column:cluster_id;index;notnull;comment:'集群ID'" json:"cluster_id"`

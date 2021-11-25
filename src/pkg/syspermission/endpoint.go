@@ -11,14 +11,22 @@ import (
 	"context"
 	"github.com/go-kit/kit/endpoint"
 	"github.com/kplcloud/kplcloud/src/encode"
+	"time"
 )
 
 type (
 	result struct {
-		Name   string `json:"name"`
-		Path   string `json:"path"`
-		Method string `json:"method"`
-		Desc   string `json:"desc"`
+		Name      string    `json:"name"`
+		Path      string    `json:"path"`
+		Method    string    `json:"method"`
+		Alias     string    `json:"alias"`
+		Remark    string    `json:"remark"`
+		ParentId  int64     `json:"parentId"`
+		Id        int64     `json:"id"`
+		Menu      bool      `json:"menu"`
+		Sort      int       `json:"sort"`
+		CreatedAt time.Time `json:"createdAt"`
+		Children  []result  `json:"children"`
 	}
 
 	addRequest struct {

@@ -29,6 +29,7 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 
 	eps := NewEndpoint(s, map[string][]endpoint.Middleware{
 		//"Add": ems,
+		"All": ems,
 	})
 
 	r := mux.NewRouter()

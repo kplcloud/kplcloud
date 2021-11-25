@@ -62,8 +62,33 @@ func (s *service) Drag(ctx context.Context, dragKey, dropKey int64) (res []resul
 }
 
 func (s *service) All(ctx context.Context) (res []result, err error) {
-	s.repository.SysPermission()
-	return
+	list, err := s.repository.SysPermission().FindAll(ctx)
+	for _, v := range list {
+		res = append(res, result{
+			Name:      v.Name,
+			Path:      v.Path,
+			Method:    v.Method,
+			Alias:     v.Alias,
+			Remark:    v.Description,
+			ParentId:  v.ParentId,
+			Id:        v.Id,
+			Menu:      v.Menu,
+			Sort:      v.Sort,
+			CreatedAt: v.CreatedAt,
+		})
+	}
+	return treeChildren(res, 0), nil
+}
+
+func treeChildren(list []result, pid int64) []result {
+	var tree []result
+	for _, v := range list {
+		if v.ParentId == pid {
+			v.Children = append(v.Children, treeChildren(list, v.Id)...)
+			tree = append(tree, v)
+		}
+	}
+	return tree
 }
 
 func (s *service) Add(ctx context.Context, name, alias, icon, path, method, desc string, parentId int64, menu bool) (err error) {

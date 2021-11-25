@@ -19,7 +19,6 @@ type Repository2 interface {
 	Template() TemplateRepository
 	Groups() GroupsRepository
 	StorageClass() StorageClassRepository
-	Pvc() PvcRepository
 	Project() ProjectRepository
 	ProjectTemplate() ProjectTemplateRepository
 	Webhook() WebhookRepository
@@ -28,7 +27,6 @@ type Repository2 interface {
 	CronJob() CronjobRepository
 	ConfigMap() ConfigMapRepository
 	ConfigData() ConfigDataRepository
-	WechatUser() WechatUserRepository
 	Permission() PermissionRepository
 	Role() RoleRepository
 	ProjectJenkins() ProjectJenkinsRepository
@@ -50,7 +48,6 @@ type store struct {
 	template        TemplateRepository
 	groups          GroupsRepository
 	storageClass    StorageClassRepository
-	pvc             PvcRepository
 	project         ProjectRepository
 	projectTemplate ProjectTemplateRepository
 	webhook         WebhookRepository
@@ -59,7 +56,6 @@ type store struct {
 	cronJob         CronjobRepository
 	configMap       ConfigMapRepository
 	configData      ConfigDataRepository
-	wechatUser      WechatUserRepository
 	permission      PermissionRepository
 	role            RoleRepository
 	projectJenkins  ProjectJenkinsRepository
@@ -81,7 +77,6 @@ func NewRepository2(db *gorm.DB) Repository2 {
 		template:        NewTemplateRepository(db),
 		groups:          NewGroupsRepository(db),
 		storageClass:    NewStorageClassRepository(db),
-		pvc:             NewPvcRepository(db),
 		project:         NewProjectRepository(db),
 		projectTemplate: NewProjectTemplateRepository(db),
 		webhook:         NewWebhookRepository(db),
@@ -90,14 +85,14 @@ func NewRepository2(db *gorm.DB) Repository2 {
 		cronJob:         NewCronjobRepository(db),
 		configMap:       NewConfigMapRepository(db),
 		configData:      NewConfigDataRepository(db),
-		wechatUser:      NewWechatUserRepository(db),
-		permission:      NewPermissionRepository(db),
-		role:            NewRoleRepository(db),
-		projectJenkins:  NewProjectJenkins(db),
-		consul:          NewConsulReporitory(db),
-		dockerfile:      NewDockerfileRepository(db),
-		noticeMember:    NewNoticeMemberRepository(db),
-		configEnv:       NewConfigEnvRepository(db),
+		//wechatUser:      NewWechatUserRepository(db),
+		permission:     NewPermissionRepository(db),
+		role:           NewRoleRepository(db),
+		projectJenkins: NewProjectJenkins(db),
+		consul:         NewConsulReporitory(db),
+		dockerfile:     NewDockerfileRepository(db),
+		noticeMember:   NewNoticeMemberRepository(db),
+		configEnv:      NewConfigEnvRepository(db),
 	}
 }
 
@@ -137,10 +132,6 @@ func (c *store) StorageClass() StorageClassRepository {
 	return c.storageClass
 }
 
-func (c *store) Pvc() PvcRepository {
-	return c.pvc
-}
-
 func (c *store) Project() ProjectRepository {
 	return c.project
 }
@@ -171,10 +162,6 @@ func (c *store) ConfigMap() ConfigMapRepository {
 
 func (c *store) ConfigData() ConfigDataRepository {
 	return c.configData
-}
-
-func (c *store) WechatUser() WechatUserRepository {
-	return c.wechatUser
 }
 
 func (c *store) Permission() PermissionRepository {

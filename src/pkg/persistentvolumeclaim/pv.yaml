@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pvc-07ef7d44-f316-4e8a-b7b7-263b00d87997
+  resourceVersion: "16577773465"
+  selfLink: /api/v1/persistentvolumes/pvc-07ef7d44-f316-4e8a-b7b7-263b00d87997
+  uid: 1416687c-48c1-4b79-9dd2-7ab1e828ab59
+spec:
+  accessModes:
+    - ReadWriteOnce
+  capacity:
+    storage: 8Gi
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: data-elastic-elasticsearch-data-0
+    namespace: icolo
+    resourceVersion: "16577773344"
+    uid: 07ef7d44-f316-4e8a-b7b7-263b00d87997
+  nfs:
+    path: /data/icolo-data-elastic-elasticsearch-data-0-pvc-07ef7d44-f316-4e8a-b7b7-263b00d87997
+    server: 172.16.0.11
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: managed-nfs-storage
+  volumeMode: Filesystem
+status:
+  phase: Bound

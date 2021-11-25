@@ -9,6 +9,7 @@ package persistentvolumeclaim
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/ghodss/yaml"
 	"github.com/go-kit/kit/log"
@@ -19,6 +20,7 @@ import (
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 )
 
 type Middleware func(Service) Service
@@ -54,16 +56,35 @@ func (s *service) Sync(ctx context.Context, clusterId int64, ns string) (err err
 	}
 
 	for _, pvc := range pvcs.Items {
-		b, _ := yaml.Marshal(pvc)
-		//storage, _ := pvc.Spec.Resources.Requests[v1.ResourceStorage].MarshalJSON()
-		//if err = c.repository.Pvc().FirstOrCreate(ns, pvc.Name,
-		//	string(pvc.Spec.AccessModes[0]), strings.Trim(string(storage), `"`),
-		//	*pvc.Spec.StorageClassName,
-		//	string(b),
-		//	pvc.Spec.Selector.String(), pvc.Labels); err != nil {
-		//	_ = level.Warn(c.logger).Log("pvcRepository", "FirstOrCreate", "err", err)
-		//}
-		fmt.Println(string(b))
+		storage, e := s.repository.StorageClass(ctx).FindName(ctx, clusterId, *pvc.Spec.StorageClassName)
+		if e != nil {
+			_ = level.Error(logger).Log("repository.StorageClass", "FindName", "err", err.Error())
+			continue
+		}
+
+		fieldsPvc := fields.SelectorFromSet(fields.Set{
+			"space.storageClassName": "",
+		})
+		l, errrr := s.k8sClient.Do(ctx).CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{
+			FieldSelector: fieldsPvc.String(),
+		})
+		fmt.Println(errrr)
+		bbb, _ := yaml.Marshal(l)
+		fmt.Println(string(bbb))
+		accessModels, _ := json.Marshal(pvc.Spec.AccessModes)
+		labels, _ := json.Marshal(pvc.Labels)
+
+		if er := s.repository.Pvc(ctx).Save(ctx, &types.PersistentVolumeClaim{
+			Name:           pvc.Name,
+			Namespace:      pvc.Namespace,
+			AccessModes:    string(accessModels),
+			Labels:         string(labels),
+			RequestStorage: pvc.Spec.Resources.Requests.Storage().String(),
+			LimitStorage:   pvc.Spec.Resources.Limits.Storage().String(),
+			StorageClassId: storage.Id,
+		}, nil); er != nil {
+			_ = level.Error(logger).Log("repository.Pvc", "Save", "err", er.Error())
+		}
 	}
 
 	return

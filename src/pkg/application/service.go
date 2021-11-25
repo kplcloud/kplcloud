@@ -29,7 +29,7 @@ type Service interface {
 	// query 可以为空 过滤 标签或应用名称或别名 TODO: 是否需要加一个标签筛选？
 	List(ctx context.Context, clusterId int64, namespace []string, query string, page, pageSize int) (res []appResult, total int, err error)
 
-	//CreateApp(ctx context.Context, clusterId int64, namespace, appName, remark string)
+	//Add(ctx context.Context, clusterId int64, ns, name, alias, remark string) (err error)
 }
 
 type service struct {

@@ -11,11 +11,11 @@ import (
 	"context"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
-	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strings"
 )
 
 type Middleware func(Service) Service
@@ -48,6 +48,9 @@ func (s *service) List(ctx context.Context, clusterId int64, ns, name string, pa
 			Name:      v.Name,
 			Namespace: v.Namespace,
 			Desc:      v.Desc,
+			Version:   v.ResourceVersion,
+			CreatedAt: v.CreatedAt,
+			UpdatedAt: v.UpdatedAt,
 		})
 	}
 
@@ -57,31 +60,51 @@ func (s *service) List(ctx context.Context, clusterId int64, ns, name string, pa
 func (s *service) Sync(ctx context.Context, clusterId int64, ns string) (err error) {
 	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
 
-	list, err := s.k8sClient.Do(ctx).CoreV1().ConfigMaps(ns).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		_ = level.Error(logger).Log("k8sClient.Do.CoreV1.ConfigMaps", "List", "err", err.Error())
-		return encode.ErrConfigMapSyncList.Wrap(err)
+	var nss []string
+	if strings.EqualFold(ns, "") {
+		if list, err := s.repository.Namespace(ctx).FindByCluster(ctx, clusterId); err == nil {
+			for _, v := range list {
+				nss = append(nss, v.Name)
+			}
+		} else {
+			_ = level.Error(logger).Log("repository.Namespace", "FindByCluster", "err", err.Error())
+			return err
+		}
+	} else {
+		nss = append(nss, ns)
 	}
 
-	for _, v := range list.Items {
-		cfgMap := &types.ConfigMap{
-			ClusterId:       clusterId,
-			Name:            v.Name,
-			Namespace:       v.Namespace,
-			ResourceVersion: v.ResourceVersion,
+	for _, n := range nss {
+		list, err := s.k8sClient.Do(ctx).CoreV1().ConfigMaps(n).List(ctx, metav1.ListOptions{})
+		if err != nil {
+			_ = level.Error(logger).Log("k8sClient.Do.CoreV1.ConfigMaps", "List", "err", err.Error())
+			//return encode.ErrConfigMapSyncList.Wrap(err)
+			continue
 		}
-		var data []types.Data
-		for key, val := range v.Data {
-			data = append(data, types.Data{
-				Style: types.DataStyleConfigMap,
-				Key:   key,
-				Value: val,
-			})
+
+		for _, v := range list.Items {
+			cfgMap := &types.ConfigMap{
+				ClusterId:       clusterId,
+				Name:            v.Name,
+				Namespace:       v.Namespace,
+				ResourceVersion: v.ResourceVersion,
+			}
+			var data []types.Data
+			for key, val := range v.Data {
+				data = append(data, types.Data{
+					Style: types.DataStyleConfigMap,
+					Key:   key,
+					Value: val,
+				})
+			}
+			if err = s.repository.ConfigMap(ctx).Save(ctx, cfgMap, data); err != nil {
+				_ = level.Error(logger).Log("repository.ConfigMap", "Save", "err", err.Error())
+				continue
+			}
 		}
-		err = s.repository.ConfigMap(ctx).Save(ctx, cfgMap, data)
 	}
 
-	return
+	return nil
 }
 
 func New(logger log.Logger, traceId string, repository repository.Repository, client kubernetes.K8sClient) Service {

@@ -17,13 +17,25 @@ import (
 	"github.com/kplcloud/kplcloud/src/repository/types"
 )
 
-type loggingServer struct {
+type logging struct {
 	logger  log.Logger
 	next    Service
 	traceId string
 }
 
-func (s *loggingServer) FindByNames(ctx context.Context, clusterId int64, names []string) (res []types.Namespace, err error) {
+func (s *logging) FindByCluster(ctx context.Context, clusterId int64) (res []types.Namespace, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "FindByCluster", "clusterId", clusterId,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.FindByCluster(ctx, clusterId)
+}
+
+func (s *logging) FindByNames(ctx context.Context, clusterId int64, names []string) (res []types.Namespace, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
 			s.traceId, ctx.Value(s.traceId),
@@ -35,7 +47,7 @@ func (s *loggingServer) FindByNames(ctx context.Context, clusterId int64, names 
 	return s.next.FindByNames(ctx, clusterId, names)
 }
 
-func (s *loggingServer) List(ctx context.Context, clusterId int64, names []string, query string, page, pageSize int) (res []types.Namespace, total int, err error) {
+func (s *logging) List(ctx context.Context, clusterId int64, names []string, query string, page, pageSize int) (res []types.Namespace, total int, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
 			s.traceId, ctx.Value(s.traceId),
@@ -52,7 +64,7 @@ func (s *loggingServer) List(ctx context.Context, clusterId int64, names []strin
 	return s.next.List(ctx, clusterId, names, query, page, pageSize)
 }
 
-func (s *loggingServer) SaveCall(ctx context.Context, data *types.Namespace, call Call) (err error) {
+func (s *logging) SaveCall(ctx context.Context, data *types.Namespace, call Call) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
 			s.traceId, ctx.Value(s.traceId),
@@ -64,7 +76,7 @@ func (s *loggingServer) SaveCall(ctx context.Context, data *types.Namespace, cal
 	return s.next.SaveCall(ctx, data, call)
 }
 
-func (s *loggingServer) FindByName(ctx context.Context, clusterId int64, name string) (res types.Namespace, err error) {
+func (s *logging) FindByName(ctx context.Context, clusterId int64, name string) (res types.Namespace, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
 			s.traceId, ctx.Value(s.traceId),
@@ -78,7 +90,7 @@ func (s *loggingServer) FindByName(ctx context.Context, clusterId int64, name st
 	return s.next.FindByName(ctx, clusterId, name)
 }
 
-func (s *loggingServer) FindByIds(ctx context.Context, ids []int64) (res []types.Namespace, err error) {
+func (s *logging) FindByIds(ctx context.Context, ids []int64) (res []types.Namespace, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
 			s.traceId, ctx.Value(s.traceId),
@@ -90,7 +102,7 @@ func (s *loggingServer) FindByIds(ctx context.Context, ids []int64) (res []types
 	return s.next.FindByIds(ctx, ids)
 }
 
-func (s *loggingServer) Save(ctx context.Context, data *types.Namespace) (err error) {
+func (s *logging) Save(ctx context.Context, data *types.Namespace) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
 			s.traceId, ctx.Value(s.traceId),
@@ -105,7 +117,7 @@ func (s *loggingServer) Save(ctx context.Context, data *types.Namespace) (err er
 func NewLogging(logger log.Logger, traceId string) Middleware {
 	logger = log.With(logger, "namespace", "logging")
 	return func(next Service) Service {
-		return &loggingServer{
+		return &logging{
 			logger:  level.Info(logger),
 			next:    next,
 			traceId: traceId,
