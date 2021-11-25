@@ -81,35 +81,31 @@ func (s *service) Sync(ctx context.Context, clusterId int64, ns string) (err err
 		return encode.ErrDeploymentSyncList.Wrap(err)
 	}
 
-	fmt.Println(ns)
-
 	for _, v := range nss.Items {
 		b, _ := yaml.Marshal(v)
 		fmt.Println(string(b))
 
-		p := types.Project{
-			Alias:        v.Name,
-			Name:         v.Name,
-			Namespace:    v.Namespace,
-			Replicas:     int(*v.Spec.Replicas),
-			Cpu:          v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().Value(),
-			MaxCpu:       v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Value(),
-			Memory:       v.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().Value(),
-			MaxMemory:    v.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().Value(),
-			GitRepo:      "",
-			Version:      "",
-			Status:       "",
+		app := types.Application{
+			Alias:     v.Name,
+			Name:      v.Name,
+			Namespace: v.Namespace,
+			ClusterId: clusterId,
+			Replicas:  int(*v.Spec.Replicas),
+			Cpu:       v.Spec.Template.Spec.Containers[0].Resources.Requests.Cpu().Value(),
+			MaxCpu:    v.Spec.Template.Spec.Containers[0].Resources.Limits.Cpu().Value(),
+			Memory:    v.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().Value(),
+			MaxMemory: v.Spec.Template.Spec.Containers[0].Resources.Limits.Memory().Value(),
+			GitRepo:   "",
+			Version:   "",
+			//Status:       v.Status.Dep(),
 			AuditStatus:  types.AuditStatusSuccess,
 			DeployMethod: types.DeployMethodGit,
 		}
 
-		//dep := types.Deployment{
-		//	Name:      "",
-		//	Namespace: "",
-		//	Replicas:  0,
-		//	Data:      "",
-		//}
-		fmt.Println(p)
+		e := s.repository.Application(ctx).Save(ctx, &app, nil)
+		if e != nil {
+			_ = level.Error(logger).Log("repository.Application", "Save", "err", e.Error())
+		}
 	}
 
 	return

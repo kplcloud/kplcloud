@@ -12,13 +12,17 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/middleware"
+	"time"
 )
 
 type (
 	configMapResult struct {
-		Name      string `json:"name"`
-		Namespace string `json:"namespace"`
-		Desc      string `json:"desc"`
+		Name      string    `json:"name"`
+		Namespace string    `json:"namespace"`
+		Desc      string    `json:"desc"`
+		Version   string    `json:"version"`
+		CreatedAt time.Time `json:"createdAt"`
+		UpdatedAt time.Time `json:"updatedAt"`
 	}
 )
 

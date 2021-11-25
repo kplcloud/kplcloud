@@ -12,6 +12,7 @@ import "time"
 // Application 应用主表
 type Application struct {
 	Id           int64        `gorm:"column:id;primary_key" json:"id"`
+	ClusterId    int64        `gorm:"column:cluster_id;notnull;comment:'集群ID'" json:"cluster_id"`
 	Alias        string       `gorm:"column:alias;notnull;comment:'别名'" json:"alias"`
 	Name         string       `gorm:"column:name;index;24;notnull;comment:'名称'" json:"name"`
 	Namespace    string       `gorm:"column:namespace;index;24;notnull;;comment:'空间'" json:"namespace"`
@@ -32,5 +33,10 @@ type Application struct {
 	UpdatedAt time.Time  `gorm:"column:updated_at" json:"updated_at" form:"updated_at"` // 更新时间
 	DeletedAt *time.Time `gorm:"column:deleted_at" json:"deleted_at"`
 
-	Deployment Deployment `json:"deployment"`
+	//Deployment Deployment `json:"deployment"`
+}
+
+// TableName set table
+func (*Application) TableName() string {
+	return "application"
 }

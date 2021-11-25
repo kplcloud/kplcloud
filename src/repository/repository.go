@@ -9,6 +9,7 @@ package repository
 
 import (
 	"context"
+	"github.com/kplcloud/kplcloud/src/repository/pvc"
 
 	"github.com/go-kit/kit/log"
 	kitcache "github.com/icowan/kit-cache"
@@ -16,6 +17,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/opentracing/opentracing-go"
 
+	"github.com/kplcloud/kplcloud/src/repository/application"
 	"github.com/kplcloud/kplcloud/src/repository/audit"
 	"github.com/kplcloud/kplcloud/src/repository/cluster"
 	"github.com/kplcloud/kplcloud/src/repository/configmap"
@@ -42,6 +44,8 @@ type Repository interface {
 	K8sTpl(ctx context.Context) k8stpl.Service
 	Registry(ctx context.Context) registry.Service
 	Audit(ctx context.Context) audit.Service
+	Application(ctx context.Context) application.Service
+	Pvc(ctx context.Context) pvc.Service
 
 	SysSetting() syssetting.Service
 	SysUser() sysuser.Service
@@ -65,12 +69,22 @@ type repository struct {
 	k8sTpl          k8stpl.Service
 	registrySvc     registry.Service
 	auditSvc        audit.Service
+	appSvc          application.Service
+	pvcSvc          pvc.Service
 
 	sysSetting    syssetting.Service
 	sysUser       sysuser.Service
 	sysNamespace  sysnamespace.Service
 	sysRole       sysrole.Service
 	sysPermission syspermission.Service
+}
+
+func (r *repository) Pvc(ctx context.Context) pvc.Service {
+	return r.pvcSvc
+}
+
+func (r *repository) Application(ctx context.Context) application.Service {
+	return r.appSvc
 }
 
 func (r *repository) Audit(ctx context.Context) audit.Service {
@@ -176,6 +190,10 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 	registrySvc = registry.NewLogging(logger, traceId)(registrySvc)
 	auditSvc := audit.New(db)
 	auditSvc = audit.NewLogging(logger, traceId)(auditSvc)
+	appSvc := application.New(db)
+	appSvc = application.NewLogging(logger, traceId)(appSvc)
+	pvcSvc := pvc.New(db)
+	pvcSvc = pvc.NewLogging(logger, traceId)(pvcSvc)
 
 	if tracer != nil {
 		sysSetting = syssetting.NewTracing(tracer)(sysSetting)
@@ -193,6 +211,8 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 		registrySvc = registry.NewTracing(tracer)(registrySvc)
 		k8sTplSvc = k8stpl.NewTracing(tracer)(k8sTplSvc)
 		auditSvc = audit.NewTracing(tracer)(auditSvc)
+		appSvc = application.NewTracing(tracer)(appSvc)
+		pvcSvc = pvc.NewTracing(tracer)(pvcSvc)
 	}
 
 	if kcache != nil {
@@ -215,5 +235,7 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 		secretSvc:       secretSvc,
 		registrySvc:     registrySvc,
 		auditSvc:        auditSvc,
+		appSvc:          appSvc,
+		pvcSvc:          pvcSvc,
 	}
 }

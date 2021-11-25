@@ -120,15 +120,11 @@ func (s *service) Save(ctx context.Context, data *types.Cluster, calls ...Call) 
 }
 
 func (s *service) FindAll(ctx context.Context, status int) (res []types.Cluster, err error) {
-<<<<<<< HEAD
-	err = s.db.Model(&types.Cluster{}).Where("status = ?", status).Find(&res).Error
-=======
 	q := s.db.Model(&types.Cluster{})
 	if status > 0 {
 		q = q.Where("status = ?", status)
 	}
 	err = q.Find(&res).Error
->>>>>>> c5de66001e40c57596899676e7c2ea7a76f3ee77
 	return
 }
 

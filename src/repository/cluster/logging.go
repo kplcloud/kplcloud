@@ -143,7 +143,7 @@ func (s *logging) Delete(ctx context.Context, id int64, unscoped bool) (err erro
 }
 
 func NewLogging(logger log.Logger, traceId string) Middleware {
-	logger = log.With(logger, "cluster", "logging")
+	logger = log.With(logger, "repository.cluster", "logging")
 	return func(next Service) Service {
 		return &logging{
 			logger:  level.Info(logger),

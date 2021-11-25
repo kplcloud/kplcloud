@@ -102,11 +102,7 @@ func (c *client) Reload(ctx context.Context) (err error) {
 
 // NewClient TODO: logging
 func NewClient(store repository.Repository) (cli K8sClient, err error) {
-<<<<<<< HEAD
-	clusters, err := store.Cluster(context.Background()).FindAll(context.Background(), 2)
-=======
 	clusters, err := store.Cluster(context.Background()).FindAll(context.Background(), -1)
->>>>>>> c5de66001e40c57596899676e7c2ea7a76f3ee77
 	if err != nil {
 		err = errors.Wrap(err, "store.Cluster")
 		return
@@ -147,7 +143,7 @@ func (c *client) Do(ctx context.Context) *kubernetes.Clientset {
 	if !ok {
 		// TODO: 取个默认的，如何给上层抛错？
 		cluster = "c1"
-		log.Println("集群没有连接,可以已经被删除了")
+		log.Println("集群没有连接,可能已经被禁用了")
 	}
 	return c.clientSet[cluster]
 }
