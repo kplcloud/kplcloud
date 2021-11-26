@@ -19,10 +19,20 @@ type Call func() error
 
 type Service interface {
 	Save(ctx context.Context, pvc *types.PersistentVolumeClaim, call Call) (err error)
+	List(ctx context.Context, storageClassIds []int64, page, pageSize int64) (res []types.PersistentVolumeClaim, total int, err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) List(ctx context.Context, storageClassIds []int64, page, pageSize int64) (res []types.PersistentVolumeClaim, total int, err error) {
+	err = s.db.Model(&types.PersistentVolumeClaim{}).Where("storage_class_id IN (?)", storageClassIds).
+		Order("created_at DESC").
+		Count(&total).
+		Offset((page - 1) * pageSize).
+		Limit(total).Find(&res).Error
+	return
 }
 
 func (s *service) Save(ctx context.Context, pvc *types.PersistentVolumeClaim, call Call) (err error) {

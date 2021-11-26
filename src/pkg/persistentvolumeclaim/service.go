@@ -154,7 +154,9 @@ func (s *service) Create(ctx context.Context, clusterId int64, ns, name, storage
 }
 
 func (s *service) List(ctx context.Context, clusterId int64, ns string, page, pageSize int) (resp map[string]interface{}, err error) {
-	//logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	s.repository.Pvc(ctx).Save()
 
 	return
 }
