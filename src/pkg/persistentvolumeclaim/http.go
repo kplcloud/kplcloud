@@ -16,6 +16,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/kplcloud/kplcloud/src/encode"
 )
@@ -28,6 +30,7 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 	eps := NewEndpoint(s, map[string][]endpoint.Middleware{
 		"Create": ems,
 		"Sync":   ems,
+		"List":   ems,
 	})
 
 	r := mux.NewRouter()
@@ -44,8 +47,43 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodGet)
+	r.Handle("/{cluster}/list/{namespace}", kithttp.NewServer(
+		eps.ListEndpoint,
+		decodeListRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodGet)
+
+	r.Handle("/{cluster}/list/{storage}/storage", kithttp.NewServer(
+		eps.ListEndpoint,
+		decodeListRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodGet)
 
 	return r
+}
+
+func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req listRequest
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	if page < 0 {
+		page = 1
+	}
+	if pageSize < 0 {
+		page = 10
+	}
+	req.page = page
+	req.pageSize = pageSize
+	req.storage = r.URL.Query().Get("storage")
+	if strings.EqualFold(req.storage, "") {
+		vars := mux.Vars(r)
+		req.storage, _ = vars["storage"]
+	}
+
+	return req, nil
 }
 
 func decodeCreateRequest(_ context.Context, r *http.Request) (interface{}, error) {

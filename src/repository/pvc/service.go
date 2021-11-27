@@ -11,6 +11,7 @@ import (
 	"context"
 	"github.com/jinzhu/gorm"
 	"github.com/kplcloud/kplcloud/src/repository/types"
+	"strings"
 )
 
 type Middleware func(service Service) Service
@@ -19,16 +20,27 @@ type Call func() error
 
 type Service interface {
 	Save(ctx context.Context, pvc *types.PersistentVolumeClaim, call Call) (err error)
-	List(ctx context.Context, storageClassIds []int64, page, pageSize int64) (res []types.PersistentVolumeClaim, total int, err error)
+	List(ctx context.Context, clusterId int64, storageClassIds []int64, ns, name string, page, pageSize int) (res []types.PersistentVolumeClaim, total int, err error)
 }
 
 type service struct {
 	db *gorm.DB
 }
 
-func (s *service) List(ctx context.Context, storageClassIds []int64, page, pageSize int64) (res []types.PersistentVolumeClaim, total int, err error) {
-	err = s.db.Model(&types.PersistentVolumeClaim{}).Where("storage_class_id IN (?)", storageClassIds).
-		Order("created_at DESC").
+func (s *service) List(ctx context.Context, clusterId int64, storageClassIds []int64, ns, name string, page, pageSize int) (res []types.PersistentVolumeClaim, total int, err error) {
+	q := s.db.Model(&types.PersistentVolumeClaim{}).
+		Preload("StorageClass").
+		Where("cluster_id = ?", clusterId)
+	if len(storageClassIds) > 0 {
+		q = q.Where("storage_class_id IN (?)", storageClassIds)
+	}
+	if !strings.EqualFold(ns, "") {
+		q = q.Where("namespace = ?", ns)
+	}
+	if !strings.EqualFold(name, "") {
+		q = q.Where("name LIKE ?", "%"+name+"%")
+	}
+	err = q.Order("created_at DESC").
 		Count(&total).
 		Offset((page - 1) * pageSize).
 		Limit(total).Find(&res).Error

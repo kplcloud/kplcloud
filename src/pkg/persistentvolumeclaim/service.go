@@ -11,7 +11,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/ghodss/yaml"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/kplcloud/kplcloud/src/encode"
@@ -20,7 +19,7 @@ import (
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
+	"strings"
 )
 
 type Middleware func(Service) Service
@@ -35,7 +34,8 @@ type Service interface {
 	// Create 创建持久化存储卷
 	Create(ctx context.Context, clusterId int64, ns, name, storage, storageClassName string, accessModes []string) (err error)
 	// List 持久化存储卷列表
-	List(ctx context.Context, clusterId int64, ns string, page, pageSize int) (resp map[string]interface{}, err error)
+	// 选择集群之后获取存储类和空间列表，暂时不考虑存储类，只考虑空间
+	List(ctx context.Context, clusterId int64, storageClass, ns string, page, pageSize int) (resp []result, total int, err error)
 	// All 当前空间下所有的pvc
 	All(ctx context.Context, clusterId int64) (resp map[string]interface{}, err error)
 }
@@ -61,16 +61,6 @@ func (s *service) Sync(ctx context.Context, clusterId int64, ns string) (err err
 			_ = level.Error(logger).Log("repository.StorageClass", "FindName", "err", err.Error())
 			continue
 		}
-
-		fieldsPvc := fields.SelectorFromSet(fields.Set{
-			"space.storageClassName": "",
-		})
-		l, errrr := s.k8sClient.Do(ctx).CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{
-			FieldSelector: fieldsPvc.String(),
-		})
-		fmt.Println(errrr)
-		bbb, _ := yaml.Marshal(l)
-		fmt.Println(string(bbb))
 		accessModels, _ := json.Marshal(pvc.Spec.AccessModes)
 		labels, _ := json.Marshal(pvc.Labels)
 
@@ -82,6 +72,7 @@ func (s *service) Sync(ctx context.Context, clusterId int64, ns string) (err err
 			RequestStorage: pvc.Spec.Resources.Requests.Storage().String(),
 			LimitStorage:   pvc.Spec.Resources.Limits.Storage().String(),
 			StorageClassId: storage.Id,
+			ClusterId:      clusterId,
 		}, nil); er != nil {
 			_ = level.Error(logger).Log("repository.Pvc", "Save", "err", er.Error())
 		}
@@ -153,10 +144,39 @@ func (s *service) Create(ctx context.Context, clusterId int64, ns, name, storage
 	return
 }
 
-func (s *service) List(ctx context.Context, clusterId int64, ns string, page, pageSize int) (resp map[string]interface{}, err error) {
+func (s *service) List(ctx context.Context, clusterId int64, storageClass, ns string, page, pageSize int) (resp []result, total int, err error) {
 	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+	var storageClassIds []int64
+	if !strings.EqualFold(storageClass, "") {
+		if storage, e := s.repository.StorageClass(ctx).FindName(ctx, clusterId, storageClass); e == nil {
+			storageClassIds = []int64{storage.Id}
+		} else {
+			_ = level.Warn(logger).Log("repository.StorageClass", "FindName", "err", err.Error())
+		}
+	}
 
-	s.repository.Pvc(ctx).Save()
+	list, total, err := s.repository.Pvc(ctx).List(ctx, clusterId, storageClassIds, ns, "", page, pageSize)
+	if err != nil {
+		_ = level.Error(logger).Log("repository.Pvc", "List", "err", err.Error())
+		return
+	}
+
+	for _, v := range list {
+		var accessModes []string
+		_ = json.Unmarshal([]byte(v.AccessModes), &accessModes)
+		resp = append(resp, result{
+			Name:           v.Name,
+			Namespace:      v.Namespace,
+			StorageClass:   v.StorageClass.Name,
+			CreatedAt:      v.CreatedAt,
+			UpdatedAt:      v.UpdatedAt,
+			AccessModes:    accessModes,
+			Remark:         v.Remark,
+			RequestStorage: v.RequestStorage,
+			LimitStorage:   v.LimitStorage,
+			Status:         v.Status,
+		})
+	}
 
 	return
 }

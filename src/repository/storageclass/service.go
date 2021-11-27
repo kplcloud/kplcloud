@@ -61,6 +61,7 @@ func (s *service) List(ctx context.Context, clusterId int64, page, pageSize int)
 
 func (s *service) FindName(ctx context.Context, clusterId int64, name string) (res types.StorageClass, err error) {
 	err = s.db.Model(&types.StorageClass{}).
+		Preload("Cluster").
 		Where("cluster_id = ?", clusterId).
 		Where("name = ?", name).
 		First(&res).Error

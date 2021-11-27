@@ -49,6 +49,8 @@ type (
 		UpdatedAt       time.Time `json:"updatedAt"`
 		ResourceVersion string    `json:"resourceVersion"`
 		Detail          string    `json:"detail"`
+		ClusterAlias    string    `json:"clusterAlias"`
+		ClusterName     string    `json:"clusterName"`
 	}
 
 	createRequest struct {

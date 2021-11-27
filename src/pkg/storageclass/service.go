@@ -73,7 +73,9 @@ func (s *service) Info(ctx context.Context, clusterId int64, storageName string)
 	res.Provisioner = class.Provisioner
 	res.VolumeMode = class.VolumeBindingMode
 	res.ResourceVersion = class.ResourceVersion
-	res.Detail = class.Detail
+	res.ClusterName = class.Cluster.Name
+	res.ClusterAlias = class.Cluster.Alias
+	res.ReclaimPolicy = class.ReclaimPolicy
 	// 是否需要自动远程同步？
 	return
 }

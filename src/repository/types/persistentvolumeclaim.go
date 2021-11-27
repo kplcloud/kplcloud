@@ -17,6 +17,7 @@ type PersistentVolume struct {
 // PersistentVolumeClaim 存储卷声明信息
 type PersistentVolumeClaim struct {
 	Id             int64      `gorm:"column:id;primary_key" json:"id"`
+	ClusterId      int64      `gorm:"column:cluster_id;index;notnull;comment:'集群ID'" json:"cluster_id"`
 	Name           string     `gorm:"column:name;index;notnull;comment:'名称'" json:"name"`
 	Namespace      string     `gorm:"column:namespace;size:64;notnull;index;comment:'空间'" json:"namespace"`
 	AccessModes    string     `gorm:"column:access_modes;null;comment:'访问模式'" json:"access_modes"`
@@ -25,11 +26,12 @@ type PersistentVolumeClaim struct {
 	RequestStorage string     `gorm:"column:request_storage;notnull;size:255;comment:'请求容量'" json:"request_storage"`
 	LimitStorage   string     `gorm:"column:limit_storage;notnull;size:255;comment:'最大容量'" json:"limit_storage"`
 	StorageClassId int64      `gorm:"column:storage_class_id;index;notnull;comment:'存储类ID'" json:"storage_class_id"`
+	Status         string     `gorm:"column:status;index;null;comment:'状态'" json:"status"`
 	CreatedAt      time.Time  `gorm:"column:created_at" json:"created_at"` // 创建时间
 	UpdatedAt      time.Time  `gorm:"column:updated_at" json:"updated_at"` // 更新时间
 	DeletedAt      *time.Time `gorm:"column:deleted_at" json:"deleted_at"`
 
-	StorageClass StorageClass `gorm:"foreignkey:Id;references:StorageClassId"`
+	StorageClass StorageClass `gorm:"foreignkey:StorageClassId;references:Id"`
 }
 
 // TableName sets the insert table name for this struct type
