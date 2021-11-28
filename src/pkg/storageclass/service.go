@@ -17,6 +17,7 @@ import (
 	coreV1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/util/json"
 
 	"github.com/kplcloud/kplcloud/src/encode"
@@ -31,7 +32,7 @@ type Middleware func(Service) Service
 type Service interface {
 	Sync(ctx context.Context, clusterId int64) (err error)
 	SyncPv(ctx context.Context, clusterId int64, storageName string) (err error)
-	SyncPvc(ctx context.Context, clusterId int64, ns string, storageName string) (err error)
+	SyncPvc(ctx context.Context, clusterId int64, storageName string) (err error)
 	// Create 创建StorageClass
 	Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode, remark string) (err error)
 	// CreateProvisioner 创建供应者
@@ -247,11 +248,26 @@ func (s *service) SyncPv(ctx context.Context, clusterId int64, storageName strin
 	return
 }
 
-func (s *service) SyncPvc(ctx context.Context, clusterId int64, ns string, storageName string) (err error) {
-	//list, err := s.k8sClient.Do(ctx).CoreV1().PersistentVolumeClaims(ns).List(ctx, metav1.ListOptions{})
-	//if err != nil {
-	//	return err
-	//}
+func (s *service) SyncPvc(ctx context.Context, clusterId int64, storageName string) (err error) {
+	//logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	list, err := s.k8sClient.Do(ctx).CoreV1().PersistentVolumeClaims(coreV1.NamespaceAll).List(ctx, metav1.ListOptions{
+		//FieldSelector: fields.SelectorFromSet(fields.Set{
+		//	"spec.storageClassName": storageName,
+		//}).String(),
+		LabelSelector: fields.SelectorFromSet(fields.Set{
+			"spec.storageClassName": storageName,
+		}).String(),
+	})
+	fmt.Println(fields.SelectorFromSet(fields.Set{
+		"spec.storageClassName": storageName,
+	}).String())
+	if err != nil {
+		return err
+	}
+	for _, v := range list.Items {
+		fmt.Println(v.Name)
+	}
 	return
 }
 
