@@ -87,8 +87,11 @@ var ResponseMessage = map[ResStatus]int{
 	ErrNodeNotfound: 1141,
 	ErrNodeDrain:    1142,
 
-	ErrPersistentVolumeClaimList:   1160,
-	ErrPersistentVolumeClaimCreate: 1161,
+	ErrPersistentVolumeClaimList:     1160,
+	ErrPersistentVolumeClaimCreate:   1161,
+	ErrPersistentVolumeClaimNotfound: 1162,
+	ErrPersistentVolumeClaimExists:   1163,
+	ErrPersistentVolumeClaimDelete:   1164,
 
 	ErrTemplateSave: 1180,
 
@@ -147,8 +150,11 @@ const (
 	ErrStorageClassDelete   ResStatus = "StorageClass 删除失败"
 	ErrStorageClassUpdate   ResStatus = "StorageClass 更新失败"
 
-	ErrPersistentVolumeClaimList   ResStatus = "存储卷声明列表获取失败"
-	ErrPersistentVolumeClaimCreate ResStatus = "存储卷声明创建失败"
+	ErrPersistentVolumeClaimList     ResStatus = "存储卷声明列表获取失败"
+	ErrPersistentVolumeClaimCreate   ResStatus = "存储卷声明创建失败"
+	ErrPersistentVolumeClaimNotfound ResStatus = "存储卷声明不存在"
+	ErrPersistentVolumeClaimExists   ResStatus = "存储卷声明已存在"
+	ErrPersistentVolumeClaimDelete   ResStatus = "存储卷声明删除失败"
 
 	// 中间件错误信息
 	ErrSystem                  ResStatus = "系统错误"

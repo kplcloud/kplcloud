@@ -1,27 +1,63 @@
 apiVersion: v1
-kind: PersistentVolume
+kind: PersistentVolumeClaim
 metadata:
-  name: pvc-07ef7d44-f316-4e8a-b7b7-263b00d87997
-  resourceVersion: "16577773465"
-  selfLink: /api/v1/persistentvolumes/pvc-07ef7d44-f316-4e8a-b7b7-263b00d87997
-  uid: 1416687c-48c1-4b79-9dd2-7ab1e828ab59
+  annotations:
+    pv.kubernetes.io/bind-completed: "yes"
+    pv.kubernetes.io/bound-by-controller: "yes"
+    volume.beta.kubernetes.io/storage-provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
+  creationTimestamp: "2021-11-22T04:07:57Z"
+  finalizers:
+  - kubernetes.io/pvc-protection
+  labels:
+    app: mysql
+  managedFields:
+  - apiVersion: v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:pv.kubernetes.io/bind-completed: {}
+          f:pv.kubernetes.io/bound-by-controller: {}
+          f:volume.beta.kubernetes.io/storage-provisioner: {}
+        f:labels:
+          .: {}
+          f:app: {}
+      f:spec:
+        f:accessModes: {}
+        f:resources:
+          f:requests:
+            .: {}
+            f:storage: {}
+        f:storageClassName: {}
+        f:volumeMode: {}
+        f:volumeName: {}
+      f:status:
+        f:accessModes: {}
+        f:capacity:
+          .: {}
+          f:storage: {}
+        f:phase: {}
+    manager: kube-controller-manager
+    operation: Update
+    time: "2021-11-22T04:07:57Z"
+  name: mysql-data-mysql-0
+  namespace: kpaas
+  resourceVersion: "247342363"
+  selfLink: /api/v1/namespaces/kpaas/persistentvolumeclaims/mysql-data-mysql-0
+  uid: 3530db8a-53d7-4133-a738-e8893d954db3
 spec:
   accessModes:
-    - ReadWriteOnce
-  capacity:
-    storage: 8Gi
-  claimRef:
-    apiVersion: v1
-    kind: PersistentVolumeClaim
-    name: data-elastic-elasticsearch-data-0
-    namespace: icolo
-    resourceVersion: "16577773344"
-    uid: 07ef7d44-f316-4e8a-b7b7-263b00d87997
-  nfs:
-    path: /data/icolo-data-elastic-elasticsearch-data-0-pvc-07ef7d44-f316-4e8a-b7b7-263b00d87997
-    server: 172.16.0.11
-  persistentVolumeReclaimPolicy: Delete
-  storageClassName: managed-nfs-storage
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: nfs-storage
   volumeMode: Filesystem
+  volumeName: pvc-3530db8a-53d7-4133-a738-e8893d954db3
 status:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 20Gi
   phase: Bound

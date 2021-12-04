@@ -53,20 +53,41 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodGet)
-
 	r.Handle("/{cluster}/list/{storage}/storage", kithttp.NewServer(
 		eps.ListEndpoint,
 		decodeListRequest,
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodGet)
+	r.Handle("/{cluster}/info/{namespace}/get/{name}", kithttp.NewServer(
+		eps.GetEndpoint,
+		decodeInfoRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodGet)
+	r.Handle("/{cluster}/delete/{namespace}/name/{name}", kithttp.NewServer(
+		eps.DeleteEndpoint,
+		decodeInfoRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodDelete)
 
 	return r
 }
 
+func decodeInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req listRequest
+	vars := mux.Vars(r)
+	name, ok := vars["name"]
+	if !ok {
+		return nil, encode.InvalidParams.Error()
+	}
+	req.name = name
+	return req, nil
+}
+
 func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req listRequest
-
 	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
 	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
 	if page < 0 {

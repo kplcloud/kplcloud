@@ -47,12 +47,30 @@ func (s *tracing) Sync(ctx context.Context, clusterId int64, ns string) (err err
 	return s.next.Sync(ctx, clusterId, ns)
 }
 
-func (s *tracing) Get(ctx context.Context, clusterId int64, ns, name string) (rs interface{}, err error) {
-	panic("implement me")
+func (s *tracing) Get(ctx context.Context, clusterId int64, ns, name string) (res result, err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Get", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "pkg.persistentvolumeclaim",
+	})
+	defer func() {
+		span.LogKV("clusterId", clusterId, "ns", ns, "name", name, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.Get(ctx, clusterId, ns, name)
 }
 
 func (s *tracing) Delete(ctx context.Context, clusterId int64, ns, name string) (err error) {
-	panic("implement me")
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Delete", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "pkg.persistentvolumeclaim",
+	})
+	defer func() {
+		span.LogKV("clusterId", clusterId, "ns", ns, "name", name, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.Delete(ctx, clusterId, ns, name)
 }
 
 func (s *tracing) Create(ctx context.Context, clusterId int64, ns, name, storage, storageClassName string, accessModes []string) (err error) {

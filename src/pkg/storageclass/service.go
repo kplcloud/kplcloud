@@ -18,6 +18,7 @@ import (
 	storagev1 "k8s.io/api/storage/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/json"
 
 	"github.com/kplcloud/kplcloud/src/encode"
@@ -251,13 +252,20 @@ func (s *service) SyncPv(ctx context.Context, clusterId int64, storageName strin
 func (s *service) SyncPvc(ctx context.Context, clusterId int64, storageName string) (err error) {
 	//logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
 
+	fmt.Println(labels.Everything().String())
+	fmt.Println(fields.Everything().String())
+	fmt.Println(fields.SelectorFromSet(fields.Set{
+		"spec.storageClassName": storageName,
+	}).String())
 	list, err := s.k8sClient.Do(ctx).CoreV1().PersistentVolumeClaims(coreV1.NamespaceAll).List(ctx, metav1.ListOptions{
-		//FieldSelector: fields.SelectorFromSet(fields.Set{
-		//	"spec.storageClassName": storageName,
-		//}).String(),
-		LabelSelector: fields.SelectorFromSet(fields.Set{
+		FieldSelector: fields.SelectorFromSet(fields.Set{
 			"spec.storageClassName": storageName,
 		}).String(),
+		LabelSelector: labels.Everything().String(),
+		//FieldSelector: fields.Everything().String(),
+		//LabelSelector: fields.SelectorFromSet(fields.Set{
+		//	"spec.storageClassName": storageName,
+		//}).String(),
 	})
 	fmt.Println(fields.SelectorFromSet(fields.Set{
 		"spec.storageClassName": storageName,

@@ -23,6 +23,30 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) Delete(ctx context.Context, pvcId int64, call ...Call) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Delete", "pvcId", pvcId,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Delete(ctx, pvcId, call...)
+}
+
+func (s *logging) FindByName(ctx context.Context, clusterId int64, ns, name string) (res types.PersistentVolumeClaim, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "FindByName", "clusterId", clusterId, "ns", ns, "name", name,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.FindByName(ctx, clusterId, ns, name)
+}
+
 func (s *logging) List(ctx context.Context, clusterId int64, storageClassIds []int64, ns, name string, page, pageSize int) (res []types.PersistentVolumeClaim, total int, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

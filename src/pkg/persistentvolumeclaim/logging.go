@@ -47,12 +47,28 @@ func (s *logging) Sync(ctx context.Context, clusterId int64, ns string) (err err
 	return s.next.Sync(ctx, clusterId, ns)
 }
 
-func (s *logging) Get(ctx context.Context, clusterId int64, ns, name string) (rs interface{}, err error) {
-	panic("implement me")
+func (s *logging) Get(ctx context.Context, clusterId int64, ns, name string) (res result, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Get", "clusterId", clusterId, "ns", ns, "name", name,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Get(ctx, clusterId, ns, name)
 }
 
 func (s *logging) Delete(ctx context.Context, clusterId int64, ns, name string) (err error) {
-	panic("implement me")
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Delete", "clusterId", clusterId, "ns", ns, "name", name,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Delete(ctx, clusterId, ns, name)
 }
 
 func (s *logging) Create(ctx context.Context, clusterId int64, ns, name, storage, storageClassName string, accessModes []string) (err error) {

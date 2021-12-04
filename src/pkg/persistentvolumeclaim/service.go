@@ -10,13 +10,14 @@ package persistentvolumeclaim
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/jinzhu/gorm"
 	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
@@ -28,8 +29,10 @@ type Service interface {
 	// Sync 同步pvc
 	Sync(ctx context.Context, clusterId int64, ns string) (err error)
 	// Get 获取pvc详情
-	Get(ctx context.Context, clusterId int64, ns, name string) (rs interface{}, err error)
+	Get(ctx context.Context, clusterId int64, ns, name string) (res result, err error)
 	// Delete 删除存储卷声明
+	// 查看的有绑定关系，如果存在绑定要求先解除绑定关系，如果没有绑定关系按下面流程删除
+	// 删除pv -> 删除k8s pvc -> 删除pvc
 	Delete(ctx context.Context, clusterId int64, ns, name string) (err error)
 	// Create 创建持久化存储卷
 	Create(ctx context.Context, clusterId int64, ns, name, storage, storageClassName string, accessModes []string) (err error)
@@ -81,34 +84,69 @@ func (s *service) Sync(ctx context.Context, clusterId int64, ns string) (err err
 	return
 }
 
-func (s *service) Get(ctx context.Context, clusterId int64, ns, name string) (rs interface{}, err error) {
-	//_, err = c.repository.Pvc().Find(ns, name)
+func (s *service) Get(ctx context.Context, clusterId int64, ns, name string) (res result, err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+	pvc, err := s.repository.Pvc(ctx).FindByName(ctx, clusterId, ns, name)
+	if err != nil {
+		_ = level.Warn(logger).Log("repository.Pvc", "FindByName", "err", err.Error())
+		err = encode.ErrPersistentVolumeClaimNotfound.Error()
+		return
+	}
+	kpvc, err := s.k8sClient.Do(ctx).CoreV1().PersistentVolumeClaims(ns).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		_ = level.Warn(logger).Log("k8sClient.Do.CoreV1.PersistentVolumeClaims", "Get", "err", err.Error())
+		err = encode.ErrPersistentVolumeClaimNotfound.Error()
+		return
+	}
+
+	//pv, err := s.k8sClient.Do(ctx).CoreV1().PersistentVolumes().Get(ctx, kpvc.Spec.VolumeName, metav1.GetOptions{})
 	//if err != nil {
-	//	_ = level.Error(c.logger).Log("pvcRepository", "Find", "err", err.Error())
-	//	return nil, ErrPvcGet
+	//	_ = level.Warn(logger).Log("k8sClient.Do.CoreV1.PersistentVolumes", "Get", "err", err.Error())
 	//}
-	//
-	//p, err := c.k8sClient.Do().CoreV1().PersistentVolumeClaims(ns).Get(name, metav1.GetOptions{})
-	//if err != nil {
-	//	_ = level.Error(c.logger).Log("PersistentVolumeClaims", "Get", "err", err.Error())
-	//	return nil, ErrPvcGet
-	//}
-	//
-	//pv, err := c.k8sClient.Do().CoreV1().PersistentVolumes().Get(p.Spec.VolumeName, metav1.GetOptions{})
-	//if err != nil {
-	//	_ = level.Error(c.logger).Log("PersistentVolumes", "Get", "err", err.Error())
-	//	return nil, ErrPvGet
-	//}
-	//
-	//return map[string]interface{}{
-	//	"pvc": p,
-	//	"pv":  pv,
-	//}, nil
+	var accessModes []string
+	_ = json.Unmarshal([]byte(pvc.AccessModes), &accessModes)
+
+	res.Namespace = pvc.Namespace
+	res.Name = pvc.Name
+	res.StorageClass = *kpvc.Spec.StorageClassName
+	res.Status = string(kpvc.Status.Phase)
+	res.CreatedAt = pvc.CreatedAt
+	res.UpdatedAt = pvc.UpdatedAt
+	res.RequestStorage = pvc.RequestStorage
+	res.LimitStorage = pvc.LimitStorage
+	res.Annotations = kpvc.Annotations
+	res.Labels = kpvc.Labels
+	res.VolumeName = kpvc.Spec.VolumeName
+	res.AccessModes = accessModes
+	res.ClusterName = pvc.Cluster.Name
+	res.ClusterAlias = pvc.Cluster.Alias
+
 	return
 }
 
 func (s *service) Delete(ctx context.Context, clusterId int64, ns, name string) (err error) {
-	panic("implement me")
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+	spvc, err := s.repository.Pvc(ctx).FindByName(ctx, clusterId, ns, name)
+	if err != nil {
+		_ = level.Warn(logger).Log("repository.Pvc", "FindByName", "err", err)
+		if gorm.IsRecordNotFoundError(err) {
+			return encode.ErrPersistentVolumeClaimNotfound.Error()
+		}
+		return err
+	}
+
+	// TODO: 查绑定关系，如果有关系返回失败，要求先解除绑定关系
+	// TODO: 删除pvc
+
+	if err := s.repository.Pvc(ctx).Delete(ctx, spvc.Id, func() error {
+		return s.k8sClient.Do(ctx).CoreV1().PersistentVolumeClaims(ns).Delete(ctx, name, metav1.DeleteOptions{})
+	}); err != nil {
+		_ = level.Error(logger).Log("pvc", "Delete", "err", err.Error())
+		return encode.ErrPersistentVolumeClaimDelete.Wrap(err)
+	}
+
+	return
+
 }
 
 func (s *service) Create(ctx context.Context, clusterId int64, ns, name, storage, storageClassName string, accessModes []string) (err error) {
@@ -118,9 +156,12 @@ func (s *service) Create(ctx context.Context, clusterId int64, ns, name, storage
 		_ = level.Error(logger).Log("repository.StorageClass", "FindName", "err", err)
 		return encode.ErrStorageClassNotfound.Error()
 	}
-	// todo 查询是否存在pvc
+	spvc, err := s.repository.Pvc(ctx).FindByName(ctx, clusterId, ns, name)
+	if !gorm.IsRecordNotFoundError(err) {
+		return encode.ErrPersistentVolumeClaimExists.Error()
+	}
 	var pvc *corev1.PersistentVolumeClaim
-	tpl, err := s.repository.K8sTpl(ctx).EncodeTemplate(ctx, types.KindPersistentVolumeClaim, map[string]interface{}{
+	_, err = s.repository.K8sTpl(ctx).EncodeTemplate(ctx, types.KindPersistentVolumeClaim, map[string]interface{}{
 		"name":             name,
 		"namespace":        ns,
 		"accessModes":      accessModes,
@@ -130,16 +171,27 @@ func (s *service) Create(ctx context.Context, clusterId int64, ns, name, storage
 	if err != nil {
 		return encode.ErrPersistentVolumeClaimCreate.Wrap(err)
 	}
-	fmt.Println(string(tpl))
-	fmt.Println(pvc)
 
-	pvc, err = s.k8sClient.Do(ctx).CoreV1().PersistentVolumeClaims(ns).Create(ctx, pvc, metav1.CreateOptions{})
-	if err != nil {
-		_ = level.Error(logger).Log("CoreV1.PersistentVolumeClaims", "Create", "err", err.Error())
+	am, _ := json.Marshal(accessModes)
+	spvc.Name = name
+	spvc.Namespace = ns
+	spvc.ClusterId = clusterId
+	spvc.StorageClassId = sc.Id
+	spvc.AccessModes = string(am)
+	spvc.Remark = ""
+	spvc.RequestStorage = storage
+
+	if err = s.repository.Pvc(ctx).Save(ctx, &spvc, func() error {
+		pvc, err = s.k8sClient.Do(ctx).CoreV1().PersistentVolumeClaims(ns).Create(ctx, pvc, metav1.CreateOptions{})
+		if err != nil {
+			return errors.Wrap(err, "CoreV1.PersistentVolumeClaims.Create")
+		}
+		spvc.Status = string(pvc.Status.Phase)
+		return nil
+	}); err != nil {
+		_ = level.Error(logger).Log("repository.Pvc", "Save", "err", err.Error())
 		return encode.ErrPersistentVolumeClaimCreate.Wrap(err)
 	}
-
-	// todo 保存到数据库
 
 	return
 }

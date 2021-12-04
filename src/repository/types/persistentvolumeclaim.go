@@ -32,6 +32,7 @@ type PersistentVolumeClaim struct {
 	DeletedAt      *time.Time `gorm:"column:deleted_at" json:"deleted_at"`
 
 	StorageClass StorageClass `gorm:"foreignkey:StorageClassId;references:Id"`
+	Cluster      Cluster      `gorm:"foreignkey:ClusterId;references:Id"`
 }
 
 // TableName sets the insert table name for this struct type

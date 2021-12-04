@@ -313,9 +313,9 @@ func initHttpHandler(g *group.Group) {
 	r.PathPrefix("/deployment").Handler(http.StripPrefix("/deployment", deployment.MakeHTTPHandler(deploymentSvc, tokenEms, opts)))
 	r.PathPrefix("/configmap").Handler(http.StripPrefix("/configmap", configmap.MakeHTTPHandler(configMapSvc, tokenEms, opts)))
 	r.PathPrefix("/secret").Handler(http.StripPrefix("/secret", secret.MakeHTTPHandler(secretSvc, tokenEms, opts)))
-	r.PathPrefix("/storage-class").Handler(http.StripPrefix("/storage-class", storageclass.MakeHTTPHandler(storageClassSvc, tokenEms, opts)))
+	r.PathPrefix("/storageclass").Handler(http.StripPrefix("/storageclass", storageclass.MakeHTTPHandler(storageClassSvc, tokenEms, opts)))
 	r.PathPrefix("/cronjob").Handler(http.StripPrefix("/cronjob", cronjob.MakeHTTPHandler(cronjobSvc, tokenEms, opts)))
-	r.PathPrefix("/persistent-volume-claim").Handler(http.StripPrefix("/persistent-volume-claim", persistentvolumeclaim.MakeHTTPHandler(pvcSvc, tokenEms, opts)))
+	r.PathPrefix("/pvc").Handler(http.StripPrefix("/pvc", persistentvolumeclaim.MakeHTTPHandler(pvcSvc, tokenEms, opts)))
 	r.PathPrefix("/registry").Handler(http.StripPrefix("/registry", registry.MakeHTTPHandler(registrySvc, append(systemEms, ems...), opts)))
 	r.PathPrefix("/template").Handler(http.StripPrefix("/template", template.MakeHTTPHandler(templateSvc, ems, opts)))
 
