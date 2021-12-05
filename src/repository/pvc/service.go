@@ -20,6 +20,7 @@ type Call func() error
 
 type Service interface {
 	Save(ctx context.Context, pvc *types.PersistentVolumeClaim, call Call) (err error)
+	SavePv(ctx context.Context, pv *types.PersistentVolume, call Call) (err error)
 	List(ctx context.Context, clusterId int64, storageClassIds []int64, ns, name string, page, pageSize int) (res []types.PersistentVolumeClaim, total int, err error)
 	FindByName(ctx context.Context, clusterId int64, ns, name string) (res types.PersistentVolumeClaim, err error)
 	Delete(ctx context.Context, pvcId int64, call ...Call) (err error)
@@ -27,6 +28,24 @@ type Service interface {
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) SavePv(ctx context.Context, pv *types.PersistentVolume, call Call) (err error) {
+	if pv.Id == 0 {
+		var p types.PersistentVolume
+		if err = s.db.Model(pv).Where("cluster_id = ? AND name = ?", pv.ClusterId, pv.Name).First(&p).Error; err == nil {
+			pv.Id = p.Id
+		}
+	}
+	return s.db.Model(pv).Transaction(func(tx *gorm.DB) error {
+		if err = tx.Save(pv).Error; err != nil {
+			return err
+		}
+		if call != nil {
+			err = call()
+		}
+		return err
+	})
 }
 
 func (s *service) Delete(ctx context.Context, pvcId int64, call ...Call) (err error) {
@@ -59,6 +78,7 @@ func (s *service) FindByName(ctx context.Context, clusterId int64, ns, name stri
 func (s *service) List(ctx context.Context, clusterId int64, storageClassIds []int64, ns, name string, page, pageSize int) (res []types.PersistentVolumeClaim, total int, err error) {
 	q := s.db.Model(&types.PersistentVolumeClaim{}).
 		Preload("StorageClass").
+		Preload("Cluster").
 		Where("cluster_id = ?", clusterId)
 	if len(storageClassIds) > 0 {
 		q = q.Where("storage_class_id IN (?)", storageClassIds)

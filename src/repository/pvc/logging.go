@@ -23,6 +23,18 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) SavePv(ctx context.Context, pv *types.PersistentVolume, call Call) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "SavePv", "pv", pv,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.SavePv(ctx, pv, call)
+}
+
 func (s *logging) Delete(ctx context.Context, pvcId int64, call ...Call) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

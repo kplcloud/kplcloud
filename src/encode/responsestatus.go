@@ -156,6 +156,8 @@ const (
 	ErrPersistentVolumeClaimExists   ResStatus = "存储卷声明已存在"
 	ErrPersistentVolumeClaimDelete   ResStatus = "存储卷声明删除失败"
 
+	ErrPodNotfound ResStatus = "Pods可能不存在"
+
 	// 中间件错误信息
 	ErrSystem                  ResStatus = "系统错误"
 	ErrAccountNotLogin         ResStatus = "用户没登录"

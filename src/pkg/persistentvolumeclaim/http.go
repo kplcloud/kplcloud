@@ -71,6 +71,12 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodDelete)
+	r.Handle("/{cluster}/update/{namespace}/name/{name}", kithttp.NewServer(
+		eps.UpdateEndpoint,
+		decodeUpdateRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodPut)
 
 	return r
 }
@@ -109,6 +115,21 @@ func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) 
 
 func decodeCreateRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req createRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return req, encode.InvalidParams.Wrap(err)
+	}
+	validResult, err := valid.ValidateStruct(req)
+	if err != nil {
+		return nil, encode.InvalidParams.Wrap(err)
+	}
+	if !validResult {
+		return nil, encode.InvalidParams.Wrap(errors.New("valid false"))
+	}
+	return req, nil
+}
+
+func decodeUpdateRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req updateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return req, encode.InvalidParams.Wrap(err)
 	}

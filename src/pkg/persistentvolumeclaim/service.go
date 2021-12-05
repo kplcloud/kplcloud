@@ -41,6 +41,8 @@ type Service interface {
 	List(ctx context.Context, clusterId int64, storageClass, ns string, page, pageSize int) (resp []result, total int, err error)
 	// All 当前空间下所有的pvc
 	All(ctx context.Context, clusterId int64) (resp map[string]interface{}, err error)
+	// Update 更新pvc
+	Update(ctx context.Context, clusterId int64, ns, name, storage, remark string, accessModes []string) (err error)
 }
 
 type service struct {
@@ -48,6 +50,40 @@ type service struct {
 	k8sClient  kubernetes.K8sClient
 	repository repository.Repository
 	traceId    string
+}
+
+func (s *service) Update(ctx context.Context, clusterId int64, ns, name, storage, remark string, accessModes []string) (err error) {
+	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	spvc, err := s.repository.Pvc(ctx).FindByName(ctx, clusterId, ns, name)
+	if err != nil {
+		_ = level.Warn(logger).Log("repository.Pvc", "FindByName", "err", err.Error())
+		return encode.ErrPersistentVolumeClaimNotfound.Error()
+	}
+	am, _ := json.Marshal(accessModes)
+	spvc.RequestStorage = storage
+	spvc.AccessModes = string(am)
+	spvc.Remark = remark
+
+	pvc, err := s.k8sClient.Do(ctx).CoreV1().PersistentVolumeClaims(ns).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		_ = level.Error(logger).Log("k8sClient.Do.CoreV2.PersistentVolumeClaims", "Get", "err", err.Error())
+		return encode.ErrPersistentVolumeClaimNotfound.Wrap(err)
+	}
+
+	if err = s.repository.Pvc(ctx).Save(ctx, &spvc, func() error {
+		pvc, err = s.k8sClient.Do(ctx).CoreV1().PersistentVolumeClaims(ns).Update(ctx, pvc, metav1.UpdateOptions{})
+		if err != nil {
+			return err
+		}
+		spvc.Status = string(pvc.Status.Phase)
+		return nil
+	}); err != nil {
+		_ = level.Error(logger).Log("repository.Pvc", "Save", "err", err.Error())
+		return
+	}
+
+	return
 }
 
 func (s *service) Sync(ctx context.Context, clusterId int64, ns string) (err error) {
@@ -76,6 +112,7 @@ func (s *service) Sync(ctx context.Context, clusterId int64, ns string) (err err
 			LimitStorage:   pvc.Spec.Resources.Limits.Storage().String(),
 			StorageClassId: storage.Id,
 			ClusterId:      clusterId,
+			Status:         string(pvc.Status.Phase),
 		}, nil); er != nil {
 			_ = level.Error(logger).Log("repository.Pvc", "Save", "err", er.Error())
 		}
@@ -146,7 +183,6 @@ func (s *service) Delete(ctx context.Context, clusterId int64, ns, name string) 
 	}
 
 	return
-
 }
 
 func (s *service) Create(ctx context.Context, clusterId int64, ns, name, storage, storageClassName string, accessModes []string) (err error) {
@@ -227,6 +263,8 @@ func (s *service) List(ctx context.Context, clusterId int64, storageClass, ns st
 			RequestStorage: v.RequestStorage,
 			LimitStorage:   v.LimitStorage,
 			Status:         v.Status,
+			ClusterName:    v.Cluster.Name,
+			ClusterAlias:   v.Cluster.Alias,
 		})
 	}
 

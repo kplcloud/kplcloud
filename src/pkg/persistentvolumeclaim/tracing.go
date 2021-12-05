@@ -19,6 +19,19 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) Update(ctx context.Context, clusterId int64, ns, name, storage, remark string, accessModes []string) (err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "Update", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "pkg.persistentvolumeclaim",
+	})
+	defer func() {
+		span.LogKV("clusterId", clusterId, "ns", ns, "name", name, "storage", storage, "remark", remark, "accessModes", accessModes, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.Update(ctx, clusterId, ns, name, storage, remark, accessModes)
+}
+
 func (s *tracing) List(ctx context.Context, clusterId int64, storageClass, ns string, page, pageSize int) (resp []result, total int, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", opentracing.Tag{
 		Key:   string(ext.Component),

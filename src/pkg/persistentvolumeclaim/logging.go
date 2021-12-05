@@ -21,6 +21,18 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) Update(ctx context.Context, clusterId int64, ns, name, storage, remark string, accessModes []string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Update", "clusterId", clusterId, "ns", ns, "name", name, "storage", storage, "remark", remark, "accessModes", accessModes,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Update(ctx, clusterId, ns, name, storage, remark, accessModes)
+}
+
 func (s *logging) List(ctx context.Context, clusterId int64, storageClass, ns string, page, pageSize int) (resp []result, total int, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
