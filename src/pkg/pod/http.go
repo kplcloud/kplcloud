@@ -11,7 +11,6 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	kithttp "github.com/go-kit/kit/transport/http"
 	"github.com/gorilla/mux"
-	"gopkg.in/igm/sockjs-go.v2/sockjs"
 	"net/http"
 )
 
@@ -34,9 +33,6 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opt []kithttp.ServerO
 
 	r := mux.NewRouter()
 
-	r.Handle("/ws/pods/console/exec/", sockjs.NewHandler("/ws/pods/console/exec", sockjs.DefaultOptions, func(session sockjs.Session) {
-		//termilanSvc.HandleTerminalSession(session)
-	})).Methods(http.MethodGet)
 
 	//r.Handle("/{cluster}/list", kithttp.NewServer(
 	//	eps.ListEndpoint,

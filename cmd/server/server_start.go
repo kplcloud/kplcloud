@@ -23,6 +23,8 @@ import (
 	"github.com/kplcloud/kplcloud/src/pkg/storageclass"
 	"github.com/kplcloud/kplcloud/src/pkg/syssetting"
 	"github.com/kplcloud/kplcloud/src/pkg/template"
+	"github.com/kplcloud/kplcloud/src/pkg/terminal"
+	"gopkg.in/igm/sockjs-go.v2/sockjs"
 	"net/http"
 	"os"
 	"os/signal"
@@ -100,6 +102,7 @@ kplcloud start -p :8080 -g :8082
 	captchaSvc      captcha.Service
 	accountSvc      account.Service
 	auditSvc        audits.Service
+	terminalSvc     terminal.Service
 )
 
 func start() (err error) {
@@ -179,6 +182,8 @@ func start() (err error) {
 	pvcSvc = persistentvolumeclaim.NewLogging(logger, logging.TraceId)(pvcSvc)
 	templateSvc = template.New(logger, logging.TraceId, store)
 	templateSvc = template.NewLogging(logger, logging.TraceId)(templateSvc)
+	terminalSvc = terminal.New(logger, logging.TraceId, cf.GetString("server", "key"), k8sClient, store)
+	//terminalSvc = terminal.NewLogging(logger, logging.TraceId)(terminalSvc)
 	captchaSvc = captcha.New(logger, NewCaptchaStore(cacheSvc, logger, time.Minute*5), logging.TraceId)
 
 	if tracer != nil {
@@ -223,7 +228,7 @@ func accessControl(h http.Handler, logger log.Logger) http.Handler {
 		for key, val := range handlers {
 			w.Header().Set(key, val)
 		}
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		//w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Connection", "keep-alive")
 
 		if r.Method == "OPTIONS" {
@@ -287,7 +292,7 @@ func initHttpHandler(g *group.Group) {
 	tokenEms = append(tokenEms, ems...)
 	nsEms := append([]endpoint.Middleware{middleware.NamespaceMiddleware(logger)}, tokenEms...)
 
-	r := mux.NewRouter()
+	r := mux.NewRouter().StrictSlash(true)
 
 	// 授权登录模块
 	r.PathPrefix("/auth").Handler(http.StripPrefix("/auth", auth.MakeHTTPHandler(authSvc, ems, opts, captchaSvc)))
@@ -318,6 +323,11 @@ func initHttpHandler(g *group.Group) {
 	r.PathPrefix("/pvc").Handler(http.StripPrefix("/pvc", persistentvolumeclaim.MakeHTTPHandler(pvcSvc, tokenEms, opts)))
 	r.PathPrefix("/registry").Handler(http.StripPrefix("/registry", registry.MakeHTTPHandler(registrySvc, append(systemEms, ems...), opts)))
 	r.PathPrefix("/template").Handler(http.StripPrefix("/template", template.MakeHTTPHandler(templateSvc, ems, opts)))
+	r.PathPrefix("/terminal").Handler(http.StripPrefix("/terminal", terminal.MakeHTTPHandler(terminalSvc, tokenEms, opts)))
+	http.Handle("/ws/terminal/pods/console/exec/", sockjs.NewHandler("/ws/terminal/pods/console/exec", sockjs.DefaultOptions, func(session sockjs.Session) {
+		terminalSvc.HandleTerminalSession(session)
+	}))
+	r.PathPrefix("/ws").Handler(http.StripPrefix("/ws", terminal.MakeHTTPHandler(terminalSvc, tokenEms, opts)))
 
 	// 以下为系统模块
 	// 系统用户模块
