@@ -61,8 +61,8 @@ func (t Session) Read(p []byte) (int, error) {
 
 	var msg Message
 	if err := json.Unmarshal([]byte(m), &msg); err != nil {
-		fmt.Println(fmt.Sprintf("read msg (%s) form client error.%v", string(p), err))
-		return 0, err
+		_ = t.Toast(fmt.Sprintf("read msg (%s) form client error.%v", string(p), err))
+		return 0, nil
 	}
 	switch msg.Op {
 	case "stdin":

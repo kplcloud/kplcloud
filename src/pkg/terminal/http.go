@@ -27,7 +27,7 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 
 	r := mux.NewRouter()
 
-	r.Handle("/{cluster}/namespace/{namespace}/pods/{podName}/container/{container}/token", kithttp.NewServer(
+	r.Handle("/{cluster}/namespace/{namespace}/service/{svcName}/pods/{podName}/token", kithttp.NewServer(
 		eps.TokenEndpoint,
 		decodeTokenRequest,
 		encode.JsonResponse,
@@ -45,13 +45,13 @@ func decodeTokenRequest(_ context.Context, r *http.Request) (interface{}, error)
 	if !ok {
 		return nil, encode.InvalidParams.Error()
 	}
-	container, ok := vars["container"]
+	svcName, ok := vars["svcName"]
 	if !ok {
 		return nil, encode.InvalidParams.Error()
 	}
 
 	req.PodName = podName
-	req.Container = container
+	req.ServiceName = svcName
 
 	return req, nil
 }

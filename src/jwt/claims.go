@@ -18,6 +18,15 @@ type ArithmeticCustomClaims struct {
 	jwt.StandardClaims
 }
 
+type ArithmeticTerminalClaims struct {
+	UserId    int64  `json:"userId"`
+	Cluster   string `json:"cluster"`
+	Namespace string `json:"namespace"`
+	PodName   string `json:"podName"`
+	Container string `json:"container"`
+	jwt.StandardClaims
+}
+
 //func Sign(email string, uid string, sessionTimeout int64) (string, error) {
 //
 //	expAt := time.Now().Add(time.Duration(sessionTimeout)).Unix()

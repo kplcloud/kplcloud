@@ -32,25 +32,25 @@ import (
 type Middleware func(Service) Service
 
 type Service interface {
-	// 1. 初始化数据库,重新加载配置文件,连接数据库
+	// InitDb 1. 初始化数据库,重新加载配置文件,连接数据库
 	InitDb(ctx context.Context, drive, host string, port int, username, password, database string) (err error)
-	// 2. platform设置
+	// InitPlatform 2. platform设置
 	InitPlatform(ctx context.Context, appName, adminName, adminPassword, appKey, domain, domainSuffix, logPath, logLevel, uploadPath string, debug bool) (err error)
-	// 8. logo 设置
+	// InitLogo 8. logo 设置
 	InitLogo(ctx context.Context, f *multipart.FileHeader) (err error)
-	// 9. 跨域配置
+	// InitCors 9. 跨域配置
 	InitCors(ctx context.Context, allow bool, origin, methods, headers string) (err error)
-	// 3. 初始化Redis
+	// InitRedis 3. 初始化Redis
 	InitRedis(ctx context.Context, hosts, auth string, db int, prefix string) (err error)
-	// 4. 初始化Jenkins构建机器
+	// InitJenkins 4. 初始化Jenkins构建机器
 	InitJenkins(ctx context.Context) (err error)
-	// 5. 初始化MQ 可以考虑直接用redis
+	// InitMq 5. 初始化MQ 可以考虑直接用redis
 	InitMq(ctx context.Context) (err error)
-	// 6. 初始化镜像仓库
+	// InitRepo 6. 初始化镜像仓库
 	InitRepo(ctx context.Context) (err error)
-	// 7. 初始化k8s集群
+	// InitK8sCluster 7. 初始化k8s集群
 	InitK8sCluster(ctx context.Context) (err error)
-	// 10. 配置写入文件
+	// StoreToConfig 10. 配置写入文件
 	StoreToConfig(ctx context.Context) (err error)
 
 	configReload(ctx context.Context) (err error)

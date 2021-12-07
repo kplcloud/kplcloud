@@ -13,16 +13,22 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	kitcache "github.com/icowan/kit-cache"
 	"github.com/kplcloud/kplcloud/src/encode"
+	kpljwt "github.com/kplcloud/kplcloud/src/jwt"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/middleware"
 	"github.com/kplcloud/kplcloud/src/repository"
+	"github.com/kplcloud/kplcloud/src/repository/types"
+	"github.com/kplcloud/kplcloud/src/util"
 	"github.com/pkg/errors"
 	"gopkg.in/igm/sockjs-go.v2/sockjs"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -30,13 +36,14 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
 type Service interface {
 	// HandleTerminalSession 处理客户端发来的ws建立请求
 	HandleTerminalSession(session sockjs.Session)
-	Token(ctx context.Context, clusterId int64, namespace, podName, container string) (res tokenResult, err error)
+	Token(ctx context.Context, userId, clusterId int64, namespace, svcName, podName string) (res tokenResult, err error)
 }
 
 type service struct {
@@ -44,9 +51,11 @@ type service struct {
 	logger          log.Logger
 	k8sClient       kubernetes.K8sClient
 	repository      repository.Repository
+	sessionTimeout  int64
+	cache           kitcache.Service
 }
 
-func (s *service) Token(ctx context.Context, clusterId int64, namespace, podName, container string) (res tokenResult, err error) {
+func (s *service) Token(ctx context.Context, userId, clusterId int64, namespace, svcName, podName string) (res tokenResult, err error) {
 	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
 
 	cluster, err := s.repository.Cluster(ctx).Find(ctx, clusterId)
@@ -64,13 +73,51 @@ func (s *service) Token(ctx context.Context, clusterId int64, namespace, podName
 		return
 	}
 
-	// TODO: 通过pod返查项目，得项目权限
-	//s.repository.Application(ctx)
+	if pods, err := s.k8sClient.Do(ctx).CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: labels.SelectorFromSet(labels.Set{
+			types.LabelAppName.String(): svcName,
+		}).String(),
+	}); err == nil {
+		for _, v := range pods.Items {
+			res.Pods = append(res.Pods, v.Name)
+		}
+	} else {
+		_ = level.Error(logger).Log("k8sClient.Do.CoreV1.Pods", "List", "err", err.Error())
+	}
 
-	sessionId, _ := genTerminalSessionId()
+	// TODO 生成token
+	//sessionId, _ := genTerminalSessionId()
+	timeout := time.Duration(s.sessionTimeout) * time.Second
+	expAt := time.Now().Add(timeout).Unix()
+
+	// 创建声明
+	claims := kpljwt.ArithmeticTerminalClaims{
+		UserId:    userId,
+		Cluster:   cluster.Name,
+		Namespace: namespace,
+		PodName:   podName,
+		Container: "",
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expAt,
+			Issuer:    "system",
+		},
+	}
+
+	//创建token，指定加密算法为HS256
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	//生成token
+	tk, err := token.SignedString([]byte(kpljwt.GetJwtKey()))
+	if err != nil {
+		_ = level.Error(logger).Log("token", "SignedString", "err", err.Error())
+		return
+	}
+
+	// userId 入redis，验证的时候查一下 时间为600秒
+	_ = s.cache.Set(ctx, fmt.Sprintf("terminal:tk:%s", util.Md5Str(tk)), userId, timeout)
+
 	var errMsg string
 	for _, val := range pod.Status.ContainerStatuses {
-		if container != "filebeat" && container != "istio-proxy" && val.Name == pod.Labels["app"] && val.Ready == false {
+		if svcName != "filebeat" && svcName != "istio-proxy" && val.Name == pod.Labels[types.LabelAppName.String()] && val.Ready == false {
 			errMsg = val.State.Waiting.Message
 			if errMsg == "" {
 				errMsg = val.State.Waiting.Reason
@@ -78,17 +125,24 @@ func (s *service) Token(ctx context.Context, clusterId int64, namespace, podName
 		}
 	}
 
-	token := generateToken(cluster.Name, namespace, podName, s.appKey)
-	var bashStr = `starting container process caused "exec: \"bash\": executable file not found in $PATH": unknown`
+	var containers []string
+	for _, val := range pod.Spec.Containers {
+		containers = append(containers, val.Name)
+	}
 
-	res.Token = token
-	res.BashStr = bashStr
 	res.Namespace = namespace
-	res.Container = container
 	res.Cluster = cluster.Name
 	res.ErrMsg = errMsg
-	res.SessionId = sessionId
+	res.SessionId = tk
 	res.PodName = podName
+	res.Containers = containers
+	res.ServiceName = svcName
+	res.Phase = string(pod.Status.Phase)
+	res.HostIp = pod.Status.HostIP
+	res.PodIp = pod.Status.PodIP
+	if pod.Status.StartTime != nil {
+		res.StartTime = pod.Status.StartTime.Time
+	}
 
 	return
 }
@@ -123,12 +177,14 @@ func (s *service) HandleTerminalSession(session sockjs.Session) {
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, middleware.ContextKeyClusterName, tr.Cluster)
 
-	// TODO: 验证token、权限、过期时间之类的
-	//err = s.checkShellToken(tr.Cluster, tr.Namespace, tr.Pod, tr.Container, tr.Token)
-	//if err != nil {
-	//	_ = level.Error(s.logger).Log("http.status", http.StatusBadRequest, "token", "not valid", "token", tr.Token, "err", err.Error())
-	//	return
-	//}
+	// 验证token、权限、过期时间之类的
+	err = s.checkShellToken(tr.Cluster, tr.Namespace, tr.PodName, tr.Container, tr.SessionId)
+	if err != nil {
+		_ = level.Error(s.logger).Log("http.status", http.StatusBadRequest, "token", "not valid", "token", tr.Token, "err", err.Error())
+		err = encode.ErrAuthTimeout.Wrap(err)
+		return
+	}
+
 	ts := Session{
 		id:            tr.SessionId,
 		sockJSSession: session,
@@ -143,34 +199,43 @@ func (s *service) HandleTerminalSession(session sockjs.Session) {
 }
 
 func (s *service) checkShellToken(cluster, namespace, podName, container, token string) error {
-	endTimeRaw := []rune(token)
-	var endTime int64
-	var endTimeStr string
-	var err error
-
-	if len(endTimeRaw) > 8 {
-		endTimeStr = string(endTimeRaw[8:])
-		endTime, err = strconv.ParseInt(endTimeStr, 10, 64)
-		if err != nil {
-			return err
-		}
-	}
-	ntime := time.Now().Unix()
-
-	if ntime > endTime {
-		return errors.New("token time expired")
+	var atc kpljwt.ArithmeticTerminalClaims
+	tk, err := jwt.ParseWithClaims(token, &atc, kpljwt.JwtKeyFunc)
+	if err != nil || tk == nil {
+		_ = level.Error(s.logger).Log("jwt", "ParseWithClaims", "err", err)
+		err = encode.ErrAuthNotLogin.Wrap(err)
+		return err
 	}
 
-	rawToken := namespace + podName + endTimeStr + s.appKey
-
-	md5Ctx := md5.New()
-	md5Ctx.Write([]byte(rawToken))
-	cipherToken := hex.EncodeToString(md5Ctx.Sum(nil))
-
-	checkToken := string([]rune(cipherToken)[12:20]) + endTimeStr
-	if checkToken != token {
-		return errors.New("token not match")
+	claim, ok := tk.Claims.(*kpljwt.ArithmeticTerminalClaims)
+	if !ok {
+		_ = level.Error(s.logger).Log("tk", "Claims", "err", ok)
+		err = encode.ErrAccountASD.Error()
+		return err
 	}
+
+	if !strings.EqualFold(claim.Cluster, cluster) {
+		return encode.ErrAccountASD.Error()
+	}
+	if !strings.EqualFold(claim.Namespace, namespace) {
+		return encode.ErrAccountASD.Error()
+	}
+	if !strings.EqualFold(claim.PodName, podName) {
+		return encode.ErrAccountASD.Error()
+	}
+	//if !strings.EqualFold(claim.Container, container) {
+	//	return encode.ErrAccountASD.Error()
+	//}
+	ctx := context.Background()
+	tkMd5 := util.Md5Str(token)
+	// userId
+	_, err = s.cache.Get(ctx, fmt.Sprintf("terminal:tk:%s", tkMd5), nil)
+	if err != nil {
+		return encode.ErrAuthTimeout.Wrap(err)
+	}
+
+	// 拿到用户ID之后的操作
+
 	return nil
 }
 
@@ -189,23 +254,25 @@ func (s *service) waitForTerminal(k8sClient *k8s.Clientset, cfg *rest.Config, ts
 			}
 		}
 	}
-
 	if err != nil {
 		_ = level.Error(s.logger).Log("namespace", namespace, "pod", podName, "container", container, "cmd", cmd, "service", "waitForTerminal", "err", err.Error())
+		_ = ts.Toast(err.Error())
 		ts.Close(2, err.Error())
 		return
 	}
-
+	_ = ts.Toast("Process exited")
 	ts.Close(1, "Process exited")
 }
 
-func New(logger log.Logger, traceId, appKey string, k8sClient kubernetes.K8sClient, repository repository.Repository) Service {
+func New(logger log.Logger, traceId, appKey string, k8sClient kubernetes.K8sClient, repository repository.Repository, cacheSvc kitcache.Service, terminalSessionTimeout int64) Service {
 	return &service{
 		traceId,
 		appKey,
 		logger,
 		k8sClient,
 		repository,
+		terminalSessionTimeout,
+		cacheSvc,
 	}
 }
 
@@ -249,8 +316,6 @@ func startProcess(k8sClient *k8s.Clientset, cfg *rest.Config, cmd []string, ptyH
 		Name(podName).
 		Namespace(namespace).
 		SubResource("exec")
-
-	fmt.Println(namespace, podName, container)
 
 	req.VersionedParams(&v1.PodExecOptions{
 		Container: container,

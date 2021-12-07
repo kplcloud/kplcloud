@@ -17,7 +17,7 @@ type SysPermission struct {
 	Method      string `gorm:"column:method;null;default:'GET';comment:'Method'" json:"method"`
 	Alias       string `gorm:"column:alias;notnull;comment:'名称'" json:"alias"`
 	Name        string `gorm:"column:name;unique;size:32;notnull;comment:'标识'" json:"name"`
-	Path        string `gorm:"column:path;unique;size:64;notnull;comment:'路径'" json:"path"`
+	Path        string `gorm:"column:path;size:255;notnull;comment:'路径'" json:"path"`
 	Description string `gorm:"column:description;null;comment:'描述'" json:"description"`
 	Sort        int    `gorm:"column:sort;null;default:0;comment:'排序'" json:"sort"`
 	//Methods     []SysPermissionMethod `json:"methods"`

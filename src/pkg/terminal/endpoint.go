@@ -12,22 +12,30 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/middleware"
+	"time"
 )
 
 type (
 	tokenRequest struct {
-		PodName   string `json:"podName"`
-		Container string `json:"container"`
+		PodName     string `json:"podName"`
+		Container   string `json:"container"`
+		ServiceName string `json:"serviceName"`
 	}
 	tokenResult struct {
-		Namespace string `json:"namespace"`
-		PodName   string `json:"podName"`
-		Container string `json:"container"`
-		ErrMsg    string `json:"errMsg"`
-		SessionId string `json:"sessionId"`
-		Token     string `json:"token"`
-		BashStr   string `json:"bashStr"`
-		Cluster   string `json:"cluster"`
+		Namespace   string    `json:"namespace"`
+		PodName     string    `json:"podName"`
+		Container   string    `json:"container"`
+		ErrMsg      string    `json:"errMsg"`
+		SessionId   string    `json:"sessionId"`
+		Token       string    `json:"token"`
+		Cluster     string    `json:"cluster"`
+		Containers  []string  `json:"containers"`
+		Phase       string    `json:"phase"`
+		HostIp      string    `json:"hostIp"`
+		PodIp       string    `json:"podIp"`
+		StartTime   time.Time `json:"startTime"`
+		ServiceName string    `json:"serviceName"`
+		Pods        []string  `json:"pods"`
 	}
 )
 
@@ -52,12 +60,16 @@ func makeTokenEndpoint(s Service) endpoint.Endpoint {
 		if !ok {
 			return nil, encode.ErrClusterNotfound.Error()
 		}
+		userId, ok := ctx.Value(middleware.ContextUserId).(int64)
+		if !ok {
+			return nil, encode.ErrClusterNotfound.Error()
+		}
 		ns, _ := ctx.Value(middleware.ContextKeyNamespaceName).(string)
 		if !ok {
 			return nil, encode.ErrNamespaceNotfound.Error()
 		}
 		req := request.(tokenRequest)
-		res, err := s.Token(ctx, clusterId, ns, req.PodName, req.Container)
+		res, err := s.Token(ctx, userId, clusterId, ns, req.ServiceName, req.PodName)
 		return encode.Response{
 			Data:  res,
 			Error: err,

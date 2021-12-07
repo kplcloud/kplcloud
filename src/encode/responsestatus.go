@@ -34,6 +34,7 @@ var ResponseMessage = map[ResStatus]int{
 	ErrAuthCheckCaptchaNotnull: 1008,
 	ErrAuthRegisterExists:      1009,
 	ErrAuthRegisterSave:        1010,
+	ErrAuthTimeout:             1011,
 
 	// 系统API
 	ErrSysRoleNotfound:     2001,
@@ -173,6 +174,7 @@ const (
 	ErrAuthCheckCaptchaNotnull ResStatus = "图形验证码不能为空"
 	ErrAuthRegisterExists      ResStatus = "注册用户已存在"
 	ErrAuthRegisterSave        ResStatus = "注册失败,请联系管理员"
+	ErrAuthTimeout             ResStatus = "授权已过期"
 
 	// 系统API
 	ErrSysRoleNotfound     ResStatus = "角色不存在"

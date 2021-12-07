@@ -182,7 +182,7 @@ func start() (err error) {
 	pvcSvc = persistentvolumeclaim.NewLogging(logger, logging.TraceId)(pvcSvc)
 	templateSvc = template.New(logger, logging.TraceId, store)
 	templateSvc = template.NewLogging(logger, logging.TraceId)(templateSvc)
-	terminalSvc = terminal.New(logger, logging.TraceId, cf.GetString("server", "key"), k8sClient, store)
+	terminalSvc = terminal.New(logger, logging.TraceId, cf.GetString("server", "key"), k8sClient, store, cacheSvc, int64(cf.GetInt("server", "terminal.session.timeout")))
 	//terminalSvc = terminal.NewLogging(logger, logging.TraceId)(terminalSvc)
 	captchaSvc = captcha.New(logger, NewCaptchaStore(cacheSvc, logger, time.Minute*5), logging.TraceId)
 
@@ -324,7 +324,9 @@ func initHttpHandler(g *group.Group) {
 	r.PathPrefix("/registry").Handler(http.StripPrefix("/registry", registry.MakeHTTPHandler(registrySvc, append(systemEms, ems...), opts)))
 	r.PathPrefix("/template").Handler(http.StripPrefix("/template", template.MakeHTTPHandler(templateSvc, ems, opts)))
 	r.PathPrefix("/terminal").Handler(http.StripPrefix("/terminal", terminal.MakeHTTPHandler(terminalSvc, tokenEms, opts)))
-	http.Handle("/ws/terminal/pods/console/exec/", sockjs.NewHandler("/ws/terminal/pods/console/exec", sockjs.DefaultOptions, func(session sockjs.Session) {
+	sockjsOptions := sockjs.DefaultOptions
+	sockjsOptions.HeartbeatDelay = time.Duration(cf.GetInt("server", "terminal.session.timeout")) * time.Second
+	http.Handle("/ws/terminal/pods/console/exec/", sockjs.NewHandler("/ws/terminal/pods/console/exec", sockjsOptions, func(session sockjs.Session) {
 		terminalSvc.HandleTerminalSession(session)
 	}))
 	r.PathPrefix("/ws").Handler(http.StripPrefix("/ws", terminal.MakeHTTPHandler(terminalSvc, tokenEms, opts)))
