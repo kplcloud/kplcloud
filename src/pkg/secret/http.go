@@ -16,6 +16,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"net/http"
+	"strconv"
 
 	"github.com/kplcloud/kplcloud/src/encode"
 )
@@ -29,6 +30,7 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		"Sync":        ems,
 		"ImageSecret": ems,
 		"Delete":      ems,
+		"List":        ems,
 	})
 
 	r := mux.NewRouter()
@@ -36,6 +38,12 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 	r.Handle("/{cluster}/sync/{namespace}", kithttp.NewServer(
 		eps.SyncEndpoint,
 		kithttp.NopRequestDecoder,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodGet)
+	r.Handle("/{cluster}/list/{namespace}", kithttp.NewServer(
+		eps.ListEndpoint,
+		decodeListRequest,
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodGet)
@@ -81,17 +89,20 @@ func decodeImageSecretRequest(_ context.Context, r *http.Request) (interface{}, 
 	return req, nil
 }
 
-func decodeSyncRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	var req syncRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		return req, encode.InvalidParams.Wrap(err)
+func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req listRequest
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	if page < 1 {
+		page = 1
 	}
-	validResult, err := valid.ValidateStruct(req)
-	if err != nil {
-		return nil, encode.InvalidParams.Wrap(err)
+	if pageSize == 0 {
+		pageSize = 10
 	}
-	if !validResult {
-		return nil, encode.InvalidParams.Wrap(errors.New("valid false"))
-	}
+
+	req.page = page
+	req.pageSize = pageSize
+	req.name = r.URL.Query().Get("name")
+
 	return req, nil
 }

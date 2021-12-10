@@ -16,9 +16,9 @@ func (c AppLabel) String() string {
 }
 
 const (
-	//LabelAppName    AppLabel = "nsini.com/app-name"
-	LabelAppName    AppLabel = "app"
+	LabelAppName    AppLabel = "nsini.com/app-name"
 	LabelAppVersion AppLabel = "nsini.com/app-version"
+	//LabelAppName    AppLabel = "k8s-app" // k8s-app
 )
 
 // Application 应用主表

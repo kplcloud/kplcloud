@@ -9,8 +9,6 @@ package terminal
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
@@ -33,9 +31,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/remotecommand"
-	"math/rand"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -73,20 +69,21 @@ func (s *service) Token(ctx context.Context, userId, clusterId int64, namespace,
 		return
 	}
 
-	if pods, err := s.k8sClient.Do(ctx).CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: labels.SelectorFromSet(labels.Set{
-			types.LabelAppName.String(): svcName,
-		}).String(),
-	}); err == nil {
-		for _, v := range pods.Items {
-			res.Pods = append(res.Pods, v.Name)
-		}
-	} else {
-		_ = level.Error(logger).Log("k8sClient.Do.CoreV1.Pods", "List", "err", err.Error())
+	pods, err := s.getPods(ctx, namespace, svcName)
+	if err != nil {
+		_ = level.Error(logger).Log("s", "getPods", "err", err.Error())
+		err = encode.ErrPodNotfound.Wrap(err)
+		return
+	}
+	if len(pods) == 0 {
+		err = encode.ErrTerminalPodsNotfound.Error()
+		return
 	}
 
-	// TODO 生成token
-	//sessionId, _ := genTerminalSessionId()
+	for _, v := range pods {
+		res.Pods = append(res.Pods, v.Name)
+	}
+
 	timeout := time.Duration(s.sessionTimeout) * time.Second
 	expAt := time.Now().Add(timeout).Unix()
 
@@ -147,6 +144,30 @@ func (s *service) Token(ctx context.Context, userId, clusterId int64, namespace,
 	return
 }
 
+func (s *service) getPods(ctx context.Context, namespace, svcName string) (res []v1.Pod, err error) {
+	for _, name := range []string{
+		types.LabelAppName.String(),
+		"k8s-app",
+		"app",
+	} {
+		pods, err := s.k8sClient.Do(ctx).CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+			LabelSelector: labels.SelectorFromSet(labels.Set{
+				name: svcName,
+			}).String(),
+		})
+		if err != nil {
+			err = encode.ErrPodNotfound.Wrap(err)
+			return res, err
+		}
+		if len(pods.Items) == 0 {
+			continue
+		}
+		return pods.Items, nil
+	}
+
+	return nil, err
+}
+
 func (s *service) HandleTerminalSession(session sockjs.Session) {
 	var (
 		buf string
@@ -203,7 +224,7 @@ func (s *service) checkShellToken(cluster, namespace, podName, container, token 
 	tk, err := jwt.ParseWithClaims(token, &atc, kpljwt.JwtKeyFunc)
 	if err != nil || tk == nil {
 		_ = level.Error(s.logger).Log("jwt", "ParseWithClaims", "err", err)
-		err = encode.ErrAuthNotLogin.Wrap(err)
+		err = encode.ErrAuthTimeout.Wrap(err)
 		return err
 	}
 
@@ -274,30 +295,6 @@ func New(logger log.Logger, traceId, appKey string, k8sClient kubernetes.K8sClie
 		terminalSessionTimeout,
 		cacheSvc,
 	}
-}
-
-func genTerminalSessionId() (string, error) {
-	bytes := make([]byte, 16)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-	id := make([]byte, hex.EncodedLen(len(bytes)))
-	hex.Encode(id, bytes)
-	return string(id), nil
-}
-
-// token生成规则
-// 1. 600秒时限，平台appkey，并进行md5加密
-// 2. 取生成的32位加密字符串第12-20位，于unixtime进行拼接生成token
-func generateToken(clusterName, namespace, pod, appKey string) string {
-	endTime := time.Now().Unix() + 60*10
-	rawTokenKey := fmt.Sprintf("%s:%s:%s:%s:%s", clusterName, namespace, pod, appKey, strconv.FormatInt(endTime, 10))
-	//rawTokenKey := namespace + pod + strconv.FormatInt(endTime, 10) + appKey
-	md5Hash := md5.New()
-	md5Hash.Write([]byte(rawTokenKey))
-	cipher := md5Hash.Sum(nil)
-	cipherStr := hex.EncodeToString(cipher)
-	return cipherStr[12:20] + strconv.FormatInt(endTime, 10)
 }
 
 func isValidShell(validShells []string, shell string) bool {

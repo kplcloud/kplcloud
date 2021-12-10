@@ -12,6 +12,7 @@ import (
 	"github.com/go-kit/kit/endpoint"
 	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/middleware"
+	"time"
 )
 
 type (
@@ -29,12 +30,26 @@ type (
 		Id   int64  `json:"id"`
 		Name string `json:"name"`
 	}
+
+	secretResult struct {
+		Name            string    `json:"name"`
+		Namespace       string    `json:"namespace"`
+		ResourceVersion string    `json:"resourceVersion"`
+		CreatedAt       time.Time `json:"createdAt"`
+		UpdatedAt       time.Time `json:"updatedAt"`
+	}
+
+	listRequest struct {
+		name           string
+		page, pageSize int
+	}
 )
 
 type Endpoints struct {
 	SyncEndpoint        endpoint.Endpoint
 	ImageSecretEndpoint endpoint.Endpoint
 	DeleteEndpoint      endpoint.Endpoint
+	ListEndpoint        endpoint.Endpoint
 }
 
 func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
@@ -42,10 +57,14 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 		SyncEndpoint:        makeSyncEndpoint(s),
 		ImageSecretEndpoint: makeImageSecretEndpoint(s),
 		DeleteEndpoint:      makeDeleteEndpoint(s),
+		ListEndpoint:        makeListEndpoint(s),
 	}
 
 	for _, m := range dmw["Sync"] {
 		eps.SyncEndpoint = m(eps.SyncEndpoint)
+	}
+	for _, m := range dmw["List"] {
+		eps.ListEndpoint = m(eps.ListEndpoint)
 	}
 	for _, m := range dmw["ImageSecret"] {
 		eps.ImageSecretEndpoint = m(eps.ImageSecretEndpoint)
@@ -54,6 +73,28 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 		eps.DeleteEndpoint = m(eps.DeleteEndpoint)
 	}
 	return eps
+}
+
+func makeListEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		clusterId, ok := ctx.Value(middleware.ContextKeyClusterId).(int64)
+		if !ok {
+			return nil, encode.ErrClusterNotfound.Error()
+		}
+		ns, ok := ctx.Value(middleware.ContextKeyNamespaceName).(string)
+		if !ok {
+			return nil, encode.ErrNamespaceNotfound.Error()
+		}
+		req := request.(listRequest)
+		res, total, err := s.List(ctx, clusterId, ns, req.name, req.page, req.pageSize)
+		return encode.Response{
+			Data: map[string]interface{}{
+				"list":  res,
+				"total": total,
+			},
+			Error: err,
+		}, err
+	}
 }
 
 func makeDeleteEndpoint(s Service) endpoint.Endpoint {

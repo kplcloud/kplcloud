@@ -11,6 +11,7 @@ import (
 	"context"
 	"github.com/jinzhu/gorm"
 	"github.com/kplcloud/kplcloud/src/repository/types"
+	"strings"
 )
 
 type Call func() error
@@ -23,10 +24,24 @@ type Service interface {
 	Delete(ctx context.Context, clusterId int64, ns, name string) (err error)
 	FindByName(ctx context.Context, name string) (res []types.Secret, err error)
 	FindNsByNames(ctx context.Context, clusterId int64, ns string, names []string) (res []types.Secret, err error)
+	List(ctx context.Context, clusterId int64, ns, name string, page, pageSize int) (res []types.Secret, total int, err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) List(ctx context.Context, clusterId int64, ns, name string, page, pageSize int) (res []types.Secret, total int, err error) {
+	query := s.db.Model(&types.Secret{}).
+		Where("cluster_id = ?", clusterId).Where("namespace = ?", ns)
+	if !strings.EqualFold(name, "") {
+		query = query.Where("name = ?", name)
+	}
+	err = query.Order("updated_at DESC").
+		Count(&total).
+		Offset((page - 1) * pageSize).Limit(total).Find(&res).Error
+
+	return
 }
 
 func (s *service) FindNsByNames(ctx context.Context, clusterId int64, ns string, names []string) (res []types.Secret, err error) {

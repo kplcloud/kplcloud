@@ -32,6 +32,8 @@ type Service interface {
 	ImageSecret(ctx context.Context, clusterId int64, ns, name, host, username, password string) (err error)
 	// Delete 删除Secret
 	Delete(ctx context.Context, clusterId int64, ns, name string) (err error)
+	// List 列表查询
+	List(ctx context.Context, clusterId int64, namespace, name string, page, pageSize int) (res []secretResult, total int, err error)
 }
 
 type service struct {
@@ -39,6 +41,25 @@ type service struct {
 	logger     log.Logger
 	repository repository.Repository
 	k8sClient  kubernetes.K8sClient
+}
+
+func (s *service) List(ctx context.Context, clusterId int64, namespace, name string, page, pageSize int) (res []secretResult, total int, err error) {
+	list, total, err := s.repository.Secrets(ctx).List(ctx, clusterId, namespace, name, page, pageSize)
+	if err != nil {
+		return
+	}
+
+	for _, v := range list {
+		res = append(res, secretResult{
+			Name:            v.Name,
+			Namespace:       v.Namespace,
+			ResourceVersion: v.ResourceVersion,
+			CreatedAt:       v.CreatedAt,
+			UpdatedAt:       v.UpdatedAt,
+		})
+	}
+
+	return
 }
 
 func (s *service) Delete(ctx context.Context, clusterId int64, ns, name string) (err error) {
