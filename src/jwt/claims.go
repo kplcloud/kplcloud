@@ -27,6 +27,10 @@ type ArithmeticTerminalClaims struct {
 	jwt.StandardClaims
 }
 
+func (s ArithmeticTerminalClaims) Valid() error {
+	return nil
+}
+
 //func Sign(email string, uid string, sessionTimeout int64) (string, error) {
 //
 //	expAt := time.Now().Add(time.Duration(sessionTimeout)).Unix()

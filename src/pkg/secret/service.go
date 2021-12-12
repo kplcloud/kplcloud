@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/jinzhu/gorm"
 	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/repository"
@@ -34,6 +35,8 @@ type Service interface {
 	Delete(ctx context.Context, clusterId int64, ns, name string) (err error)
 	// List 列表查询
 	List(ctx context.Context, clusterId int64, namespace, name string, page, pageSize int) (res []secretResult, total int, err error)
+	// Add 添加密钥 TODO: 跟configMap 一样，如何添加data？先添加 然后跳到添加data信息页？
+	Add(ctx context.Context, clusterId int64, namespace, name string) (err error)
 }
 
 type service struct {
@@ -41,6 +44,27 @@ type service struct {
 	logger     log.Logger
 	repository repository.Repository
 	k8sClient  kubernetes.K8sClient
+}
+
+func (s *service) Add(ctx context.Context, clusterId int64, namespace, name string) (err error) {
+	//logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+	secret, err := s.repository.Secrets(ctx).FindBy(ctx, clusterId, namespace, name)
+	if !gorm.IsRecordNotFoundError(err) {
+		return encode.ErrSecretExists.Error()
+	}
+
+	k8sSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{},
+		Immutable:  nil,
+		Data:       nil,
+		StringData: nil,
+		Type:       "",
+	}
+
+	k8sSecret, err = s.k8sClient.Do(ctx).CoreV1().Secrets(namespace).Create(ctx, k8sSecret, metav1.CreateOptions{})
+
+	s.repository.Secrets(ctx).Save(ctx, &secret, nil)
+	return
 }
 
 func (s *service) List(ctx context.Context, clusterId int64, namespace, name string, page, pageSize int) (res []secretResult, total int, err error) {

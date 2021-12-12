@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/dgrijalva/jwt-go"
+	kitjwt "github.com/go-kit/kit/auth/jwt"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	kitcache "github.com/icowan/kit-cache"
@@ -99,13 +100,18 @@ func (s *service) Token(ctx context.Context, userId, clusterId int64, namespace,
 			Issuer:    "system",
 		},
 	}
-
-	//创建token，指定加密算法为HS256
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	//生成token
-	tk, err := token.SignedString([]byte(kpljwt.GetJwtKey()))
+	e := func(ctx context.Context, i interface{}) (interface{}, error) { return ctx, nil }
+	signer := kitjwt.NewSigner("terminal-auth", []byte(kpljwt.GetJwtKey()), jwt.SigningMethodHS256, claims)(e)
+	kitCtx, err := signer(context.Background(), struct{}{})
 	if err != nil {
 		_ = level.Error(logger).Log("token", "SignedString", "err", err.Error())
+		err = encode.ErrTerminalToken.Wrap(err)
+		return
+	}
+	fmt.Println(kitCtx)
+	tk, ok := kitCtx.(context.Context).Value(kitjwt.JWTContextKey).(string)
+	if !ok {
+		err = encode.ErrTerminalToken.Error()
 		return
 	}
 
@@ -221,18 +227,20 @@ func (s *service) HandleTerminalSession(session sockjs.Session) {
 
 func (s *service) checkShellToken(cluster, namespace, podName, container, token string) error {
 	var atc kpljwt.ArithmeticTerminalClaims
-	tk, err := jwt.ParseWithClaims(token, &atc, kpljwt.JwtKeyFunc)
-	if err != nil || tk == nil {
+	e := func(ctx context.Context, i interface{}) (interface{}, error) { return ctx, nil }
+	parser := kitjwt.NewParser(kpljwt.JwtKeyFunc, jwt.SigningMethodHS256, func() jwt.Claims {
+		return &atc
+	})(e)
+	ctx := context.WithValue(context.Background(), kitjwt.JWTContextKey, token)
+	kitCtx, err := parser(ctx, struct{}{})
+	if err != nil {
 		_ = level.Error(s.logger).Log("jwt", "ParseWithClaims", "err", err)
 		err = encode.ErrAuthTimeout.Wrap(err)
 		return err
 	}
-
-	claim, ok := tk.Claims.(*kpljwt.ArithmeticTerminalClaims)
+	claim, ok := kitCtx.(context.Context).Value(kitjwt.JWTClaimsContextKey).(*kpljwt.ArithmeticTerminalClaims)
 	if !ok {
-		_ = level.Error(s.logger).Log("tk", "Claims", "err", ok)
-		err = encode.ErrAccountASD.Error()
-		return err
+		return encode.ErrAuthTimeout.Error()
 	}
 
 	if !strings.EqualFold(claim.Cluster, cluster) {
@@ -247,7 +255,6 @@ func (s *service) checkShellToken(cluster, namespace, podName, container, token 
 	//if !strings.EqualFold(claim.Container, container) {
 	//	return encode.ErrAccountASD.Error()
 	//}
-	ctx := context.Background()
 	tkMd5 := util.Md5Str(token)
 	// userId
 	_, err = s.cache.Get(ctx, fmt.Sprintf("terminal:tk:%s", tkMd5), nil)

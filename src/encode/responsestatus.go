@@ -127,6 +127,7 @@ const (
 	ErrSecretMarshal   ResStatus = "转换错误"
 	ErrSecretImageSave ResStatus = "添加镜像Secret错误"
 	ErrSecretDelete    ResStatus = "Secret删除错误"
+	ErrSecretExists    ResStatus = "Secret已存在"
 
 	ErrNamespaceNotfound ResStatus = "空间不存在"
 	ErrNameNotfound      ResStatus = "名称不存在"
@@ -160,6 +161,7 @@ const (
 	ErrPodNotfound ResStatus = "Pods可能不存在"
 
 	ErrTerminalPodsNotfound ResStatus = "没有找到相应标签的pods"
+	ErrTerminalToken        ResStatus = "生成token失败"
 
 	// 中间件错误信息
 	ErrSystem                  ResStatus = "系统错误"
