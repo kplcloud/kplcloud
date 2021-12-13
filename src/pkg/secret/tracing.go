@@ -20,6 +20,10 @@ type tracing struct {
 	tracer opentracing.Tracer
 }
 
+func (s *tracing) Add(ctx context.Context, clusterId int64, namespace, name string) (err error) {
+	panic("implement me")
+}
+
 func (s *tracing) List(ctx context.Context, clusterId int64, namespace, name string, page, pageSize int) (res []secretResult, total int, err error) {
 	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "List", opentracing.Tag{
 		Key:   string(ext.Component),

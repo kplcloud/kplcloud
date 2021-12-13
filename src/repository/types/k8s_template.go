@@ -12,9 +12,10 @@ import "time"
 type Kind string
 
 const (
-	KindClusterRole           Kind = "ClusterRole"
-	KindSecret                Kind = "Secret"
-	KindPersistentVolumeClaim Kind = "PersistentVolumeClaim"
+	KindClusterRole             Kind = "ClusterRole"
+	KindSecret                  Kind = "Secret"
+	KindPersistentVolumeClaim   Kind = "PersistentVolumeClaim"
+	KindHorizontalPodAutoscaler Kind = "HorizontalPodAutoscaler"
 )
 
 func (s Kind) String() string {

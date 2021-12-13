@@ -9,6 +9,7 @@ package repository
 
 import (
 	"context"
+	"github.com/kplcloud/kplcloud/src/repository/hpa"
 	"github.com/kplcloud/kplcloud/src/repository/pvc"
 
 	"github.com/go-kit/kit/log"
@@ -46,6 +47,7 @@ type Repository interface {
 	Audit(ctx context.Context) audit.Service
 	Application(ctx context.Context) application.Service
 	Pvc(ctx context.Context) pvc.Service
+	HPA(ctx context.Context) hpa.Service
 
 	SysSetting() syssetting.Service
 	SysUser() sysuser.Service
@@ -71,12 +73,17 @@ type repository struct {
 	auditSvc        audit.Service
 	appSvc          application.Service
 	pvcSvc          pvc.Service
+	hpaSvc          hpa.Service
 
 	sysSetting    syssetting.Service
 	sysUser       sysuser.Service
 	sysNamespace  sysnamespace.Service
 	sysRole       sysrole.Service
 	sysPermission syspermission.Service
+}
+
+func (r *repository) HPA(ctx context.Context) hpa.Service {
+	return r.hpaSvc
 }
 
 func (r *repository) Pvc(ctx context.Context) pvc.Service {
@@ -194,6 +201,8 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 	appSvc = application.NewLogging(logger, traceId)(appSvc)
 	pvcSvc := pvc.New(db)
 	pvcSvc = pvc.NewLogging(logger, traceId)(pvcSvc)
+	hpaSvc := hpa.New(db)
+	hpaSvc = hpa.NewLogging(logger, traceId)(hpaSvc)
 
 	if tracer != nil {
 		sysSetting = syssetting.NewTracing(tracer)(sysSetting)
@@ -213,6 +222,7 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 		auditSvc = audit.NewTracing(tracer)(auditSvc)
 		appSvc = application.NewTracing(tracer)(appSvc)
 		pvcSvc = pvc.NewTracing(tracer)(pvcSvc)
+		hpaSvc = hpa.NewTracing(tracer)(hpaSvc)
 	}
 
 	if kcache != nil {
@@ -237,5 +247,6 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 		auditSvc:        auditSvc,
 		appSvc:          appSvc,
 		pvcSvc:          pvcSvc,
+		hpaSvc:          hpaSvc,
 	}
 }
