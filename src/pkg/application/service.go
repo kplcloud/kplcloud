@@ -27,7 +27,7 @@ type Service interface {
 	// 中间件取得ClusterId、GroupIds 并通过GroupIds和NamespaceIds过滤出所有的appName TODO: Group 关系: groupId nsId appId
 	// namespace 可以为空，如果前端没选择namespace, 则取所有namespace下的应用(前题条件是这些namespace在Groups里)
 	// query 可以为空 过滤 标签或应用名称或别名 TODO: 是否需要加一个标签筛选？
-	List(ctx context.Context, clusterId int64, namespace []string, query string, page, pageSize int) (res []appResult, total int, err error)
+	List(ctx context.Context, clusterId int64, namespace string, name []string, page, pageSize int) (res []appResult, total int, err error)
 	// Sync 同步空间下的所有Deployment
 	Sync(ctx context.Context, clusterId int64, namespace string) (err error)
 
@@ -44,8 +44,10 @@ func (s *service) Sync(ctx context.Context, clusterId int64, namespace string) (
 	panic("implement me")
 }
 
-func (s *service) List(ctx context.Context, clusterId int64, namespace []string, query string, page, pageSize int) (res []appResult, total int, err error) {
-	//logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+func (s *service) List(ctx context.Context, clusterId int64, namespace string, name []string, page, pageSize int) (res []appResult, total int, err error) {
+	// logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	s.repository.Application(ctx).List(ctx, clusterId, namespace, nil, page, pageSize)
 
 	return
 }

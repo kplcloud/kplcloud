@@ -36,6 +36,12 @@ type Service interface {
 	// 如果 kind 的资源没有设置 request 和 limit 则创建的hpa可能会不生效
 	// 如果没有则给返回无法创建，需要先设置 request和limit
 	Create(ctx context.Context, clusterId int64, namespace, name, kind, appName string) (err error)
+	// Delete 删除自动伸缩
+	Delete(ctx context.Context, clusterId int64, namespace, name string) (err error)
+	// List 列表
+	List(ctx context.Context, clusterId int64, namespace string, page, pageSize int) (res []result, total int, err error)
+	// Detail 获取自动伸缩详情
+	Detail(ctx context.Context, clusterId int64, namespace, name string) (res result, err error)
 }
 
 type service struct {
@@ -43,6 +49,20 @@ type service struct {
 	logging    log.Logger
 	repository repository.Repository
 	k8sClient  kubernetes.K8sClient
+}
+
+func (s *service) Delete(ctx context.Context, clusterId int64, namespace, name string) (err error) {
+	panic("implement me")
+}
+
+func (s *service) List(ctx context.Context, clusterId int64, namespace string, page, pageSize int) (res []result, total int, err error) {
+	// TODO: 先查询group是否对该应用可读权限
+	s.repository.HPA(ctx).List(ctx, clusterId, namespace, nil, page, pageSize)
+	return
+}
+
+func (s *service) Detail(ctx context.Context, clusterId int64, namespace, name string) (res result, err error) {
+	panic("implement me")
 }
 
 func (s *service) Create(ctx context.Context, clusterId int64, namespace, name, kind, appName string) (err error) {

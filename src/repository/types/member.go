@@ -17,7 +17,7 @@ type Member struct {
 
 	Groups     []Groups    `gorm:"many2many:groups_memberss;foreignkey:id;association_foreignkey:id;association_jointable_foreignkey:groups_id;jointable_foreignkey:members_id;" json:"groups"`
 	Namespaces []Namespace `gorm:"many2many:namespaces_memberss;foreignkey:id;association_foreignkey:id;association_jointable_foreignkey:namespaces_id;jointable_foreignkey:members_id;" json:"namespaces"`
-	Roles      []Role      `gorm:"many2many:members_roless;foreignkey:id;association_foreignkey:id;association_jointable_foreignkey:roles_id;jointable_foreignkey:members_id;" json:"roles"`
+	Roles      []SysRole   `gorm:"many2many:members_roless;foreignkey:id;association_foreignkey:id;association_jointable_foreignkey:roles_id;jointable_foreignkey:members_id;" json:"roles"`
 }
 
 // TableName sets the insert table name for this struct type
