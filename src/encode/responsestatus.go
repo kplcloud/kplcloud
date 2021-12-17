@@ -163,6 +163,8 @@ const (
 	ErrTerminalPodsNotfound ResStatus = "没有找到相应标签的pods"
 	ErrTerminalToken        ResStatus = "生成token失败"
 
+	ErrAutoScaleMetricsServerNotfound ResStatus = "metrics-server不存在无法创建HPA"
+
 	// 中间件错误信息
 	ErrSystem                  ResStatus = "系统错误"
 	ErrAccountNotLogin         ResStatus = "用户没登录"
@@ -193,6 +195,11 @@ const (
 	ErrSysSettingDelete   ResStatus = "删除失败"
 	ErrSysSettingExists   ResStatus = "配置已存在"
 	ErrSysSettingSave     ResStatus = "配置保存失败"
+
+	ErrSysGroupExists        ResStatus = "组已存在"
+	ErrSysGroupNotfound      ResStatus = "组不存在"
+	ErrSysGroupNotPermission ResStatus = "您无法操作,请让组管理员操作"
+	ErrSysGroupSave          ResStatus = "保存失败"
 
 	ErrNodeCordon    ResStatus = "操作失败"
 	ErrNodeNotfound  ResStatus = "节点不存在"

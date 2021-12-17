@@ -11,6 +11,7 @@ import (
 	"context"
 	"github.com/kplcloud/kplcloud/src/repository/hpa"
 	"github.com/kplcloud/kplcloud/src/repository/pvc"
+	"github.com/kplcloud/kplcloud/src/repository/sysgroup"
 
 	"github.com/go-kit/kit/log"
 	kitcache "github.com/icowan/kit-cache"
@@ -49,6 +50,7 @@ type Repository interface {
 	Pvc(ctx context.Context) pvc.Service
 	HPA(ctx context.Context) hpa.Service
 
+	SysGroup(ctx context.Context) sysgroup.Service
 	SysSetting() syssetting.Service
 	SysUser() sysuser.Service
 	SysNamespace() sysnamespace.Service
@@ -75,11 +77,16 @@ type repository struct {
 	pvcSvc          pvc.Service
 	hpaSvc          hpa.Service
 
+	sysGroup      sysgroup.Service
 	sysSetting    syssetting.Service
 	sysUser       sysuser.Service
 	sysNamespace  sysnamespace.Service
 	sysRole       sysrole.Service
 	sysPermission syspermission.Service
+}
+
+func (r *repository) SysGroup(ctx context.Context) sysgroup.Service {
+	return r.sysGroup
 }
 
 func (r *repository) HPA(ctx context.Context) hpa.Service {
@@ -178,6 +185,8 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 
 	sysPermission := syspermission.New(db)
 	sysPermission = syspermission.NewLogging(logger, traceId)(sysPermission)
+	sysGroup := sysgroup.New(db)
+	//sysGroup = syspermission.NewLogging(logger, traceId)(sysPermission)
 
 	clusterSvc := cluster.New(db)
 	clusterSvc = cluster.NewLogging(logger, traceId)(clusterSvc)
@@ -235,6 +244,7 @@ func New(db *gorm.DB, logger log.Logger, traceId string, tracer opentracing.Trac
 		sysNamespace:  sysNamespace,
 		sysRole:       sysRole,
 		sysPermission: sysPermission,
+		sysGroup:      sysGroup,
 
 		storageClassSvc: storageClassSvc,
 		k8sTpl:          k8sTplSvc,

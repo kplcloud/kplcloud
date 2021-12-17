@@ -11,6 +11,7 @@ import (
 	"context"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
@@ -66,6 +67,15 @@ func (s *service) Detail(ctx context.Context, clusterId int64, namespace, name s
 }
 
 func (s *service) Create(ctx context.Context, clusterId int64, namespace, name, kind, appName string) (err error) {
+	logger := log.With(s.logging, s.traceId, ctx.Value(s.traceId))
+
+	_, err = s.k8sClient.Do(ctx).AppsV1().Deployments(metav1.NamespaceAll).Get(ctx, "metrics-server", metav1.GetOptions{})
+	if err != nil {
+		_ = level.Warn(logger).Log("k8sClient.Do.AppsV1.Deployments", "Get", "err", err.Error())
+		err = encode.ErrAutoScaleMetricsServerNotfound.Wrap(err)
+		return
+	}
+
 	var hpa *autoscalev1.HorizontalPodAutoscaler
 	_, err = s.repository.K8sTpl(ctx).EncodeTemplate(ctx, types.KindHorizontalPodAutoscaler, map[string]interface{}{
 		"name":         name,
