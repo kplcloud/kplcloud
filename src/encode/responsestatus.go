@@ -200,6 +200,7 @@ const (
 	ErrSysGroupNotfound      ResStatus = "组不存在"
 	ErrSysGroupNotPermission ResStatus = "您无法操作,请让组管理员操作"
 	ErrSysGroupSave          ResStatus = "保存失败"
+	ErrSysGroupDelete        ResStatus = "删除失败"
 
 	ErrNodeCordon    ResStatus = "操作失败"
 	ErrNodeNotfound  ResStatus = "节点不存在"

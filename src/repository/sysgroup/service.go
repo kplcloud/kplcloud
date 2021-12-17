@@ -23,10 +23,33 @@ type Service interface {
 	FindByName(ctx context.Context, clusterId int64, namespace, name string) (res types.SysGroup, err error)
 	List(ctx context.Context, clusterId int64, groupIds []int64, namespace, name string, page, pageSize int) (res []types.SysGroup, total int, err error)
 	FindIds(ctx context.Context, clusterId int64, namespace string) (ids []int64, err error)
+	Delete(ctx context.Context, group *types.SysGroup, call ...Call) (err error)
 }
 
 type service struct {
 	db *gorm.DB
+}
+
+func (s *service) Delete(ctx context.Context, group *types.SysGroup, call ...Call) (err error) {
+	return s.db.Model(group).Transaction(func(tx *gorm.DB) error {
+		if err = tx.Association("Users").Clear().Error; err != nil {
+			return err
+		}
+		if err = tx.Association("Apps").Clear().Error; err != nil {
+			return err
+		}
+		if err = tx.Where("id = ?", group.Id).Delete(group).Error; err != nil {
+			return err
+		}
+		if len(call) > 0 {
+			for _, v := range call {
+				if err = v(); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	})
 }
 
 func (s *service) FindIds(ctx context.Context, clusterId int64, namespace string) (ids []int64, err error) {
@@ -63,7 +86,7 @@ func (s *service) List(ctx context.Context, clusterId int64, groupIds []int64, n
 }
 
 func (s *service) FindByName(ctx context.Context, clusterId int64, namespace, name string) (res types.SysGroup, err error) {
-	err = s.db.Model(&res).Where("cluster_id = ? AND namespace = ? AND name = ?", clusterId, namespace, namespace).First(&res).Error
+	err = s.db.Model(&res).Where("cluster_id = ? AND namespace = ? AND name = ?", clusterId, namespace, name).First(&res).Error
 	return
 }
 

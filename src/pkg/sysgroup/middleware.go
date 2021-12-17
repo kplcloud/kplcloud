@@ -56,6 +56,9 @@ func checkGroupMiddleware(store repository.Repository) endpoint.Middleware {
 					if !paas {
 						return nil, encode.ErrSysGroupNotPermission.Error()
 					}
+					if group.OnlyRead {
+						// TODO 如果为只读，这个是在上层中间件处理
+					}
 				}
 			}
 			ctx = context.WithValue(ctx, ctxGroupIds, groupIds)

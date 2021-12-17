@@ -21,6 +21,7 @@ type Middleware func(Service) Service
 // 此模块只对应用进行操作，如需对Deployment进行操作使用deployment模块
 // 此模块应该会继承deployment、service、ingress、pvc、configmap、build、git等等模块，在此模块中会直接调用以上模块
 // 这样的话该模块方法会非常多，合理么？先这么设计，以后会怎么样再说...
+// 创建服务要求加到组里，如果没有组给弹窗创建一个，应用创建成功之后自动将该应用加入到组里
 type Service interface {
 	// List 获取应用列表
 	// 集群权限及组权限验证在中间件完成

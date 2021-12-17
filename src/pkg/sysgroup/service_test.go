@@ -44,11 +44,25 @@ func TestService_List(t *testing.T) {
 	svc := initSvc()
 	list, total, err := svc.List(context.Background(), 1, []int64{1}, "kpaas", "", 1, 10)
 	if err != nil {
-		t.Error()
+		t.Error(err)
 		return
 	}
 	t.Log(total)
 	for _, v := range list {
 		t.Log(v)
+	}
+}
+
+func TestService_Delete(t *testing.T) {
+	svc := initSvc()
+	err := svc.Delete(context.Background(), 1, 21, "kpaas", "kpaas.kplcloud")
+	if err != nil {
+		t.Error()
+		return
+	}
+	err = svc.Create(context.Background(), 1, 21, "kpaas", "kpaas.test", "看查组", "奥神队", 1, false)
+	if err != nil {
+		t.Error(err)
+		return
 	}
 }

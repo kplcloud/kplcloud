@@ -9,7 +9,6 @@ package sysgroup
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/jinzhu/gorm"
@@ -43,6 +42,7 @@ type Service interface {
 	Delete(ctx context.Context, sysUserId, clusterId int64, namespace, groupName string) (err error)
 	// List 组列表
 	// groupName 可以为空
+	// 删除需要手输名称防止误操作,在中间件验证就好
 	List(ctx context.Context, clusterId int64, groupIds []int64, namespace, groupName string, page, pageSize int) (res []result, total int, err error)
 	// AddUser 给组添加成员
 	AddUser(ctx context.Context, sysUserId, clusterId int64, namespace, groupName string, userIds []int64) (err error)
@@ -130,15 +130,22 @@ func (s *service) Update(ctx context.Context, sysUserId, clusterId int64, namesp
 
 func (s *service) Delete(ctx context.Context, sysUserId, clusterId int64, namespace, groupName string) (err error) {
 	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
-	user, err := s.repository.SysUser().Find(ctx, sysUserId, "SysGroups")
+
+	group, err := s.repository.SysGroup(ctx).FindByName(ctx, clusterId, namespace, groupName)
 	if err != nil {
-		_ = level.Warn(logger).Log("repository.SysUser", "Find", "err", err.Error())
+		_ = level.Warn(logger).Log("repository.SysGroup", "FindByName", "err", err.Error())
+		err = encode.ErrSysGroupNotfound.Error()
 		return
 	}
 
-	fmt.Println(user.Id)
+	if group.UserId != sysUserId {
+		return encode.ErrSysGroupNotfound.Error()
+	}
 
-	s.repository.SysGroup(ctx)
+	if err = s.repository.SysGroup(ctx).Delete(ctx, &group); err != nil {
+		_ = level.Error(logger).Log("repository.SysGroup", "Delete", "err", err.Error())
+		return encode.ErrSysGroupDelete.Wrap(err)
+	}
 
 	return
 }
