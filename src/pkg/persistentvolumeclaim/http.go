@@ -16,6 +16,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/kplcloud/kplcloud/src/encode"
 )
@@ -28,6 +30,7 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 	eps := NewEndpoint(s, map[string][]endpoint.Middleware{
 		"Create": ems,
 		"Sync":   ems,
+		"List":   ems,
 	})
 
 	r := mux.NewRouter()
@@ -44,12 +47,89 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opts []kithttp.Server
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodGet)
+	r.Handle("/{cluster}/list/{namespace}", kithttp.NewServer(
+		eps.ListEndpoint,
+		decodeListRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodGet)
+	r.Handle("/{cluster}/list/{storage}/storage", kithttp.NewServer(
+		eps.ListEndpoint,
+		decodeListRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodGet)
+	r.Handle("/{cluster}/info/{namespace}/get/{name}", kithttp.NewServer(
+		eps.GetEndpoint,
+		decodeInfoRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodGet)
+	r.Handle("/{cluster}/delete/{namespace}/name/{name}", kithttp.NewServer(
+		eps.DeleteEndpoint,
+		decodeInfoRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodDelete)
+	r.Handle("/{cluster}/update/{namespace}/name/{name}", kithttp.NewServer(
+		eps.UpdateEndpoint,
+		decodeUpdateRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodPut)
 
 	return r
 }
 
+func decodeInfoRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req listRequest
+	vars := mux.Vars(r)
+	name, ok := vars["name"]
+	if !ok {
+		return nil, encode.InvalidParams.Error()
+	}
+	req.name = name
+	return req, nil
+}
+
+func decodeListRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req listRequest
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("pageSize"))
+	if page < 0 {
+		page = 1
+	}
+	if pageSize < 0 {
+		page = 10
+	}
+	req.page = page
+	req.pageSize = pageSize
+	req.storage = r.URL.Query().Get("storage")
+	if strings.EqualFold(req.storage, "") {
+		vars := mux.Vars(r)
+		req.storage, _ = vars["storage"]
+	}
+
+	return req, nil
+}
+
 func decodeCreateRequest(_ context.Context, r *http.Request) (interface{}, error) {
 	var req createRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		return req, encode.InvalidParams.Wrap(err)
+	}
+	validResult, err := valid.ValidateStruct(req)
+	if err != nil {
+		return nil, encode.InvalidParams.Wrap(err)
+	}
+	if !validResult {
+		return nil, encode.InvalidParams.Wrap(errors.New("valid false"))
+	}
+	return req, nil
+}
+
+func decodeUpdateRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	var req updateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		return req, encode.InvalidParams.Wrap(err)
 	}

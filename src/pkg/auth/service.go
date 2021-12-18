@@ -106,6 +106,9 @@ func (s *service) Login(ctx context.Context, username, password string) (rs stri
 	go func(sysUser *types.SysUser) {
 		t := time.Now()
 		sysUser.LastLogin = &t
+		sysUser.Clusters = nil
+		sysUser.Namespaces = nil
+		sysUser.SysRoles = nil
 		if e := s.repository.SysUser().Save(ctx, sysUser); e != nil {
 			_ = level.Error(s.logger).Log("repository.SysUse", "Save", "err", e.Error())
 		}

@@ -65,9 +65,12 @@ func (s *service) Info(ctx context.Context, name string) (res infoResult, err er
 	//res.Id = cluster.Id
 	res.CreatedAt = cluster.CreatedAt
 	res.UpdatedAt = cluster.UpdatedAt
-	res.GitVersion = version.GitVersion
-	res.GoVersion = version.GoVersion
-	res.Platform = version.Platform
+	if version != nil {
+		res.GitVersion = version.GitVersion
+		res.GoVersion = version.GoVersion
+		res.Platform = version.Platform
+	}
+
 	return
 }
 

@@ -123,5 +123,8 @@ func generateTable() (err error) {
 	_ = logger.Log("migrate", "table", "Audit", db.AutoMigrate(types.Audit{}).Error)
 	_ = logger.Log("migrate", "table", "Application", db.AutoMigrate(types.Application{}).Error)
 	_ = logger.Log("migrate", "table", "PersistentVolumeClaim", db.AutoMigrate(types.PersistentVolumeClaim{}).Error)
+	_ = logger.Log("migrate", "table", "PersistentVolume", db.AutoMigrate(types.PersistentVolume{}).Error)
+	_ = logger.Log("migrate", "table", "HorizontalPodAutoscaler", db.AutoMigrate(types.HorizontalPodAutoscaler{}).Error)
+	_ = logger.Log("migrate", "table", "SysGroup", db.AutoMigrate(types.SysGroup{}).Error)
 	return
 }

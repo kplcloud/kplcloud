@@ -7,7 +7,10 @@
 
 package types
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 type SysUser struct {
 	Id                int64      `gorm:"column:id;primary_key" json:"id"`
@@ -30,9 +33,28 @@ type SysUser struct {
 	SysRoles   []SysRole   `gorm:"many2many:sys_user_roles;foreignkey:id;association_foreignkey:id;association_jointable_foreignkey:role_id;jointable_foreignkey:sys_user_id;" json:"sys_roles"`
 	Namespaces []Namespace `gorm:"many2many:sys_user_namespaces;foreignkey:id;association_foreignkey:id;association_jointable_foreignkey:namespace_id;jointable_foreignkey:sys_user_id;" json:"sys_namespaces"`
 	Clusters   []Cluster   `gorm:"many2many:sys_user_cluster;foreignkey:id;association_foreignkey:id;association_jointable_foreignkey:cluster_id;jointable_foreignkey:user_id;" json:"clusters"`
+	SysGroups  []SysRole   `gorm:"many2many:sys_group_users;foreignkey:id;association_foreignkey:id;association_jointable_foreignkey:group_id;jointable_foreignkey:sys_user_id;" json:"sys_groups"`
 }
 
 // TableName set table
 func (*SysUser) TableName() string {
 	return "sys_user"
+}
+
+func (s *SysUser) GroupIds() []int64 {
+	var ids []int64
+	for _, v := range s.SysGroups {
+		ids = append(ids, v.Id)
+	}
+	return ids
+}
+
+func (s *SysUser) IsAdmin() bool {
+	var isAdmin bool
+	for _, v := range s.SysRoles {
+		if strings.EqualFold(v.Name, "super.admin") {
+			return true
+		}
+	}
+	return isAdmin
 }

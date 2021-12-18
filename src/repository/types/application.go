@@ -9,6 +9,18 @@ package types
 
 import "time"
 
+type AppLabel string
+
+func (c AppLabel) String() string {
+	return string(c)
+}
+
+const (
+	LabelAppName    AppLabel = "nsini.com/app-name"
+	LabelAppVersion AppLabel = "nsini.com/app-version"
+	//LabelAppName    AppLabel = "k8s-app" // k8s-app
+)
+
 // Application 应用主表
 type Application struct {
 	Id           int64        `gorm:"column:id;primary_key" json:"id"`

@@ -72,6 +72,12 @@ func MakeHTTPHandler(s Service, dmw []endpoint.Middleware, opt []kithttp.ServerO
 		encode.JsonResponse,
 		opts...,
 	)).Methods(http.MethodGet)
+	r.Handle("/{cluster}/sync/{storage}/pvc", kithttp.NewServer(
+		eps.SyncPvcEndpoint,
+		decodeSyncPvRequest,
+		encode.JsonResponse,
+		opts...,
+	)).Methods(http.MethodGet)
 	r.Handle("/{cluster}/create", kithttp.NewServer(
 		eps.CreateEndpoint,
 		decodeCreateRequest,

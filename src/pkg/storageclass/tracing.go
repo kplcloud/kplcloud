@@ -126,8 +126,17 @@ func (s *tracing) SyncPv(ctx context.Context, clusterId int64, storageName strin
 	return s.next.SyncPv(ctx, clusterId, storageName)
 }
 
-func (s *tracing) SyncPvc(ctx context.Context, clusterId int64, ns string, storageName string) (err error) {
-	panic("implement me")
+func (s *tracing) SyncPvc(ctx context.Context, clusterId int64, storageName string) (err error) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(ctx, s.tracer, "SyncPvc", opentracing.Tag{
+		Key:   string(ext.Component),
+		Value: "pkg.storageclass",
+	})
+	defer func() {
+		span.LogKV("clusterId", clusterId, "storageName", storageName, "err", err)
+		span.SetTag(string(ext.Error), err != nil)
+		span.Finish()
+	}()
+	return s.next.SyncPvc(ctx, clusterId, storageName)
 }
 
 func (s *tracing) Sync(ctx context.Context, clusterId int64) (err error) {

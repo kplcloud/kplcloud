@@ -34,6 +34,7 @@ var ResponseMessage = map[ResStatus]int{
 	ErrAuthCheckCaptchaNotnull: 1008,
 	ErrAuthRegisterExists:      1009,
 	ErrAuthRegisterSave:        1010,
+	ErrAuthTimeout:             1011,
 
 	// 系统API
 	ErrSysRoleNotfound:     2001,
@@ -87,8 +88,11 @@ var ResponseMessage = map[ResStatus]int{
 	ErrNodeNotfound: 1141,
 	ErrNodeDrain:    1142,
 
-	ErrPersistentVolumeClaimList:   1160,
-	ErrPersistentVolumeClaimCreate: 1161,
+	ErrPersistentVolumeClaimList:     1160,
+	ErrPersistentVolumeClaimCreate:   1161,
+	ErrPersistentVolumeClaimNotfound: 1162,
+	ErrPersistentVolumeClaimExists:   1163,
+	ErrPersistentVolumeClaimDelete:   1164,
 
 	ErrTemplateSave: 1180,
 
@@ -123,6 +127,7 @@ const (
 	ErrSecretMarshal   ResStatus = "转换错误"
 	ErrSecretImageSave ResStatus = "添加镜像Secret错误"
 	ErrSecretDelete    ResStatus = "Secret删除错误"
+	ErrSecretExists    ResStatus = "Secret已存在"
 
 	ErrNamespaceNotfound ResStatus = "空间不存在"
 	ErrNameNotfound      ResStatus = "名称不存在"
@@ -147,8 +152,18 @@ const (
 	ErrStorageClassDelete   ResStatus = "StorageClass 删除失败"
 	ErrStorageClassUpdate   ResStatus = "StorageClass 更新失败"
 
-	ErrPersistentVolumeClaimList   ResStatus = "存储卷声明列表获取失败"
-	ErrPersistentVolumeClaimCreate ResStatus = "存储卷声明创建失败"
+	ErrPersistentVolumeClaimList     ResStatus = "存储卷声明列表获取失败"
+	ErrPersistentVolumeClaimCreate   ResStatus = "存储卷声明创建失败"
+	ErrPersistentVolumeClaimNotfound ResStatus = "存储卷声明不存在"
+	ErrPersistentVolumeClaimExists   ResStatus = "存储卷声明已存在"
+	ErrPersistentVolumeClaimDelete   ResStatus = "存储卷声明删除失败"
+
+	ErrPodNotfound ResStatus = "Pods可能不存在"
+
+	ErrTerminalPodsNotfound ResStatus = "没有找到相应标签的pods"
+	ErrTerminalToken        ResStatus = "生成token失败"
+
+	ErrAutoScaleMetricsServerNotfound ResStatus = "metrics-server不存在无法创建HPA"
 
 	// 中间件错误信息
 	ErrSystem                  ResStatus = "系统错误"
@@ -165,6 +180,7 @@ const (
 	ErrAuthCheckCaptchaNotnull ResStatus = "图形验证码不能为空"
 	ErrAuthRegisterExists      ResStatus = "注册用户已存在"
 	ErrAuthRegisterSave        ResStatus = "注册失败,请联系管理员"
+	ErrAuthTimeout             ResStatus = "授权已过期"
 
 	// 系统API
 	ErrSysRoleNotfound     ResStatus = "角色不存在"
@@ -179,6 +195,12 @@ const (
 	ErrSysSettingDelete   ResStatus = "删除失败"
 	ErrSysSettingExists   ResStatus = "配置已存在"
 	ErrSysSettingSave     ResStatus = "配置保存失败"
+
+	ErrSysGroupExists        ResStatus = "组已存在"
+	ErrSysGroupNotfound      ResStatus = "组不存在"
+	ErrSysGroupNotPermission ResStatus = "您无法操作,请让组管理员操作"
+	ErrSysGroupSave          ResStatus = "保存失败"
+	ErrSysGroupDelete        ResStatus = "删除失败"
 
 	ErrNodeCordon    ResStatus = "操作失败"
 	ErrNodeNotfound  ResStatus = "节点不存在"

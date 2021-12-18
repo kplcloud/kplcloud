@@ -1,27 +1,32 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: pvc-07ef7d44-f316-4e8a-b7b7-263b00d87997
-  resourceVersion: "16577773465"
-  selfLink: /api/v1/persistentvolumes/pvc-07ef7d44-f316-4e8a-b7b7-263b00d87997
-  uid: 1416687c-48c1-4b79-9dd2-7ab1e828ab59
+  annotations:
+    pv.kubernetes.io/provisioned-by: k8s-sigs.io/nfs-subdir-external-provisioner
+  creationTimestamp: "2021-12-04T15:14:27Z"
+  finalizers:
+  - kubernetes.io/pv-protection
+  name: pvc-a66be030-2a00-4297-86ea-16ba236c79c0
+  resourceVersion: "700814199"
+  selfLink: /api/v1/persistentvolumes/pvc-a66be030-2a00-4297-86ea-16ba236c79c0
+  uid: 6a294b7e-6fab-458a-87ee-9bb384455d74
 spec:
   accessModes:
-    - ReadWriteOnce
+  - ReadWriteMany
   capacity:
-    storage: 8Gi
+    storage: 20Gi
   claimRef:
     apiVersion: v1
     kind: PersistentVolumeClaim
-    name: data-elastic-elasticsearch-data-0
-    namespace: icolo
-    resourceVersion: "16577773344"
-    uid: 07ef7d44-f316-4e8a-b7b7-263b00d87997
+    name: shalog-data
+    namespace: app
+    resourceVersion: "700814174"
+    uid: a66be030-2a00-4297-86ea-16ba236c79c0
   nfs:
-    path: /data/icolo-data-elastic-elasticsearch-data-0-pvc-07ef7d44-f316-4e8a-b7b7-263b00d87997
-    server: 172.16.0.11
+    path: /data/storage/app-shalog-data-pvc-a66be030-2a00-4297-86ea-16ba236c79c0
+    server: 10.0.0.1
   persistentVolumeReclaimPolicy: Delete
-  storageClassName: managed-nfs-storage
+  storageClassName: nfs-storage
   volumeMode: Filesystem
 status:
   phase: Bound

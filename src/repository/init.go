@@ -14,11 +14,8 @@ type Repository2 interface {
 	Notice() NoticesRepository
 	Proclaim() NoticesRepository
 	NoticeReceive() NoticeReceiveRepository
-	Namespace() NamespaceRepository
 	Member() MemberRepository
-	Template() TemplateRepository
 	Groups() GroupsRepository
-	StorageClass() StorageClassRepository
 	Project() ProjectRepository
 	ProjectTemplate() ProjectTemplateRepository
 	Webhook() WebhookRepository
@@ -27,8 +24,6 @@ type Repository2 interface {
 	CronJob() CronjobRepository
 	ConfigMap() ConfigMapRepository
 	ConfigData() ConfigDataRepository
-	Permission() PermissionRepository
-	Role() RoleRepository
 	ProjectJenkins() ProjectJenkinsRepository
 	Consul() ConsulRepository
 	Dockerfile() DockerfileRepository
@@ -43,11 +38,8 @@ type store struct {
 	notice          NoticesRepository
 	proclaim        NoticesRepository
 	noticeReceive   NoticeReceiveRepository
-	namespace       NamespaceRepository
 	member          MemberRepository
-	template        TemplateRepository
 	groups          GroupsRepository
-	storageClass    StorageClassRepository
 	project         ProjectRepository
 	projectTemplate ProjectTemplateRepository
 	webhook         WebhookRepository
@@ -56,8 +48,6 @@ type store struct {
 	cronJob         CronjobRepository
 	configMap       ConfigMapRepository
 	configData      ConfigDataRepository
-	permission      PermissionRepository
-	role            RoleRepository
 	projectJenkins  ProjectJenkinsRepository
 	consul          ConsulRepository
 	dockerfile      DockerfileRepository
@@ -72,11 +62,8 @@ func NewRepository2(db *gorm.DB) Repository2 {
 		notice:          NewNoticesRepository(db),
 		proclaim:        NewNoticesRepository(db),
 		noticeReceive:   NewNoticeReceiveRepository(db),
-		namespace:       NewNamespaceRepository(db),
 		member:          NewMemberRepository(db),
-		template:        NewTemplateRepository(db),
 		groups:          NewGroupsRepository(db),
-		storageClass:    NewStorageClassRepository(db),
 		project:         NewProjectRepository(db),
 		projectTemplate: NewProjectTemplateRepository(db),
 		webhook:         NewWebhookRepository(db),
@@ -86,8 +73,6 @@ func NewRepository2(db *gorm.DB) Repository2 {
 		configMap:       NewConfigMapRepository(db),
 		configData:      NewConfigDataRepository(db),
 		//wechatUser:      NewWechatUserRepository(db),
-		permission:     NewPermissionRepository(db),
-		role:           NewRoleRepository(db),
 		projectJenkins: NewProjectJenkins(db),
 		consul:         NewConsulReporitory(db),
 		dockerfile:     NewDockerfileRepository(db),
@@ -112,24 +97,12 @@ func (c *store) NoticeReceive() NoticeReceiveRepository {
 	return c.noticeReceive
 }
 
-func (c *store) Namespace() NamespaceRepository {
-	return c.namespace
-}
-
 func (c *store) Member() MemberRepository {
 	return c.member
 }
 
-func (c *store) Template() TemplateRepository {
-	return c.template
-}
-
 func (c *store) Groups() GroupsRepository {
 	return c.groups
-}
-
-func (c *store) StorageClass() StorageClassRepository {
-	return c.storageClass
 }
 
 func (c *store) Project() ProjectRepository {
@@ -162,14 +135,6 @@ func (c *store) ConfigMap() ConfigMapRepository {
 
 func (c *store) ConfigData() ConfigDataRepository {
 	return c.configData
-}
-
-func (c *store) Permission() PermissionRepository {
-	return c.permission
-}
-
-func (c *store) Role() RoleRepository {
-	return c.role
 }
 
 func (c *store) ProjectJenkins() ProjectJenkinsRepository {

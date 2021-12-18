@@ -16,7 +16,7 @@ type MemberRepository interface {
 	GetMembers(emailLike string, nsName string) (members []types.Member, err error)
 	FindById(mId int64) (*types.Member, error)
 	GetNssByMemberId(mId int64) ([]string, error)
-	GetRolesByMemberId(mId int64) ([]*types.Role, error)
+	GetRolesByMemberId(mId int64) ([]*types.SysRole, error)
 	BindWechat(email, openid string) error
 	UnBindWechat(mId int64) error
 	GetMembersByIds(ids []int64) (members []*types.Member, err error)
@@ -172,7 +172,7 @@ func (c *member) GetNssByMemberId(mId int64) ([]string, error) {
 	return res, nil
 }
 
-func (c *member) GetRolesByMemberId(mId int64) (roles []*types.Role, err error) {
+func (c *member) GetRolesByMemberId(mId int64) (roles []*types.SysRole, err error) {
 	var m types.Member
 	err = c.db.First(&m, mId).Related(&roles, "roles").Error
 	if err != nil {

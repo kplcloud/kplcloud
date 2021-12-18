@@ -121,8 +121,16 @@ func (s *logging) SyncPv(ctx context.Context, clusterId int64, storageName strin
 	return s.next.SyncPv(ctx, clusterId, storageName)
 }
 
-func (s *logging) SyncPvc(ctx context.Context, clusterId int64, ns string, storageName string) (err error) {
-	panic("implement me")
+func (s *logging) SyncPvc(ctx context.Context, clusterId int64, storageName string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "SyncPvc", "clusterId", clusterId, "storageName", storageName,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.SyncPvc(ctx, clusterId, storageName)
 }
 
 func (s *logging) Sync(ctx context.Context, clusterId int64) (err error) {

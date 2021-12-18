@@ -10,19 +10,22 @@ package storageclass
 import (
 	"context"
 	"fmt"
+	"github.com/ghodss/yaml"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/jinzhu/gorm"
-	"github.com/pkg/errors"
-	coreV1 "k8s.io/api/core/v1"
-	storagev1 "k8s.io/api/storage/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/json"
-
 	"github.com/kplcloud/kplcloud/src/encode"
 	"github.com/kplcloud/kplcloud/src/kubernetes"
 	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
+	"github.com/pkg/errors"
+	coreV1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/json"
+	"strings"
 )
 
 type Middleware func(Service) Service
@@ -31,7 +34,7 @@ type Middleware func(Service) Service
 type Service interface {
 	Sync(ctx context.Context, clusterId int64) (err error)
 	SyncPv(ctx context.Context, clusterId int64, storageName string) (err error)
-	SyncPvc(ctx context.Context, clusterId int64, ns string, storageName string) (err error)
+	SyncPvc(ctx context.Context, clusterId int64, storageName string) (err error)
 	// Create 创建StorageClass
 	Create(ctx context.Context, clusterId int64, ns, name, provisioner string, reclaimPolicy *coreV1.PersistentVolumeReclaimPolicy, volumeBindingMode *storagev1.VolumeBindingMode, remark string) (err error)
 	// CreateProvisioner 创建供应者
@@ -73,7 +76,9 @@ func (s *service) Info(ctx context.Context, clusterId int64, storageName string)
 	res.Provisioner = class.Provisioner
 	res.VolumeMode = class.VolumeBindingMode
 	res.ResourceVersion = class.ResourceVersion
-	res.Detail = class.Detail
+	res.ClusterName = class.Cluster.Name
+	res.ClusterAlias = class.Cluster.Alias
+	res.ReclaimPolicy = class.ReclaimPolicy
 	// 是否需要自动远程同步？
 	return
 }
@@ -219,37 +224,107 @@ type persistentVolumeListChannel struct {
 
 func (s *service) SyncPv(ctx context.Context, clusterId int64, storageName string) (err error) {
 	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
-	find, err := s.repository.StorageClass(ctx).FindName(ctx, clusterId, storageName)
-	if err != nil {
-		_ = level.Error(logger).Log("repository.StorageClass", "Find", "err", err.Error())
-		return encode.ErrStorageClassNotfound.Error()
-	}
-	fmt.Println(find.Name)
+	//find, err := s.repository.StorageClass(ctx).FindName(ctx, clusterId, storageName)
+	//if err != nil {
+	//	_ = level.Error(logger).Log("repository.StorageClass", "Find", "err", err.Error())
+	//	return encode.ErrStorageClassNotfound.Error()
+	//}
 
 	list, err := s.k8sClient.Do(ctx).CoreV1().PersistentVolumes().List(ctx, metav1.ListOptions{
-		//FieldSelector: fmt.Sprintf("spec.storageClassName=%s", find.Name),
-		//FieldSelector: fmt.Sprintf("spec.claimRef.name=%s", "newlender-gfs"),
+		FieldSelector: fields.SelectorFromSet(fields.Set{
+			//"spec.storageClassName": "nfs-storage",
+			//"spec.claimRef.name":      "shalog-data",
+			//"spec.claimRef.namespace": "app",
+		}).String(),
 	})
 
-	fmt.Println(fmt.Sprintf("spec.storageClassName=%s", find.Name))
 	if err != nil {
 		_ = level.Error(logger).Log("k8sClient.Do", "StorageV1", "StorageClasses", "List", "err", err.Error())
 		return encode.ErrStorageClassSyncPv.Wrap(err)
 	}
 
 	for _, v := range list.Items {
-		b, _ := json.Marshal(v)
-		fmt.Println(string(b))
+		b, _ := yaml.Marshal(v)
+		am, _ := json.Marshal(v.Spec.AccessModes)
+		pvc, err := s.repository.Pvc(ctx).FindByName(ctx, clusterId, v.Spec.ClaimRef.Namespace, v.Spec.ClaimRef.Name)
+		if err != nil {
+			_ = level.Warn(logger).Log("repository.Pvc", "FindByName", "err", err.Error())
+			continue
+		}
+		storageClass, err := s.repository.StorageClass(ctx).FindName(ctx, clusterId, v.Spec.StorageClassName)
+		if err != nil {
+			_ = level.Warn(logger).Log("repository.StorageClass", "FindByName", "err", err.Error())
+			continue
+		}
+		var volumeMode string
+		if v.Spec.VolumeMode != nil {
+			volumeMode = string(*v.Spec.VolumeMode)
+		}
+		var msg string
+		if !strings.EqualFold(v.Status.Message, "") {
+			msg += v.Status.Message
+		}
+		if !strings.EqualFold(v.Status.Reason, "") {
+			msg += v.Status.Reason
+		}
+		var persistentVolumeSource string
+		var pvsMap map[string]interface{}
+		bbb, _ := json.Marshal(v.Spec.PersistentVolumeSource)
+		_ = json.Unmarshal(bbb, &pvsMap)
+		for k, _ := range pvsMap {
+			persistentVolumeSource = k
+		}
+		pv := &types.PersistentVolume{
+			ClusterId:                     clusterId,
+			Name:                          v.Name,
+			Namespace:                     v.Spec.ClaimRef.Namespace,
+			AccessModes:                   string(am),
+			Remark:                        msg,
+			PersistentVolumeSource:        persistentVolumeSource,
+			PvcId:                         pvc.Id,
+			PersistentVolumeReclaimPolicy: string(v.Spec.PersistentVolumeReclaimPolicy),
+			PersistentVolumeMode:          volumeMode,
+			StorageClassId:                storageClass.Id,
+			Storage:                       v.Spec.Capacity.Storage().String(),
+			Detail:                        string(b),
+			Status:                        string(v.Status.Phase),
+		}
+		if err = s.repository.Pvc(ctx).SavePv(ctx, pv, nil); err != nil {
+			_ = level.Error(logger).Log("repository.Pvc", "SavePv", "err", err.Error())
+			continue
+		}
 	}
 
-	return
+	return nil
 }
 
-func (s *service) SyncPvc(ctx context.Context, clusterId int64, ns string, storageName string) (err error) {
-	//list, err := s.k8sClient.Do(ctx).CoreV1().PersistentVolumeClaims(ns).List(ctx, metav1.ListOptions{})
-	//if err != nil {
-	//	return err
-	//}
+func (s *service) SyncPvc(ctx context.Context, clusterId int64, storageName string) (err error) {
+	//logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
+
+	fmt.Println(labels.Everything().String())
+	fmt.Println(fields.Everything().String())
+	fmt.Println(fields.SelectorFromSet(fields.Set{
+		"spec.storageClassName": storageName,
+	}).String())
+	list, err := s.k8sClient.Do(ctx).CoreV1().PersistentVolumeClaims(coreV1.NamespaceAll).List(ctx, metav1.ListOptions{
+		FieldSelector: fields.SelectorFromSet(fields.Set{
+			"spec.storageClassName": storageName,
+		}).String(),
+		LabelSelector: labels.Everything().String(),
+		//FieldSelector: fields.Everything().String(),
+		//LabelSelector: fields.SelectorFromSet(fields.Set{
+		//	"spec.storageClassName": storageName,
+		//}).String(),
+	})
+	fmt.Println(fields.SelectorFromSet(fields.Set{
+		"spec.storageClassName": storageName,
+	}).String())
+	if err != nil {
+		return err
+	}
+	for _, v := range list.Items {
+		fmt.Println(v.Name)
+	}
 	return
 }
 

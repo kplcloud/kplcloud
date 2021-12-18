@@ -21,6 +21,30 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) Update(ctx context.Context, clusterId int64, ns, name, storage, remark string, accessModes []string) (err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Update", "clusterId", clusterId, "ns", ns, "name", name, "storage", storage, "remark", remark, "accessModes", accessModes,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Update(ctx, clusterId, ns, name, storage, remark, accessModes)
+}
+
+func (s *logging) List(ctx context.Context, clusterId int64, storageClass, ns string, page, pageSize int) (resp []result, total int, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "List", "clusterId", clusterId, "storageClass", storageClass, "ns", ns, "page", page, "pageSize", pageSize,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.List(ctx, clusterId, storageClass, ns, page, pageSize)
+}
+
 func (s *logging) Sync(ctx context.Context, clusterId int64, ns string) (err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(
@@ -35,12 +59,28 @@ func (s *logging) Sync(ctx context.Context, clusterId int64, ns string) (err err
 	return s.next.Sync(ctx, clusterId, ns)
 }
 
-func (s *logging) Get(ctx context.Context, clusterId int64, ns, name string) (rs interface{}, err error) {
-	panic("implement me")
+func (s *logging) Get(ctx context.Context, clusterId int64, ns, name string) (res result, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Get", "clusterId", clusterId, "ns", ns, "name", name,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Get(ctx, clusterId, ns, name)
 }
 
 func (s *logging) Delete(ctx context.Context, clusterId int64, ns, name string) (err error) {
-	panic("implement me")
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "Delete", "clusterId", clusterId, "ns", ns, "name", name,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.Delete(ctx, clusterId, ns, name)
 }
 
 func (s *logging) Create(ctx context.Context, clusterId int64, ns, name, storage, storageClassName string, accessModes []string) (err error) {
@@ -58,10 +98,6 @@ func (s *logging) Create(ctx context.Context, clusterId int64, ns, name, storage
 		)
 	}(time.Now())
 	return s.next.Create(ctx, clusterId, ns, name, storage, storageClassName, accessModes)
-}
-
-func (s *logging) List(ctx context.Context, clusterId int64, ns string, page, pageSize int) (resp map[string]interface{}, err error) {
-	panic("implement me")
 }
 
 func (s *logging) All(ctx context.Context, clusterId int64) (resp map[string]interface{}, err error) {

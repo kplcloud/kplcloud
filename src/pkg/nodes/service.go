@@ -181,10 +181,6 @@ func (s *service) Cordon(ctx context.Context, clusterId int64, nodeName string) 
 	return s.repository.Nodes(ctx).Save(ctx, &resNode)
 }
 
-func (s *service) UnCordon(ctx context.Context, clusterId int64, nodeName string) (err error) {
-	panic("implement me")
-}
-
 func (s *service) List(ctx context.Context, clusterId int64, query string, page, pageSize int) (res []nodeResult, total int, err error) {
 	logger := log.With(s.logger, s.traceId, ctx.Value(s.traceId))
 

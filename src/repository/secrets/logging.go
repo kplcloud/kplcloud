@@ -23,6 +23,18 @@ type logging struct {
 	traceId string
 }
 
+func (s *logging) List(ctx context.Context, clusterId int64, ns, name string, page, pageSize int) (res []types.Secret, total int, err error) {
+	defer func(begin time.Time) {
+		_ = s.logger.Log(
+			s.traceId, ctx.Value(s.traceId),
+			"method", "List", "clusterId", clusterId, "ns", ns, "name", name, "page", page, "pageSize", pageSize,
+			"took", time.Since(begin),
+			"err", err,
+		)
+	}(time.Now())
+	return s.next.List(ctx, clusterId, ns, name, page, pageSize)
+}
+
 func (s *logging) FindNsByNames(ctx context.Context, clusterId int64, ns string, names []string) (res []types.Secret, err error) {
 	defer func(begin time.Time) {
 		_ = s.logger.Log(

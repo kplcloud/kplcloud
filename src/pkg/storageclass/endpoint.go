@@ -24,6 +24,9 @@ type (
 	syncPvRequest struct {
 		Name string `json:"name"`
 	}
+	syncPvcRequest struct {
+		Name string `json:"name"`
+	}
 
 	listRequest struct {
 		page, pageSize int
@@ -49,6 +52,8 @@ type (
 		UpdatedAt       time.Time `json:"updatedAt"`
 		ResourceVersion string    `json:"resourceVersion"`
 		Detail          string    `json:"detail"`
+		ClusterAlias    string    `json:"clusterAlias"`
+		ClusterName     string    `json:"clusterName"`
 	}
 
 	createRequest struct {
@@ -64,6 +69,7 @@ type (
 type Endpoints struct {
 	SyncEndpoint    endpoint.Endpoint
 	SyncPvEndpoint  endpoint.Endpoint
+	SyncPvcEndpoint endpoint.Endpoint
 	CreateEndpoint  endpoint.Endpoint
 	ListEndpoint    endpoint.Endpoint
 	DeleteEndpoint  endpoint.Endpoint
@@ -76,6 +82,7 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 	eps := Endpoints{
 		SyncEndpoint:    makeSyncEndpoint(s),
 		SyncPvEndpoint:  makeSyncPvEndpoint(s),
+		SyncPvcEndpoint: makeSyncPvcEndpoint(s),
 		CreateEndpoint:  makeCreateEndpoint(s),
 		ListEndpoint:    makeListEndpoint(s),
 		DeleteEndpoint:  makeDeleteEndpoint(s),
@@ -86,6 +93,7 @@ func NewEndpoint(s Service, dmw map[string][]endpoint.Middleware) Endpoints {
 
 	for _, m := range dmw["Sync"] {
 		eps.SyncEndpoint = m(eps.SyncEndpoint)
+		eps.SyncPvcEndpoint = m(eps.SyncPvcEndpoint)
 	}
 	for _, m := range dmw["SyncPv"] {
 		eps.SyncPvEndpoint = m(eps.SyncPvEndpoint)
@@ -157,6 +165,20 @@ func makeSyncPvEndpoint(s Service) endpoint.Endpoint {
 		}
 		req := request.(syncPvRequest)
 		err = s.SyncPv(ctx, clusterId, req.Name)
+		return encode.Response{
+			Error: err,
+		}, err
+	}
+}
+
+func makeSyncPvcEndpoint(s Service) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		clusterId, ok := ctx.Value(middleware.ContextKeyClusterId).(int64)
+		if !ok {
+			return nil, encode.ErrClusterNotfound.Error()
+		}
+		req := request.(syncPvRequest)
+		err = s.SyncPvc(ctx, clusterId, req.Name)
 		return encode.Response{
 			Error: err,
 		}, err
