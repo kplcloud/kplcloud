@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <title>{{.Namespace}} - {{.PodName}} - {{.Container}}</title>
+    <link rel="icon" href="http://source.qiniu.cnd.nsini.com/kplcloud/kpl-logo-blue.png" type="image/x-icon">
+    <script src="/static/xterm/sockjs.min.js"></script>
+    <link href="/static/xterm/xterm.min.css" rel="stylesheet">
+    <script src="/static/xterm/xterm.min.js"></script>
+    <script src="/static/xterm/terminado.min.js"></script>
+    <script src="/static/xterm/webLinks.min.js"></script>
+    <script src="/static/xterm/winptyCompat.min.js"></script>
+    <script>
+        function getQueryString(name) {
+            var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+            var r = window.location.search.substr(1).match(reg);
+            if (r != null) return unescape(r[2]);
+            return null;
+        }
+
+        window.onload = function () {
+            var term = new Terminal();
+            term.open(document.getElementById('terminal'));
+            var cols = parseInt((window.innerWidth - (window.innerWidth / 8)) / 8);
+            var height = window.innerHeight;
+            var outerHeight = getQueryString("window") == "new" ? window.outerHeight : window.innerHeight + 70;
+            var rows = parseInt((outerHeight + (outerHeight - height)) / 21);
+            if (getQueryString("window") == "new") {
+                rows = Math.ceil((height / (21 - ((window.outerHeight - window.innerHeight) / 21))) - Math.ceil((window.outerHeight - window.innerHeight) / 21));
+            }
+            term.destroy();
+            var xterm = new Terminal({
+                cursorBlink: true,
+                cols: cols,
+                rows: rows,
+                scrollback: 400,
+                tabStopWidth: 4
+            });
+
+            if ("{{.ErrMsg}}" != "") {
+                xterm.write('\033[31m {{.ErrMsg}} \033[0m')
+            }
+            ws = new SockJS('/ws/pods/console/exec?{{.SessionId}}');
+            ws.onopen = function () {
+                var startData = {
+                    Op: 'bind',
+                    SessionID: '{{.SessionId}}',
+                    Data: "{\"namespace\":\"{{.Namespace}}\",\"container\":\"{{.Container}}\",\"pod\":\"{{.PodName}}\", \"token\": \"{{.Token}}\"}"
+                };
+                ws.send(JSON.stringify(startData));
+                winptyCompat.winptyCompatInit(xterm);
+                webLinks.webLinksInit(xterm);
+                xterm.focus();
+            };
+
+            xterm.on('resize', function (size) {
+                resizeScreen();
+            });
+
+            xterm.on('data', function (data) {
+                ws.send(JSON.stringify({'Op': "resize", "Cols": xterm.cols, "rows": xterm.rows}));
+            });
+
+            ws.onmessage = function (evt) {
+                let msg = JSON.parse(evt.data);
+                try {
+                    switch (msg['Op']) {
+                        case 'stdout':
+                            if ((msg['Data'].toString()).indexOf('{{.BashStr}}') == -1) {
+                                // console.log("data",msg['Data'])
+                                if (msg['Data'] == "") {
+                                    ws.send(JSON.stringify({'Op': 'resize', 'Cols': xterm.cols, 'Rows': xterm.rows}));
+                                    // ws.send(JSON.stringify({'Op': 'resize', 'Cols': xterm.cols, 'Rows': xterm.rows}));
+                                } else {
+                                    xterm.write(msg['Data']);
+                                }
+                            }
+                            break;
+                        default:
+                            console.error('Unexpected message type:', msg);
+                    }
+                } catch (e) {
+                    console.log('parse json error.', evt.data);
+                }
+            };
+
+            ws.onclose = function () {
+                goodbye();
+            };
+
+            wstimer = window.setInterval(function () {
+                ws.send(JSON.stringify({'Op': 'stdin', 'Data': " ", 'Cols': xterm.cols, 'Rows': xterm.rows}))
+            }, 30000);
+
+            xterm.on('data', function (str) {
+                ws.send(JSON.stringify({'Op': 'stdin', 'Data': str, 'Cols': xterm.cols, 'Rows': xterm.rows}))
+            });
+
+            xterm.open(document.getElementById('terminal'));
+
+            window.addEventListener('resize', resizeScreen, false)
+
+            function resizeScreen() {
+                var cols = parseInt((window.innerWidth - (window.innerWidth / 8)) / 8);
+                var height = window.innerHeight;
+                var outerHeight = getQueryString("window") == "new" ? window.outerHeight : window.innerHeight;
+                var rows = parseInt((outerHeight + (outerHeight - height)) / 21);
+                xterm.resize(cols, rows);
+                ws.send(JSON.stringify({'Op': "resize", "Cols": xterm.cols, "rows": xterm.rows}));
+            }
+
+            window.goodbye = function () {
+                ws.send('e');
+                ws.send('x');
+                ws.send('i');
+                ws.send('t');
+                ws.send("\n");
+                ws.close();
+            }
+
+        };
+
+        window.onbeforeunload = function () {
+            ws.send('e');
+            ws.send('x');
+            ws.send('i');
+            ws.send('t');
+            ws.send("\n");
+            ws.close();
+        }
+    </script>
+</head>
+<body onunload="window.goodbye()" id="body" style="margin: 0; padding: 0">
+<div id="terminal"></div>
+</body>
+</html>
