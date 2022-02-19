@@ -140,8 +140,13 @@ func init() {
 	startCmd.PersistentFlags().StringVar(&adminPassword, "admin.password", DefaultAdminPassword, "初始化管理员密码")
 	startCmd.PersistentFlags().StringVar(&sqlPath, "init.sqlpath", DefaultInitDBSQL, "初始化sql文件")
 
+	genAdminUserCmd.PersistentFlags().StringVar(&adminEmail, "admin.email", DefaultAdminEmail, "初始化管理员邮箱")
+	genAdminUserCmd.PersistentFlags().StringVar(&adminPassword, "admin.password", DefaultAdminPassword, "初始化管理员密码")
+
+	generateCmd.AddCommand(genAdminUserCmd, genTableCmd, genInitDataCmd)
+
 	addFlags(rootCmd)
-	rootCmd.AddCommand(startCmd)
+	rootCmd.AddCommand(startCmd, generateCmd)
 }
 
 func Run() {

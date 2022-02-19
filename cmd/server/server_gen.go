@@ -9,16 +9,177 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"github.com/go-kit/kit/log/level"
 	"github.com/go-sql-driver/mysql"
+	"github.com/icowan/config"
+	mysqlclient "github.com/icowan/mysql-client"
+	"github.com/jinzhu/gorm"
+	"github.com/kplcloud/kplcloud/src/logging"
+	"github.com/kplcloud/kplcloud/src/repository"
 	"github.com/kplcloud/kplcloud/src/repository/types"
 	"github.com/kplcloud/kplcloud/src/util/encode"
+	"github.com/spf13/cobra"
 	"gopkg.in/guregu/null.v3"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
 	"strings"
 )
+
+var (
+	generateCmd = &cobra.Command{
+		Use:               "generate command <args> [flags]",
+		Short:             "生成命令",
+		SilenceErrors:     false,
+		DisableAutoGenTag: false,
+		Example: `## 生成命令
+可用的配置类型：
+[table, init-data]
+
+kplcloud generate -h
+`,
+	}
+
+	genTableCmd = &cobra.Command{
+		Use:               `table <args> [flags]`,
+		Short:             "生成数据库表",
+		SilenceErrors:     false,
+		DisableAutoGenTag: false,
+		Example: `
+kplcloud generate table all
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// 关闭资源连接
+			defer func() {
+				_ = level.Debug(logger).Log("db", "close", "err", db.Close())
+				if rds != nil {
+					_ = rds.Close()
+				}
+			}()
+
+			if len(args) > 0 && args[0] == "all" {
+				return nil
+			}
+			return nil
+		},
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return runPre()
+		},
+	}
+
+	genInitDataCmd = &cobra.Command{
+		Use:               `init-data <args> [flags]`,
+		Short:             "生成数据",
+		SilenceErrors:     false,
+		DisableAutoGenTag: false,
+		Example: `
+kplcloud generate init-data
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// 关闭资源连接
+			defer func() {
+				_ = level.Debug(logger).Log("db", "close", "err", db.Close())
+				if rds != nil {
+					_ = level.Debug(logger).Log("redis", "close", "err", rds.Close())
+				}
+			}()
+
+			return nil
+		},
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return runPre()
+		},
+	}
+
+	genAdminUserCmd = &cobra.Command{
+		Use:               `admin-user <args> [flags]`,
+		Short:             "生成管理员用户",
+		SilenceErrors:     false,
+		DisableAutoGenTag: false,
+		Example: `
+kplcloud generate admin-user
+`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// 关闭资源连接
+			defer func() {
+				_ = level.Debug(logger).Log("db", "close", "err", db.Close())
+				if rds != nil {
+					_ = level.Debug(logger).Log("redis", "close", "err", rds.Close())
+				}
+			}()
+
+			if strings.EqualFold(adminEmail, "") {
+				adminEmail = args[0]
+			}
+			if strings.EqualFold(adminPassword, "") {
+				adminPassword = args[1]
+			}
+
+			if validateFormat(adminEmail) != nil {
+				return errors.New("邮箱不正确")
+			}
+
+			_, err = store.Member().Find(adminEmail)
+			if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return errors.New("用户已存在")
+			}
+
+			var nss []types.Namespace
+			if ns, err := store.Namespace().FindAll(); err == nil {
+				for _, v := range ns {
+					nss = append(nss, *v)
+				}
+			}
+
+			role, err := store.Role().FindById(1)
+			if err != nil {
+				return err
+			}
+			var roles []types.Role
+			roles = append(roles, *role)
+			member := &types.Member{
+				Email:      adminEmail,
+				Username:   adminEmail,
+				Password:   null.StringFrom(encode.EncodePassword(adminPassword, cf.GetString("server", "app_key"))),
+				Roles:      roles,
+				Namespaces: nss,
+			}
+			return store.Member().CreateMember(member)
+		},
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return runPre()
+		},
+	}
+)
+
+func runPre() error {
+	cf, err = config.NewConfig(configPath)
+	if err != nil {
+		return err
+	}
+	_ = cf.SetValue("server", "kube_config", kubeConfig)
+
+	logger = logging.SetLogging(logger, cf.GetString("server", "log_path"), cf.GetString("server", "log_level"))
+
+	dbUrl := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local&timeout=20m&collation=utf8mb4_unicode_ci",
+		cf.GetString(config.SectionMysql, "user"),
+		cf.GetString(config.SectionMysql, "password"),
+		cf.GetString(config.SectionMysql, "host"),
+		cf.GetString(config.SectionMysql, "port"),
+		cf.GetString(config.SectionMysql, "database"))
+
+	// 连接数据库
+	db, err = mysqlclient.NewMysql(dbUrl, cf.GetBool(config.SectionServer, "debug"))
+	if err != nil {
+		_ = level.Error(logger).Log("db", "connect", "err", err)
+		return err
+	}
+
+	store = repository.NewRepository(db)
+
+	return nil
+}
 
 var (
 	ErrBadFormat = errors.New("invalid format")
